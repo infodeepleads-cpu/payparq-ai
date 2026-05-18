@@ -446,6 +446,17 @@ function PaidCheckoutForm({
   const [promoDiscountCents, setPromoDiscountCents] = useState(0);
   const [promoDiscountPercent, setPromoDiscountPercent] = useState(0);
 
+  // Mobile payment options toggle
+  const [showPaymentOptions, setShowPaymentOptions] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Update payment intent with email, plate, phone when they change
   useEffect(() => {
     if (!clientSecret || clientSecret === 'free') return;
@@ -716,44 +727,129 @@ function PaidCheckoutForm({
             {/* Payment Method */}
             <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6 space-y-4 overflow-hidden">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Način plaćanja</p>
-              <ExpressCheckoutElement
-                options={{ wallets: { googlePay: 'always', applePay: 'always' } }}
-                onConfirm={async () => {
-                  if (!stripe || !elements) return;
-                  if (clientSecret && clientSecret !== 'free') {
-                    const piId = clientSecret.split('_secret_')[0];
-                    if (piId?.startsWith('pi_')) {
-                      try {
-                        await fetch('/api/stripe/payment-intent', {
-                          method: 'PUT',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ payment_intent_id: piId, email, plate, phone }),
-                        });
-                      } catch { /* non-blocking */ }
-                    }
-                  }
-                  const piId = clientSecret && clientSecret !== 'free' ? clientSecret.split('_secret_')[0] : '';
-                  const successUrl = piId ? `${window.location.origin}/success?payment_intent=${piId}` : `${window.location.origin}/success`;
-                  const { error } = await stripe.confirmPayment({
-                    elements,
-                    confirmParams: { return_url: successUrl },
-                  });
-                  if (error) console.error(error);
-                }}
-              />
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-xs text-gray-400">ili</span>
-                <div className="flex-1 h-px bg-gray-200" />
-              </div>
-              <PaymentElement
-                options={{
-                  layout: { type: 'accordion' },
-                  paymentMethodOrder: ['card', 'google_pay', 'apple_pay', 'paypal'],
-                  wallets: { googlePay: 'auto', applePay: 'auto' },
-                  fields: { billingDetails: { email: 'never', phone: 'never' } },
-                }}
-              />
+
+              {/* Mobile: Show only Google Pay by default */}
+              {isMobile ? (
+                <div className="space-y-3">
+                  <ExpressCheckoutElement
+                    options={{ wallets: { googlePay: 'always', applePay: 'never' } }}
+                    onConfirm={async () => {
+                      if (!stripe || !elements) return;
+                      if (clientSecret && clientSecret !== 'free') {
+                        const piId = clientSecret.split('_secret_')[0];
+                        if (piId?.startsWith('pi_')) {
+                          try {
+                            await fetch('/api/stripe/payment-intent', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ payment_intent_id: piId, email, plate, phone }),
+                            });
+                          } catch { /* non-blocking */ }
+                        }
+                      }
+                      const piId = clientSecret && clientSecret !== 'free' ? clientSecret.split('_secret_')[0] : '';
+                      const successUrl = piId ? `${window.location.origin}/success?payment_intent=${piId}` : `${window.location.origin}/success`;
+                      const { error } = await stripe.confirmPayment({
+                        elements,
+                        confirmParams: { return_url: successUrl },
+                      });
+                      if (error) console.error(error);
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPaymentOptions(!showPaymentOptions)}
+                    className="w-full py-2 px-3 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+                  >
+                    {showPaymentOptions ? '▼ Pogledajte manje' : '▶ Pogledajte više'}
+                  </button>
+
+                  {showPaymentOptions && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-px bg-gray-200" />
+                        <span className="text-xs text-gray-400">ili</span>
+                        <div className="flex-1 h-px bg-gray-200" />
+                      </div>
+                      <ExpressCheckoutElement
+                        options={{ wallets: { googlePay: 'never', applePay: 'always' } }}
+                        onConfirm={async () => {
+                          if (!stripe || !elements) return;
+                          if (clientSecret && clientSecret !== 'free') {
+                            const piId = clientSecret.split('_secret_')[0];
+                            if (piId?.startsWith('pi_')) {
+                              try {
+                                await fetch('/api/stripe/payment-intent', {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ payment_intent_id: piId, email, plate, phone }),
+                                });
+                              } catch { /* non-blocking */ }
+                            }
+                          }
+                          const piId = clientSecret && clientSecret !== 'free' ? clientSecret.split('_secret_')[0] : '';
+                          const successUrl = piId ? `${window.location.origin}/success?payment_intent=${piId}` : `${window.location.origin}/success`;
+                          const { error } = await stripe.confirmPayment({
+                            elements,
+                            confirmParams: { return_url: successUrl },
+                          });
+                          if (error) console.error(error);
+                        }}
+                      />
+                      <PaymentElement
+                        options={{
+                          layout: { type: 'accordion' },
+                          paymentMethodOrder: ['card', 'google_pay', 'apple_pay', 'paypal'],
+                          wallets: { googlePay: 'auto', applePay: 'auto' },
+                          fields: { billingDetails: { email: 'never', phone: 'never' } },
+                        }}
+                      />
+                    </>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <ExpressCheckoutElement
+                    options={{ wallets: { googlePay: 'always', applePay: 'always' } }}
+                    onConfirm={async () => {
+                      if (!stripe || !elements) return;
+                      if (clientSecret && clientSecret !== 'free') {
+                        const piId = clientSecret.split('_secret_')[0];
+                        if (piId?.startsWith('pi_')) {
+                          try {
+                            await fetch('/api/stripe/payment-intent', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ payment_intent_id: piId, email, plate, phone }),
+                            });
+                          } catch { /* non-blocking */ }
+                        }
+                      }
+                      const piId = clientSecret && clientSecret !== 'free' ? clientSecret.split('_secret_')[0] : '';
+                      const successUrl = piId ? `${window.location.origin}/success?payment_intent=${piId}` : `${window.location.origin}/success`;
+                      const { error } = await stripe.confirmPayment({
+                        elements,
+                        confirmParams: { return_url: successUrl },
+                      });
+                      if (error) console.error(error);
+                    }}
+                  />
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-px bg-gray-200" />
+                    <span className="text-xs text-gray-400">ili</span>
+                    <div className="flex-1 h-px bg-gray-200" />
+                  </div>
+                  <PaymentElement
+                    options={{
+                      layout: { type: 'accordion' },
+                      paymentMethodOrder: ['card', 'google_pay', 'apple_pay', 'paypal'],
+                      wallets: { googlePay: 'auto', applePay: 'auto' },
+                      fields: { billingDetails: { email: 'never', phone: 'never' } },
+                    }}
+                  />
+                </>
+              )}
             </div>
 
             {/* Error */}
@@ -768,14 +864,16 @@ function PaidCheckoutForm({
               <a href="/terms" className="underline hover:text-gray-600">Terms of Service</a>
             </p>
 
-            {/* CTA */}
-            <button
-              type="submit"
-              disabled={!stripe || submitting}
-              className="w-full py-4 rounded-lg font-bold text-base text-white disabled:opacity-60 transition-opacity shadow-sm bg-blue-600 hover:bg-blue-700"
-            >
-              {submitting ? 'Obrada...' : isFree ? 'Potvrdi - Besplatno' : 'Plaćajte'}
-            </button>
+            {/* CTA - Hidden on mobile */}
+            {!isMobile && (
+              <button
+                type="submit"
+                disabled={!stripe || submitting}
+                className="w-full py-4 rounded-lg font-bold text-base text-white disabled:opacity-60 transition-opacity shadow-sm bg-blue-600 hover:bg-blue-700"
+              >
+                {submitting ? 'Obrada...' : isFree ? 'Potvrdi - Besplatno' : 'Plaćajte'}
+              </button>
+            )}
 
             <p className="text-center text-xs text-gray-500 pb-4">
               Potvrđivanjem plaćanja dopuštate tvrtki INDIREKTNO da vas se tereti za ovo plaćanje i buduća plaćanja u skladu s njenim uvjetima.
