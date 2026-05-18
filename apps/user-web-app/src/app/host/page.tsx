@@ -643,6 +643,7 @@ export default function HostPage() {
   const [wantMarketing, setWantMarketing] = useState(true);
   const [wantDashboard, setWantDashboard] = useState(true);
   const [wantReferral, setWantReferral] = useState(true);
+  const [wantOperativePartner, setWantOperativePartner] = useState(false);
 
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -720,6 +721,15 @@ export default function HostPage() {
     fd.append('minPriceHourly', minPriceHourly);
     fd.append('minPriceDaily', minPriceDaily);
     fd.append('minPriceMonthly', minPriceMonthly);
+    // Partnership toggles
+    fd.append('wantPartnership', String(wantPartnership));
+    fd.append('wantQR', String(wantQR));
+    fd.append('wantLPR', String(wantLPR));
+    fd.append('wantDashboard', String(wantDashboard));
+    fd.append('wantMarketing', String(wantMarketing));
+    fd.append('wantSafeBrand', String(wantSafeBrand));
+    fd.append('wantReferral', String(wantReferral));
+    fd.append('wantOperativePartner', String(wantOperativePartner));
     // Photos — compress before upload to avoid 413
     const compressedPhotos = await Promise.all(photos.map((p) => compressImage(p)));
     compressedPhotos.forEach((photo) => fd.append('photos', photo));
@@ -1167,7 +1177,7 @@ export default function HostPage() {
               </div>
               <div className="flex items-start justify-between gap-4">
                 <p className="text-xs font-medium text-gray-600 leading-relaxed">Da, želim pomoć pri traženju operativnog partnera</p>
-                <Toggle checked={false} onChange={() => {}} />
+                <Toggle checked={wantOperativePartner} onChange={setWantOperativePartner} />
               </div>
             </div>
 

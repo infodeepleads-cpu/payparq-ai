@@ -87,6 +87,16 @@ export async function POST(req: NextRequest) {
     const minPriceDaily        = parseFloat((formData.get('minPriceDaily') as string) || '0');
     const minPriceMonthly      = parseFloat((formData.get('minPriceMonthly') as string) || '0');
 
+    // Partnership toggles
+    const wantPartnership      = formData.get('wantPartnership') === 'true';
+    const wantQR               = formData.get('wantQR') === 'true';
+    const wantLPR              = formData.get('wantLPR') === 'true';
+    const wantDashboard        = formData.get('wantDashboard') === 'true';
+    const wantMarketing        = formData.get('wantMarketing') === 'true';
+    const wantSafeBrand        = formData.get('wantSafeBrand') === 'true';
+    const wantReferral         = formData.get('wantReferral') === 'true';
+    const wantOperativePartner = formData.get('wantOperativePartner') === 'true';
+
     if (!ownerEmail || !lotName || !address) {
       return NextResponse.json({ error: 'Nedostaju obavezna polja' }, { status: 400 });
     }
@@ -164,6 +174,15 @@ export async function POST(req: NextRequest) {
           // Pricing
           smart_pricing: useDynamicPrice,
           dynamic_pricing: useDynamicPrice ? { min_hourly: minPriceHourly, min_daily: minPriceDaily, min_monthly: minPriceMonthly } : null,
+          // Partnership toggles
+          want_partnership: wantPartnership,
+          want_qr_pay: wantQR,
+          want_lpr: wantLPR,
+          want_dashboard: wantDashboard,
+          want_marketing: wantMarketing,
+          want_safe_brand: wantSafeBrand,
+          want_referral: wantReferral,
+          want_operative_partner: wantOperativePartner,
           // Photos
           photos: photoUrls,
           verification_photos: photoUrls,
