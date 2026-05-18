@@ -796,21 +796,7 @@ function PaidCheckoutForm({
                   <div style={{ transform: 'scale(1.1)', transformOrigin: 'top center', marginBottom: '0.75rem', marginLeft: '8px', marginRight: '8px' }}>
                     <ExpressCheckoutElement
                     options={{
-                      wallets: { googlePay: !showPaymentOptions ? 'always' : 'never', applePay: showPaymentOptions ? 'always' : 'never' },
-                      appearance: {
-                        theme: 'flat',
-                        variables: {
-                          colorPrimary: '#2563eb',
-                          colorBackground: '#ffffff',
-                          fontFamily: 'system-ui, -apple-system, sans-serif',
-                          spacingUnit: '4px',
-                          borderRadius: '8px',
-                        },
-                        rules: {
-                          '.Tab': { boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', padding: '16px' },
-                          '.Button': { padding: '12px 16px', fontSize: '16px', fontWeight: 'bold', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' },
-                        }
-                      }
+                      wallets: { googlePay: !showPaymentOptions ? 'always' : 'never', applePay: showPaymentOptions ? 'always' : 'never' }
                     }}
                     onConfirm={async () => {
                     if (!stripe || !elements) return;
