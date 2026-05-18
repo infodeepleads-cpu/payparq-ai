@@ -2431,7 +2431,7 @@ export function SearchPage() {
                   setShowVehicleModal(true);
                   setVehicleCheckResult(null);
                 }}
-                className="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 flex items-start gap-3 cursor-pointer transition-colors border-b border-gray-200"
+                className="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 flex items-start gap-3 cursor-pointer transition-colors border-b border-gray-200 -mx-4"
               >
                 <div className="flex items-center gap-3 flex-1">
                   <Info className="w-4 h-4 text-gray-600 flex-shrink-0" />
@@ -2444,7 +2444,7 @@ export function SearchPage() {
               </button>
 
               {/* Book Now Suggestion Widget */}
-              <div className="flex-shrink-0 w-full px-6 py-4 bg-amber-100 flex items-start gap-3 border-b border-amber-300">
+              <div className="flex-shrink-0 w-full px-6 py-4 bg-amber-100 flex items-start gap-3 border-b border-amber-300 -mx-4">
                 <AlertCircle className="w-4 h-4 text-amber-700 flex-shrink-0" />
                 <div className="text-center">
                   <p className="text-xs font-semibold text-gray-900">Predlažemo da rezervirate odmah.</p>
@@ -2453,7 +2453,7 @@ export function SearchPage() {
               </div>
 
               {/* Location Information Widget */}
-              <div className="w-full bg-white border-b border-gray-200 mb-4 px-0 -mx-4">
+              <div className="w-full bg-white border-b border-gray-200 -mx-4">
                 <div className="font-bold text-white bg-black px-4 py-1.5 flex items-center justify-start text-sm rounded-r-lg w-fit">
                   Lokacija
                 </div>
