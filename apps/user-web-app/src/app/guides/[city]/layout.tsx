@@ -45,7 +45,6 @@ export async function generateMetadata({
   return {
     title: data?.title || `${city} Parking Guide | Payparq`,
     description: data?.description || `Find safe and affordable parking in ${city}`,
-    canonical: `${siteUrl}/guides/${normalizedCity}`,
     keywords: [
       `parking ${city}`,
       `${city} parking guide`,
@@ -54,6 +53,9 @@ export async function generateMetadata({
       'parking',
       'parkiranje',
     ],
+    alternates: {
+      canonical: `${siteUrl}/guides/${normalizedCity}`,
+    },
     openGraph: {
       title: data?.title || `${city} Parking Guide`,
       description: data?.description || `Find parking in ${city}`,
