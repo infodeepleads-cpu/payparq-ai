@@ -61,6 +61,22 @@ export default async function RootLayout({
 
   return (
     <html lang={locale}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "Payparq",
+              url: "https://www.payparq.com",
+              logo: "https://www.payparq.com/logo.png",
+              description:
+                "Payparq is the software-only platform for frictionless parking, access, and urban mobility for drivers, operators, and modern cities.",
+            }),
+          }}
+        />
+      </head>
       <body className={`${plusJakarta.className} antialiased`}>
         <script
           dangerouslySetInnerHTML={{

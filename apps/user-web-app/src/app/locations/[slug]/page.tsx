@@ -1,318 +1,199 @@
-import { SiteHeader } from "@/components/SiteHeader";
-import { FooterBrand } from "@/components/FooterBrand";
-import Link from "next/link";
-import type { Metadata } from "next";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { supabase } from "@/lib/supabase";
-import { formatEuroLabel, normalizeLocationName, resolveScannerTruthPriceEuro } from "@/lib/locationPricing";
-import LocationClient from "./LocationClient";
+'use client';
 
-const supabaseClient = supabase;
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { MapPin, Star } from 'lucide-react';
 
-type HubData = {
+interface LocationData {
   id: string;
   name: string;
-  address?: string;
-  display_id?: string;
-  canonical_slug?: string;
-  latitude?: number;
-  longitude?: number;
-  verification_photos?: string[];
-  verification_metadata?: Record<string, unknown>;
-  addons_config?: Record<string, unknown> | null;
-  capacity?: number;
-  total_spots?: number;
-  rate_per_hour?: number;
-  review_score?: number;
-  review_count?: number;
-};
-
-async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: string; hero: string; faqItems: Array<{ q: string; a: string }>; travelTime: string } | null> {
-  const hyphenDisplay = String(slug || "").trim().toLowerCase();
-  console.log('[locations/[slug]] fetching canonical_slug:', hyphenDisplay);
-  
-  // Use supabaseAdmin with fallback to supabase
-  const client = supabaseAdmin ?? supabaseClient;
-  if (!client) {
-    console.error('Supabase client not configured');
-    return null;
-  }
-  
-  const selectCols = "id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling,addons_config,review_score,review_count,review_scores,capacity,total_spots";
-
-  const { data: locationData, error } = await client
-    .from("locations")
-    .select(selectCols)
-    .eq("canonical_slug", hyphenDisplay)
-    .limit(1);
-
-  if (error) {
-    console.error('[locations/[slug]] Error:', error);
-  }
-
-  let hub = locationData?.[0];
-
-  // Fallback 1: try hub_slug in metadata (older locations before canonical_slug was added)
-  if (!hub) {
-    const { data: fallback } = await client
-      .from("locations")
-      .select(selectCols)
-      .contains("verification_metadata", { hub_slug: hyphenDisplay })
-      .limit(1);
-    hub = fallback?.[0];
-  }
-
-  // Fallback 2: extract display_id from slug suffix (e.g. "parking-trogir-61440" → "61440")
-  if (!hub) {
-    const displayIdMatch = hyphenDisplay.match(/-(\d{4,6})$/);
-    if (displayIdMatch) {
-      const { data: fallback } = await client
-        .from("locations")
-        .select(selectCols)
-        .eq("display_id", displayIdMatch[1])
-        .limit(1);
-      hub = fallback?.[0];
-    }
-  }
-
-  if (!hub) {
-    return null;
-  }
-
-  hub.name = normalizeLocationName(hub.name || '');
-  if (!hub.name) {
-    hub.name = 'Parking ' + (hub.display_id || 'Unknown');
-  }
-
-  const priceLabel = formatEuroLabel(resolveScannerTruthPriceEuro(hub, "hourly"));
-
-  const hero = Array.isArray(hub.verification_photos) ? (hub.verification_photos[0] as string) : "";
-  const faqItems: Array<{ q: string; a: string }> = [];
-
-  // Calculate travel time
-  let travelTime = "2 minutes";
-  if (hub.latitude && hub.longitude) {
-    // Default to Split Airport (SPU)
-    let targetLat = 43.538;
-    let targetLng = 16.298;
-
-    // Allow overriding target coordinates via metadata (e.g. for other airports)
-    if (hub.verification_metadata && 
-        typeof hub.verification_metadata.target_lat === 'number' && 
-        typeof hub.verification_metadata.target_lng === 'number') {
-      targetLat = hub.verification_metadata.target_lat;
-      targetLng = hub.verification_metadata.target_lng;
-    }
-    
-    const R = 6371; // Radius of the earth in km
-    const dLat = (targetLat - hub.latitude) * (Math.PI / 180);
-    const dLon = (targetLng - hub.longitude) * (Math.PI / 180);
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(hub.latitude * (Math.PI / 180)) * Math.cos(targetLat * (Math.PI / 180)) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-    const d = R * c; // Distance in km
-    
-    const minutes = Math.ceil(d * 2 + 1);
-    const capped = Math.min(minutes, 5);
-    travelTime = `${capped} minutes`;
-  }
-
-  return { hub, priceLabel, hero, faqItems, travelTime };
+  canonical_slug: string;
+  address: string;
+  city: string;
+  country: string;
+  postal_code: string;
+  lat: number;
+  lng: number;
+  base_price_hourly: number;
+  base_price_daily: number;
+  base_price_monthly: number;
+  photo_url: string;
+  rating: number;
+  review_count: number;
 }
 
-export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const params = await props.params;
-  const data = await fetchHub(params.slug);
+export default function LocationPage({ params }: { params: Promise<{ slug: string }> }) {
+  const [location, setLocation] = useState<LocationData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!data) {
-    return {
-      title: "Parking Location | PayParq",
-      description: "Find and book secure parking with PayParq.",
-    };
-  }
+  useEffect(() => {
+    params.then(({ slug }) => {
+      fetchLocation(slug);
+    });
+  }, [params]);
 
-  const { hub, priceLabel, travelTime } = data;
-  // Parse Croatian addresses robustly — formats vary (full 6-part vs. short municipality-only)
-  const addrParts = hub.address ? hub.address.split(",").map((s: string) => s.trim()) : [];
-  const _isAdmin = (p: string) => /^(?:Općina|Grad|Gradska\s+četvrt)\s+/i.test(p);
-  const _isRegion = (p: string) => /županija/i.test(p);
-  const _isPostal = (p: string) => /^\d{5}$/.test(p);
-  const _isCountry = (p: string) => /^hrvatska$/i.test(p);
-  const _stripAdmin = (p: string) => p.replace(/^(?:Općina|Grad|Gradska\s+četvrt)\s+/i, "").trim();
-  const hasStreet = addrParts.length >= 4 && !_isAdmin(addrParts[0]);
-  const city = (() => {
-    const candidates = hasStreet ? addrParts.slice(1) : addrParts;
-    for (const p of candidates) {
-      if (_isRegion(p) || _isPostal(p) || _isCountry(p)) continue;
-      return _stripAdmin(p);
+  const fetchLocation = async (slug: string) => {
+    if (!supabase) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select(
+          'id, name, canonical_slug, address, city, country, postal_code, lat, lng, ' +
+          'base_price_hourly, base_price_daily, base_price_monthly, photo_url, rating, review_count'
+        )
+        .eq('canonical_slug', slug)
+        .single();
+
+      if (error) throw error;
+      setLocation(data);
+    } catch (error) {
+      console.error('Failed to fetch location:', error);
+    } finally {
+      setLoading(false);
     }
-    return (addrParts[0] ? _stripAdmin(addrParts[0]) : '') || hub.name;
-  })();
-  const address = hub.address || hub.name;
-  const url = `https://payparq.ai/locations/${hub.canonical_slug}`;
-  const heroImage = Array.isArray(hub.verification_photos) && hub.verification_photos[0]
-    ? hub.verification_photos[0] as string
-    : undefined;
-
-  const title = `Parking ${city} | PayParq – From ${priceLabel}/hr`;
-  const description = `Secure parking at ${address}. ${travelTime} transfer to your destination. From ${priceLabel}/hr – AI camera monitoring, no ticket needed, instant booking on PayParq.`;
-
-  return {
-    title,
-    description,
-    alternates: { canonical: url },
-    openGraph: {
-      title,
-      description,
-      url,
-      siteName: "PayParq",
-      type: "website",
-      locale: "hr_HR",
-      ...(heroImage ? { images: [{ url: heroImage, width: 1200, height: 630, alt: `PayParq ${city} parking` }] } : {}),
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      ...(heroImage ? { images: [heroImage] } : {}),
-    },
   };
-}
 
-export default async function LocationPage(props: { params: Promise<{ slug: string }> }) {
-  const params = await props.params;
-  console.log('=== LOCATION PAGE DEBUG ===');
-  console.log('1. Slug received:', params?.slug);
-  console.log('2. supabaseAdmin exists?', !!supabaseAdmin);
-
-  if (!params?.slug || typeof params.slug !== "string") {
-    return (
-      <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
-        <SiteHeader />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-2">
-            <p className="text-sm text-white/70">Location not found</p>
-            <Link href="/locations" className="text-xs font-semibold underline">
-              Back to Locations
-            </Link>
-          </div>
-        </main>
-        <FooterBrand />
-      </div>
-    );
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
-  const data = await fetchHub(params.slug);
-  if (!data) {
-    console.error('[locations/[slug]] not found for canonical_slug:', params.slug);
-    return (
-      <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
-        <SiteHeader />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-2">
-            <p className="text-sm text-white/70">Location not found</p>
-            <Link href="/locations" className="text-xs font-semibold underline">
-              Back to Locations
-            </Link>
-          </div>
-        </main>
-        <FooterBrand />
-      </div>
-    );
+  if (!location) {
+    return <div className="flex items-center justify-center min-h-screen">Location not found</div>;
   }
-  
-  const { hub, priceLabel } = data;
-  const hubUrl = `https://www.payparq.com/locations/${hub.canonical_slug ?? params.slug}`;
 
-  const localBusinessLd = {
-    "@context": "https://schema.org",
-    "@type": "ParkingFacility",
-    "@id": `${hubUrl}#parking`,
-    "name": hub.name,
-    "url": hubUrl,
-    "description": `Secure parking at ${hub.name}. From ${priceLabel}/hr — AI camera monitoring, no ticket needed, instant booking on PayParq.`,
-    "priceRange": priceLabel,
-    "openingHours": "Mo-Su 00:00-24:00",
-    "paymentAccepted": "Credit Card, Debit Card",
-    "currenciesAccepted": "EUR",
-    ...(hub.address ? {
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": hub.address.split(",")[0]?.trim() ?? hub.address,
-        "addressCountry": "HR",
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://www.payparq.com';
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: siteUrl,
       },
-    } : {}),
-    ...(hub.latitude && hub.longitude ? {
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": hub.latitude,
-        "longitude": hub.longitude,
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: location.city,
+        item: `${siteUrl}/guides/${location.city.toLowerCase().replace(/\s+/g, '-')}`,
       },
-    } : {}),
-    "image": Array.isArray(hub.verification_photos) && hub.verification_photos[0]
-      ? hub.verification_photos[0]
-      : undefined,
-    "brand": { "@type": "Brand", "name": "PayParq" },
-    "amenityFeature": [
-      { "@type": "LocationFeatureSpecification", "name": "AI License Plate Recognition", "value": true },
-      { "@type": "LocationFeatureSpecification", "name": "24/7 Surveillance", "value": true },
-      { "@type": "LocationFeatureSpecification", "name": "Online Booking", "value": true },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: location.name,
+        item: `${siteUrl}/locations/${location.canonical_slug}`,
+      },
     ],
-    ...(hub.review_score && hub.review_count ? {
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": hub.review_score.toFixed(1),
-        "ratingCount": hub.review_count,
-        "bestRating": "5",
-        "worstRating": "1",
-      },
-    } : {}),
-    "offers": {
-      "@type": "AggregateOffer",
-      "priceCurrency": "EUR",
-      "lowPrice": Math.max(0.5, (hub.rate_per_hour || 2) - 1).toFixed(2),
-      "highPrice": ((hub.rate_per_hour || 2) + 2).toFixed(2),
-      "offerCount": hub.capacity || hub.total_spots || 10,
-      "availability": "https://schema.org/InStock",
+  };
+
+  const localBusinessSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: location.name,
+    image: location.photo_url,
+    description: `Parking at ${location.name} in ${location.city}`,
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: location.address,
+      addressLocality: location.city,
+      addressCountry: location.country,
+      postalCode: location.postal_code,
+    },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: location.lat,
+      longitude: location.lng,
+    },
+    priceRange: `${location.base_price_hourly}€-${location.base_price_daily}€`,
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: location.rating,
+      reviewCount: location.review_count,
     },
   };
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessLd) }} />
-      <LocationClient hub={data.hub} priceLabel={data.priceLabel} hero={data.hero} faqItems={data.faqItems} travelTime={data.travelTime} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
+      />
+
+      <div className="min-h-screen bg-white">
+        {/* Hero Image */}
+        {location.photo_url && (
+          <div className="relative w-full h-96 overflow-hidden">
+            <img
+              src={location.photo_url}
+              alt={location.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">{location.name}</h1>
+            <div className="flex items-center gap-2 text-gray-600">
+              <MapPin size={20} />
+              <span>
+                {location.address}, {location.city}, {location.country}
+              </span>
+            </div>
+          </div>
+
+          {/* Rating */}
+          {location.rating > 0 && (
+            <div className="flex items-center gap-2 mb-8">
+              <div className="flex items-center">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    size={20}
+                    className={i < Math.round(location.rating) ? 'fill-yellow-400' : 'text-gray-300'}
+                  />
+                ))}
+              </div>
+              <span className="text-lg font-semibold">
+                {location.rating}/5 ({location.review_count} reviews)
+              </span>
+            </div>
+          )}
+
+          {/* Pricing */}
+          <div className="bg-gray-50 rounded-lg p-6 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Pricing</h2>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="text-gray-600">Hourly</p>
+                <p className="text-2xl font-bold text-blue-600">{location.base_price_hourly}€</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Daily</p>
+                <p className="text-2xl font-bold text-blue-600">{location.base_price_daily}€</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Monthly</p>
+                <p className="text-2xl font-bold text-blue-600">{location.base_price_monthly}€</p>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-blue-700 transition">
+            Book Now
+          </button>
+        </div>
+      </div>
     </>
   );
-}
-
-export const revalidate = 300;
-export const dynamicParams = true;
-
-export async function generateStaticParams() {
-  try {
-    const client = supabaseAdmin ?? supabaseClient;
-    if (!client) {
-      console.error('Supabase client not configured for static generation');
-      return [];
-    }
-    const { data: locations } = await client
-      .from("locations")
-      .select("canonical_slug,display_id,name,verification_metadata")
-      .contains("verification_metadata", { hub_enabled: true })
-      .limit(500);
-    const slugs = (locations || []).flatMap((loc: { canonical_slug?: string | null; display_id?: string; name?: string }) => {
-      if (loc.canonical_slug?.trim()) return [loc.canonical_slug.trim().toLowerCase()];
-      // For locations without canonical_slug, build slug from name + display_id
-      if (loc.display_id) {
-        const namePart = String(loc.name || '').toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
-        return [namePart ? `${namePart}-${loc.display_id}` : loc.display_id];
-      }
-      return [];
-    });
-    return slugs.map((slug) => ({ slug }));
-  } catch {
-    return [];
-  }
 }
