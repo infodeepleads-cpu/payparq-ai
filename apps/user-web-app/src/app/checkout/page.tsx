@@ -864,12 +864,12 @@ function PaidCheckoutForm({
               <a href="/terms" className="underline hover:text-gray-600">Terms of Service</a>
             </p>
 
-            {/* CTA - Hidden on mobile */}
-            {!isMobile && (
+            {/* CTA - Visible but secondary on mobile */}
+            {(!isMobile || showPaymentOptions) && (
               <button
                 type="submit"
                 disabled={!stripe || submitting}
-                className="w-full py-4 rounded-lg font-bold text-base text-white disabled:opacity-60 transition-opacity shadow-sm bg-blue-600 hover:bg-blue-700"
+                className={`w-full py-4 rounded-lg font-bold text-base text-white disabled:opacity-60 transition-opacity shadow-sm ${isMobile && showPaymentOptions ? 'bg-gray-600 hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'}`}
               >
                 {submitting ? 'Obrada...' : isFree ? 'Potvrdi - Besplatno' : 'Plaćajte'}
               </button>
