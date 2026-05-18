@@ -2364,7 +2364,7 @@ export function SearchPage() {
           </div>
 
           {/* Details Content */}
-          <div className="w-full bg-white overflow-y-auto flex-1">
+          <div className="w-full bg-white overflow-y-scroll flex-1">
             <div className="px-4 pb-6 space-y-0">
               {/* Photo Carousel */}
               {selectedListing.photos && selectedListing.photos.length > 0 && (
@@ -2431,7 +2431,7 @@ export function SearchPage() {
                   setShowVehicleModal(true);
                   setVehicleCheckResult(null);
                 }}
-                className="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 flex items-start gap-3 cursor-pointer transition-colors border-b border-gray-200 -mx-4 -mt-4"
+                className="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 flex items-start gap-3 cursor-pointer transition-colors border-b border-gray-200 -mx-4 -mt-1"
               >
                 <div className="flex items-center gap-3 flex-1">
                   <Info className="w-4 h-4 text-gray-600 flex-shrink-0" />
