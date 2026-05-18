@@ -2453,19 +2453,33 @@ export function SearchPage() {
               </div>
 
               {/* Location Information Widget */}
-              <div className="w-full bg-white border-b border-gray-200 -mx-4">
-                <div className="font-bold text-white bg-black px-4 py-1.5 flex items-center justify-start text-sm rounded-r-lg w-fit">
+              <div className="flex-shrink-0 w-full bg-white border-b border-gray-200 overflow-hidden">
+                {/* Black Badge Header */}
+                <div className="font-bold text-white bg-black px-2 flex items-center justify-start" style={{ fontSize: '12px', paddingRight: '24px', paddingTop: '6px', paddingBottom: '6px', borderRadius: '0 0 16px 0' }}>
                   Lokacija
                 </div>
-                <div className="px-4 py-3 space-y-2">
-                  <p className="font-semibold text-gray-900 text-sm truncate">{selectedListing.address}</p>
-                  <div className="flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span className="text-xs font-semibold text-gray-900">{selectedListing.rating}</span>
-                    <span className="text-xs text-gray-500">({selectedListing.reviews})</span>
+
+                {/* Location Content - Card Style */}
+                <div className="px-8 py-6 space-y-3">
+                  {/* Address */}
+                  <p className="font-semibold text-gray-900" style={{ fontSize: '18px' }}>{selectedListing.address}</p>
+
+                  {/* Rating */}
+                  <div className="flex items-center gap-1 text-sm font-semibold">
+                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                    {selectedListing.reviews > 0 ? (
+                      <>
+                        <span className="text-gray-900">{selectedListing.rating}</span>
+                        <span className="text-gray-900">({selectedListing.reviews})</span>
+                      </>
+                    ) : (
+                      <span className="text-gray-900">Novi objekt</span>
+                    )}
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-900">
-                    <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+
+                  {/* Walking Distance */}
+                  <div className="flex items-center gap-1 text-sm font-semibold text-gray-900">
+                    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="13" cy="3" r="2"/>
                       <path d="M11 6.5L8 12l3 1"/>
                       <path d="M13 6.5l1.5 3-3 2.5 1 5.5"/>
