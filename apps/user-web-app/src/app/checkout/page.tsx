@@ -781,7 +781,7 @@ function PaidCheckoutForm({
               <a href="/terms" className="underline hover:text-gray-600">Terms of Service</a>
             </p>
 
-            {/* Mobile: Google Pay button + Change button | Desktop: CTA button */}
+            {/* Mobile: Single button (GPay > APay > Card) + Change link + CTA | Desktop: CTA button */}
             {isMobile ? (
               <div className="space-y-3">
                 <ExpressCheckoutElement
@@ -809,22 +809,62 @@ function PaidCheckoutForm({
                     if (error) console.error(error);
                   }}
                 />
+
                 <button
                   type="button"
                   onClick={() => setShowPaymentOptions(!showPaymentOptions)}
-                  className="w-full py-3 px-4 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+                  className="text-xs font-medium text-blue-600 hover:text-blue-700 py-2"
                 >
                   Promijeni
                 </button>
+
+                <button
+                  type="submit"
+                  disabled={!stripe || submitting}
+                  className="w-full py-4 rounded-lg font-bold text-base text-white disabled:opacity-60 transition-opacity shadow-sm bg-blue-600 hover:bg-blue-700"
+                >
+                  {submitting ? 'Obrada...' : isFree ? 'Potvrdi - Besplatno' : 'Plaćajte'}
+                </button>
+
                 {showPaymentOptions && (
-                  <PaymentElement
-                    options={{
-                      layout: { type: 'accordion' },
-                      paymentMethodOrder: ['card', 'apple_pay', 'paypal'],
-                      wallets: { googlePay: 'never', applePay: 'auto' },
-                      fields: { billingDetails: { email: 'never', phone: 'never' } },
-                    }}
-                  />
+                  <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
+                    <div className="border-b pb-3">
+                      <p className="text-xs font-semibold text-gray-600 mb-3">Odaberite način plaćanja</p>
+                      <ExpressCheckoutElement
+                        options={{ wallets: { googlePay: 'never', applePay: 'always' } }}
+                        onConfirm={async () => {
+                          if (!stripe || !elements) return;
+                          if (clientSecret && clientSecret !== 'free') {
+                            const piId = clientSecret.split('_secret_')[0];
+                            if (piId?.startsWith('pi_')) {
+                              try {
+                                await fetch('/api/stripe/payment-intent', {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ payment_intent_id: piId, email, plate, phone }),
+                                });
+                              } catch { /* non-blocking */ }
+                            }
+                          }
+                          const piId = clientSecret && clientSecret !== 'free' ? clientSecret.split('_secret_')[0] : '';
+                          const successUrl = piId ? `${window.location.origin}/success?payment_intent=${piId}` : `${window.location.origin}/success`;
+                          const { error } = await stripe.confirmPayment({
+                            elements,
+                            confirmParams: { return_url: successUrl },
+                          });
+                          if (error) console.error(error);
+                        }}
+                      />
+                    </div>
+                    <PaymentElement
+                      options={{
+                        layout: { type: 'accordion' },
+                        paymentMethodOrder: ['card', 'paypal'],
+                        wallets: { googlePay: 'never', applePay: 'never' },
+                        fields: { billingDetails: { email: 'never', phone: 'never' } },
+                      }}
+                    />
+                  </div>
                 )}
               </div>
             ) : (
