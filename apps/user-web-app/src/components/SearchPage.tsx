@@ -2453,7 +2453,7 @@ export function SearchPage() {
               </div>
 
               {/* Location Information Widget */}
-              <div className="flex-shrink-0 w-full bg-white border-b border-gray-200 overflow-hidden -ml-[23px]">
+              <div className="flex-shrink-0 w-full bg-white border-b border-gray-200 overflow-hidden -ml-[15px]">
                 {/* Black Badge Header */}
                 <div className="font-bold text-white bg-black px-2 flex items-center justify-start" style={{ fontSize: '12px', paddingRight: '24px', paddingTop: '6px', paddingBottom: '6px', borderRadius: '0 0 16px 0' }}>
                   Lokacija
@@ -2713,19 +2713,13 @@ export function SearchPage() {
             </div>
 
             {/* Sticky Footer - Book Now Button */}
-            <div className="sticky bottom-0 px-4 py-3 border-t border-gray-200 bg-white space-y-2">
+            <div className="sticky bottom-0 px-4 py-6 border-t border-gray-200 bg-white flex items-center justify-center">
               <a
                 href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
-                className="block w-full px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
+                className="block w-full px-5 py-5 bg-blue-500 text-white text-base font-bold rounded-lg hover:bg-blue-700 transition-colors text-center"
               >
                 Rezervirajte sada — €{totalPrice.toFixed(2)}
               </a>
-              <button
-                onClick={() => setShowMobileDetails(false)}
-                className="w-full px-4 py-2 border border-gray-300 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-50"
-              >
-                Zatvori
-              </button>
             </div>
           </div>
         </div>
