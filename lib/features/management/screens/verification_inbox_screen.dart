@@ -73,6 +73,23 @@ class _VerificationInboxScreenState
     final submittedAt = loc['verification_submitted_at'] != null
         ? DateTime.parse(loc['verification_submitted_at'])
         : null;
+    final Map<String, dynamic> metadata = loc['verification_metadata'] is Map
+        ? loc['verification_metadata']
+        : {};
+    final ownerName = metadata['owner_name'] ?? 'N/A';
+    final ownerPhone = metadata['owner_phone'] ?? 'N/A';
+    final address = loc['address'] ?? 'N/A';
+
+    // Extract toggles
+    final wantPartnership = metadata['want_partnership'] ?? false;
+    final wantQR = metadata['want_qr_pay'] ?? false;
+    final wantLPR = metadata['want_lpr'] ?? false;
+    final wantDashboard = metadata['want_dashboard'] ?? false;
+    final wantMarketing = metadata['want_marketing'] ?? false;
+    final wantSafeBrand = metadata['want_safe_brand'] ?? false;
+    final wantReferral = metadata['want_referral'] ?? false;
+    final wantOperativePartner = metadata['want_operative_partner'] ?? false;
+
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -94,19 +111,85 @@ class _VerificationInboxScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Host Details Section
                       Text(
-                        'Submitted on: ${submittedAt != null ? DateFormat('MMM dd, yyyy HH:mm').format(submittedAt) : 'N/A'}',
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Verification Photos (${photos.length})',
+                        'HOST DETAILS',
                         style: GoogleFonts.inter(
-                          fontSize: 20,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[800]!),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildDetailRow('Owner:', ownerName),
+                            const SizedBox(height: 8),
+                            _buildDetailRow('Phone:', ownerPhone),
+                            const SizedBox(height: 8),
+                            _buildDetailRow('Address:', address),
+                            const SizedBox(height: 8),
+                            _buildDetailRow(
+                              'Submitted:',
+                              submittedAt != null
+                                  ? DateFormat('MMM dd, yyyy HH:mm').format(submittedAt)
+                                  : 'N/A',
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Partnership Preferences Section
+                      Text(
+                        'PARTNERSHIP PREFERENCES',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[800]!),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildToggleRow('Partnership Program', wantPartnership),
+                            const SizedBox(height: 8),
+                            _buildToggleRow('QR Pay', wantQR),
+                            const SizedBox(height: 8),
+                            _buildToggleRow('Dashboard + LPR', wantDashboard || wantLPR),
+                            const SizedBox(height: 8),
+                            _buildToggleRow('Marketing + Safe Brand', wantMarketing || wantSafeBrand),
+                            const SizedBox(height: 8),
+                            _buildToggleRow('Referral Program', wantReferral),
+                            const SizedBox(height: 8),
+                            _buildToggleRow('Help Find Operative Partner', wantOperativePartner),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'VERIFICATION PHOTOS',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       const SizedBox(height: 16),
                       GridView.builder(
                         shrinkWrap: true,
@@ -211,6 +294,69 @@ class _VerificationInboxScreenState
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.grey,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildToggleRow(String label, bool isEnabled) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: isEnabled ? Colors.green.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: isEnabled ? Colors.green : Colors.grey,
+              width: 0.5,
+            ),
+          ),
+          child: Text(
+            isEnabled ? '✓ Yes' : '✗ No',
+            style: TextStyle(
+              color: isEnabled ? Colors.green : Colors.grey,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
