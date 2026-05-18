@@ -147,7 +147,7 @@ function SummaryPanel({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 md:sticky md:top-8 p-4 md:p-6 space-y-4 md:space-y-6 overflow-hidden">
+    <div className="bg-white rounded-none md:rounded-lg border-0 md:border md:border-gray-200 md:sticky md:top-8 p-2 md:p-6 space-y-4 md:space-y-6 overflow-hidden">
       <div className="hidden lg:block">
         <p className="text-sm font-semibold text-gray-900 mb-1">{locationName}</p>
         <p className="text-xs text-gray-600 mb-2">{address || locationId}</p>
@@ -655,8 +655,8 @@ function PaidCheckoutForm({
       </header>
 
       {/* Body */}
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8 items-start">
+      <div className="max-w-4xl mx-auto px-2 md:px-6 py-0 md:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-0 md:gap-8 items-start">
 
           {/* ── Left: summary ── */}
           <SummaryPanel
@@ -684,10 +684,10 @@ function PaidCheckoutForm({
           />
 
           {/* ── Right: form ── */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-0 md:space-y-4 px-0 md:px-0">
 
             {/* Contact Info Display Widget */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-5">
+            <div className="bg-white rounded-none md:rounded-lg border-0 md:border md:border-gray-200 p-2 md:p-6 space-y-5">
               <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Contact Info</p>
               <div className="space-y-3">
                 <div>
