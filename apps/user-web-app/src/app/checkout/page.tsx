@@ -793,9 +793,25 @@ function PaidCheckoutForm({
                     {showPaymentOptions ? 'Zatvori opcije' : 'Promijeni'}
                   </button>
 
-                  <div style={{ transform: 'scale(1.3)', transformOrigin: 'top center', marginBottom: '0.75rem', marginLeft: '8px', marginRight: '8px' }}>
+                  <div style={{ transform: 'scale(1.1)', transformOrigin: 'top center', marginBottom: '0.75rem', marginLeft: '8px', marginRight: '8px' }}>
                     <ExpressCheckoutElement
-                    options={{ wallets: { googlePay: !showPaymentOptions ? 'always' : 'never', applePay: showPaymentOptions ? 'always' : 'never' } }}
+                    options={{
+                      wallets: { googlePay: !showPaymentOptions ? 'always' : 'never', applePay: showPaymentOptions ? 'always' : 'never' },
+                      appearance: {
+                        theme: 'flat',
+                        variables: {
+                          colorPrimary: '#2563eb',
+                          colorBackground: '#ffffff',
+                          fontFamily: 'system-ui, -apple-system, sans-serif',
+                          spacingUnit: '4px',
+                          borderRadius: '8px',
+                        },
+                        rules: {
+                          '.Tab': { boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', padding: '16px' },
+                          '.Button': { padding: '12px 16px', fontSize: '16px', fontWeight: 'bold', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' },
+                        }
+                      }
+                    }}
                     onConfirm={async () => {
                     if (!stripe || !elements) return;
                     if (clientSecret && clientSecret !== 'free') {
@@ -830,6 +846,19 @@ function PaidCheckoutForm({
                         paymentMethodOrder: ['card', 'paypal'],
                         wallets: { googlePay: 'never', applePay: 'never' },
                         fields: { billingDetails: { email: 'never', phone: 'never' } },
+                        appearance: {
+                          theme: 'flat',
+                          variables: {
+                            colorPrimary: '#2563eb',
+                            colorBackground: '#ffffff',
+                            fontFamily: 'system-ui, -apple-system, sans-serif',
+                            borderRadius: '8px',
+                          },
+                          rules: {
+                            '.Tab': { boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', padding: '12px' },
+                            '.Input': { padding: '10px 12px', borderRadius: '6px' },
+                          }
+                        }
                       }}
                     />
                     <button
