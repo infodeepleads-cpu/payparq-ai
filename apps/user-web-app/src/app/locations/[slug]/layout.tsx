@@ -39,34 +39,36 @@ export async function generateMetadata({
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.payparq.com";
   const priceRange =
-    location.base_price_hourly && location.base_price_daily
+    location && location.base_price_hourly && location.base_price_daily
       ? `${location.base_price_hourly}€-${location.base_price_daily}€`
       : "Kontaktirajte za cijenu";
 
   return {
-    title: `${location.name} Parking in ${location.city} | Payparq`,
-    description: `Parking at ${location.name} in ${location.city}. ${location.review_count || 0} reviews, rated ${location.rating || "N/A"}/5. Hourly from ${location.base_price_hourly || "N/A"}€.`,
-    canonical: `${siteUrl}/locations/${location.canonical_slug}`,
+    title: `${location?.name || "Parking"} Parking in ${location?.city || "Location"} | Payparq`,
+    description: `Parking at ${location?.name}. ${location?.review_count || 0} reviews, rated ${location?.rating || "N/A"}/5. Hourly from ${location?.base_price_hourly || "N/A"}€.`,
+    alternates: {
+      canonical: `${siteUrl}/locations/${location?.canonical_slug}`,
+    },
     keywords: [
-      `parking ${location.city}`,
-      `${location.name} parking`,
-      location.city,
-      location.country,
+      `parking ${location?.city}`,
+      `${location?.name} parking`,
+      location?.city || "",
+      location?.country || "",
       "parkiranje",
       "parking",
-    ],
+    ].filter(Boolean),
     openGraph: {
-      title: `Parking at ${location.name} in ${location.city}`,
-      description: `Book safe parking at ${location.name}. From ${location.base_price_hourly || "N/A"}€/hour. ${location.review_count || 0} reviews.`,
+      title: `Parking at ${location?.name}`,
+      description: `Book safe parking at ${location?.name}. From ${location?.base_price_hourly || "N/A"}€/hour. ${location?.review_count || 0} reviews.`,
       type: "website",
-      url: `${siteUrl}/locations/${location.canonical_slug}`,
-      images: location.photo_url ? [location.photo_url] : [],
+      url: `${siteUrl}/locations/${location?.canonical_slug}`,
+      images: location?.photo_url ? [location.photo_url] : [],
     },
     twitter: {
       card: "summary_large_image",
-      title: `Parking at ${location.name} in ${location.city}`,
-      description: `Safe parking from ${location.base_price_hourly || "N/A"}€/hour`,
-      images: location.photo_url ? [location.photo_url] : [],
+      title: `Parking at ${location?.name}`,
+      description: `Safe parking from ${location?.base_price_hourly || "N/A"}€/hour`,
+      images: location?.photo_url ? [location.photo_url] : [],
     },
   };
 }
