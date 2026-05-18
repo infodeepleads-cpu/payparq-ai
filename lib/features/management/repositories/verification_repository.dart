@@ -18,13 +18,26 @@ class VerificationRepository {
     final data = await _client
         .from('locations')
         .select(
-            'id, name, display_id, verification_status, verification_photos, verification_submitted_at, is_run_by_payparq')
+            'id, name, display_id, verification_status, verification_photos, verification_submitted_at, is_run_by_payparq, verification_metadata, owner_id, address')
         .eq('verification_status', 'pending')
         .order('verification_submitted_at', ascending: false);
     return (data as List)
         .whereType<Map>()
         .map((item) => Map<String, dynamic>.from(item))
         .toList();
+  }
+
+  Future<String?> fetchOwnerEmail(String ownerId) async {
+    try {
+      final data = await _client
+          .from('profiles')
+          .select('email')
+          .eq('id', ownerId)
+          .single();
+      return data['email'] as String?;
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<void> updateVerificationStatus(
