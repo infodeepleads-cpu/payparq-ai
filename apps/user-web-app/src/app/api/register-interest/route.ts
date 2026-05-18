@@ -37,14 +37,25 @@ export async function POST(request: NextRequest) {
 
     // Add to locations table for mobile scanner inbox (registration interest - read-only)
     try {
+      const timestamp = Date.now();
       const { error: locationErr } = await supabase
         .from('locations')
         .insert({
-          owner_email: email,
-          owner_phone: phone,
-          country_code: country,
-          verification_status: 'registration_interest',
+          name: `Host Interest - ${email}`,
+          address: `Registration Inquiry`,
+          display_id: String((timestamp % 90000) + 10000),
+          canonical_slug: `registration-interest-${timestamp}`,
+          verification_status: 'pending',
           verification_submitted_at: new Date().toISOString(),
+          verification_metadata: {
+            contact_email: email,
+            owner_phone: phone,
+            country: country,
+            source: 'landing_page_registration',
+          },
+          capacity: 0,
+          total_spots: 0,
+          occupancy: 0,
         });
       if (locationErr) {
         console.error('Location insert error:', locationErr);
