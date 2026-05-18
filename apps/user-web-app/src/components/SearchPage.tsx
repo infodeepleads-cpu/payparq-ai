@@ -2422,19 +2422,6 @@ export function SearchPage() {
                       </div>
                     )}
                   </div>
-                  {selectedListing.photos.length > 1 && (
-                    <div className="flex gap-1 mt-2 px-4">
-                      {selectedListing.photos.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setPhotoIndex(idx)}
-                          className={`flex-1 h-1 rounded-full transition-colors ${
-                            idx === photoIndex ? 'bg-blue-500' : 'bg-gray-300'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -2444,7 +2431,7 @@ export function SearchPage() {
                   setShowVehicleModal(true);
                   setVehicleCheckResult(null);
                 }}
-                className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center gap-3 justify-center cursor-pointer transition-colors border-b border-gray-200 -mx-4 mb-4"
+                className="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 flex items-start gap-3 cursor-pointer transition-colors border-b border-gray-200"
               >
                 <div className="flex items-center gap-3 flex-1">
                   <Info className="w-4 h-4 text-gray-600 flex-shrink-0" />
@@ -2457,7 +2444,7 @@ export function SearchPage() {
               </button>
 
               {/* Book Now Suggestion Widget */}
-              <div className="flex-shrink-0 w-full px-4 py-3 bg-amber-100 flex items-center gap-3 justify-center border-b border-amber-300 -mx-4 mb-4">
+              <div className="flex-shrink-0 w-full px-6 py-4 bg-amber-100 flex items-start gap-3 border-b border-amber-300">
                 <AlertCircle className="w-4 h-4 text-amber-700 flex-shrink-0" />
                 <div className="text-center">
                   <p className="text-xs font-semibold text-gray-900">Predlažemo da rezervirate odmah.</p>
