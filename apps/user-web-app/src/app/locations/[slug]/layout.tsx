@@ -40,7 +40,7 @@ async function getLocationData(slug: string): Promise<LocationData | null> {
       return null;
     }
 
-    return data as LocationData;
+    return (data as unknown) as LocationData;
   } catch (error) {
     console.error("Failed to fetch location metadata:", error);
     return null;
