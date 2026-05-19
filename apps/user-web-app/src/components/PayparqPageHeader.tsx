@@ -17,7 +17,7 @@ export function PayparqPageHeader({ title, onBack, lineColor = 'violet' }: Paypa
         <div className="flex items-center justify-between">
           {/* LEFT: Logo */}
           <div className="flex items-center gap-3 flex-shrink-0">
-            <div className="w-8 h-8 rounded-full bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-white/95 flex items-center justify-center">
               <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#020617] to-[#020617] flex items-center justify-center border border-white/40">
                 <span className="text-xs font-semibold tracking-tight leading-none text-white">
                   P
