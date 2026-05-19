@@ -262,7 +262,6 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
               config={selectedDateConfig}
               lotCapacity={parseInt(lotCapacity)}
               onSave={(config) => handleSaveDate(config)}
-              onDelete={() => handleCloseDate(selectedDate!)}
               onCancel={() => setSelectedDate(null)}
             />
           </div>
@@ -276,11 +275,10 @@ interface DateConfigWidgetProps {
   config: DateConfig;
   lotCapacity: number;
   onSave: (config: DateConfig) => void;
-  onDelete: () => void;
   onCancel: () => void;
 }
 
-function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: DateConfigWidgetProps) {
+function DateConfigWidget({ config, lotCapacity, onSave, onCancel }: DateConfigWidgetProps) {
   const [capacity, setCapacity] = useState(config.capacity ? String(config.capacity) : '');
   const [isOpen, setIsOpen] = useState(config.isOpen);
   const [openTime, setOpenTime] = useState(config.openTime);
@@ -450,12 +448,6 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
           className="flex-1 px-3 md:px-4 py-2.5 md:py-3 border border-gray-300 text-gray-700 rounded-lg text-xs md:text-sm font-medium hover:bg-gray-50 transition-colors"
         >
           Odustani
-        </button>
-        <button
-          onClick={() => onDelete()}
-          className="px-3 md:px-4 py-2.5 md:py-3 border border-red-300 text-red-600 rounded-lg text-xs md:text-sm font-medium hover:bg-red-50 transition-colors"
-        >
-          Obriši
         </button>
         <button
           onClick={() => onSave({

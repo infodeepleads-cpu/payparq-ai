@@ -2705,18 +2705,18 @@ export default function MembersPage() {
                 </div>
               )}
             </div>
-            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+            <div className="rounded-lg border border-black/10 bg-black/2 p-4">
               <p className="text-sm font-semibold text-black mb-3">Revenue & Payouts</p>
               <div className="space-y-2.5">
                 <div>
                   <p className="text-[11px] text-black/60 uppercase font-semibold">Total Revenue</p>
-                  <p className="text-2xl font-bold text-green-700">€0.00</p>
+                  <p className="text-2xl font-bold text-black">€0.00</p>
                 </div>
-                <div className="border-t border-green-200 pt-2.5">
+                <div className="border-t border-black/10 pt-2.5">
                   <p className="text-[11px] text-black/60 uppercase font-semibold">Pending</p>
                   <p className="text-lg font-semibold text-orange-600">€0.00</p>
                 </div>
-                <button className="w-full mt-2 px-3 py-2 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors">
+                <button className="w-full mt-2 px-3 py-2 rounded-lg bg-black text-white text-xs font-semibold hover:bg-gray-800 transition-colors">
                   View Details
                 </button>
               </div>

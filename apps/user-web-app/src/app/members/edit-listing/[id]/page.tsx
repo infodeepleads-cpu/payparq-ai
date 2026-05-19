@@ -715,8 +715,9 @@ export default function EditListingPage() {
                     className="hidden"
                     onChange={(e) => {
                       if (e.target.files) {
+                        const maxId = formData.photos.length > 0 ? Math.max(...formData.photos.map(p => p.id)) : 0;
                         const newPhotos = Array.from(e.target.files).map((file, idx) => ({
-                          id: Math.max(...formData.photos.map(p => p.id), 0) + idx + 1,
+                          id: maxId + idx + 1,
                           name: file.name.replace(/\.[^/.]+$/, ''),
                           url: URL.createObjectURL(file),
                         }));
