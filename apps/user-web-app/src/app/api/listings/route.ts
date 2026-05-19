@@ -12,7 +12,7 @@ export async function GET() {
     const { data: locations, error } = await client
       .from('locations')
       .select('*')
-      .eq('hub_enabled', true)
+      .eq('verification_status', 'verified')
       .limit(100);
 
     if (error) {
