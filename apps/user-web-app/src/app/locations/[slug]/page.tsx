@@ -46,7 +46,9 @@ export default function LocationPage({ params }: { params: Promise<{ slug: strin
         .single();
 
       if (error) throw error;
-      setLocation(data);
+      if (data) {
+        setLocation(data as unknown as LocationData);
+      }
     } catch (error) {
       console.error('Failed to fetch location:', error);
     } finally {
