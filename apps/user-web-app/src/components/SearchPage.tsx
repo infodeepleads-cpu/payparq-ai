@@ -1563,15 +1563,17 @@ export function SearchPage() {
                 );
               })()}
 
-              {/* Close Button - Top Right */}
-              <button
-                onClick={() => setShowDetailsView(false)}
-                className="absolute top-4 right-4 bg-white/90 hover:bg-white text-gray-900 rounded-lg p-2 shadow-md transition-all z-10"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              {/* Close Button - Top Right (hidden in hubId mode) */}
+              {!isHubIdMode && (
+                <button
+                  onClick={() => setShowDetailsView(false)}
+                  className="absolute top-4 right-4 bg-white/90 hover:bg-white text-gray-900 rounded-lg p-2 shadow-md transition-all z-10"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
 
               {/* Left Arrow */}
               <button
@@ -2376,12 +2378,14 @@ export function SearchPage() {
                 </div>
                 <div className="text-base font-black tracking-tight text-black">payparq</div>
               </div>
-              <button
-                onClick={() => setShowMobileDetails(false)}
-                className="text-gray-600 hover:text-gray-900 text-xl font-bold"
-              >
-                ✕
-              </button>
+              {!isHubIdMode && (
+                <button
+                  onClick={() => setShowMobileDetails(false)}
+                  className="text-gray-600 hover:text-gray-900 text-xl font-bold"
+                >
+                  ✕
+                </button>
+              )}
             </div>
           </div>
 
