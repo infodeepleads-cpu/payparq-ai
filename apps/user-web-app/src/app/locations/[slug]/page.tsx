@@ -70,7 +70,7 @@ export default function LocationPage({ params }: { params: Promise<{ slug: strin
   const hasDateParams = searchParams.has('in') && searchParams.has('out');
 
   return (
-    <div className={hasDateParams ? '' : 'blur-sm'}>
+    <div>
       <LocationClient
         hub={hub}
         priceLabel={`${hub.base_price_hourly || 'Contact'}€/hr`}

@@ -10,6 +10,7 @@ import { BookingModal } from './BookingModal';
 import { DateTimePickerDropdown } from './DateTimePickerDropdown';
 import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
 import { DestinationPickerWidget } from './DestinationPickerWidget';
+import { ScrollableDateTimePicker } from './ScrollableDateTimePicker';
 import { useLocale } from './LocaleProvider';
 import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle, List } from 'lucide-react';
 import { resolveScannerTruthPriceEuro, getViablePrice } from '@/lib/locationPricing';
@@ -93,6 +94,10 @@ export function SearchPage() {
   const { locale } = useLocale();
   const searchParams = useSearchParams();
   const [isHubIdMode, setIsHubIdMode] = useState(false);
+  const [showArrivalPicker, setShowArrivalPicker] = useState(false);
+  const [showDeparturePicker, setShowDeparturePicker] = useState(false);
+  const [arrivalDateTime, setArrivalDateTime] = useState('');
+  const [departureDateTime, setDepartureDateTime] = useState('');
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
     libraries: GOOGLE_MAPS_LIBRARIES,
@@ -230,18 +235,17 @@ export function SearchPage() {
       return listing.pricePerMonth || listing.pricePerHour;
     }
     if (duration < 8) {
-      return listing.pricePerHour;
+      return listing.pricePerHour * duration;
     }
     const hourlyTotal = listing.pricePerHour * duration;
-    const dailyTotal = listing.pricePerDay || listing.pricePerHour;
+    const dailyTotal = listing.pricePerDay || listing.pricePerHour * duration;
     return Math.min(hourlyTotal, dailyTotal);
   };
 
   const subtotal = selectedListing ? (() => {
-    const pricePerUnit = getDisplayPrice(selectedListing, durationHours, reservationType);
-    // For monthly, don't multiply by duration - it's a flat monthly rate
-    const calc = reservationType === 'Mjesečna' ? pricePerUnit : durationHours * pricePerUnit;
-    return parseFloat(calc.toFixed(2));
+    const totalPrice = getDisplayPrice(selectedListing, durationHours, reservationType);
+    // getDisplayPrice already returns total for hourly/daily durations, and flat monthly rate for monthly
+    return parseFloat(totalPrice.toFixed(2));
   })() : 0;
   const serviceFee = parseFloat((0.99 + subtotal * 0.05).toFixed(2));
   const totalPrice = parseFloat((subtotal + serviceFee).toFixed(2));
@@ -262,9 +266,8 @@ export function SearchPage() {
   };
 
   const buildCheckoutUrl = (listing: Parking) => {
-    const pricePerUnit = getDisplayPrice(listing, durationHours, reservationType);
-    const calc = reservationType === 'Mjesečna' ? pricePerUnit : durationHours * pricePerUnit;
-    const sub = parseFloat(calc.toFixed(2));
+    const totalPrice = getDisplayPrice(listing, durationHours, reservationType);
+    const sub = parseFloat(totalPrice.toFixed(2));
     const fee = parseFloat((0.99 + sub * 0.05).toFixed(2));
     const total = parseFloat((showTotalPrice ? sub + fee : sub).toFixed(2));
 
@@ -533,6 +536,13 @@ export function SearchPage() {
     const refreshInterval = setInterval(fetchListings, 60000);
     return () => clearInterval(refreshInterval);
   }, []);
+
+  // Show arrival picker on load when hubId is present
+  useEffect(() => {
+    if (isHubIdMode && !arrivalDateTime) {
+      setShowArrivalPicker(true);
+    }
+  }, [isHubIdMode, arrivalDateTime]);
 
   // Reset photo index when listing selection changes
   useEffect(() => {
@@ -1439,7 +1449,7 @@ export function SearchPage() {
       {/* Desktop: Split layout - 2 column (normal) or 3 column (details view) */}
       <div className="hidden md:flex flex-1 overflow-hidden">
         {/* Parking Lots Cards - hidden when hubId present */}
-        <div className={`flex flex-col overflow-hidden bg-gray-50 border-r border-gray-200 ${searchParams?.get('hubId') ? 'hidden' : showDetailsView ? 'flex-1' : 'w-[35%]'} max-h-[calc(100vh-120px)]`}>
+        <div className={`flex flex-col overflow-hidden bg-gray-50 border-r border-gray-200 ${isHubIdMode ? 'hidden' : showDetailsView ? 'flex-1' : 'w-[35%]'} max-h-[calc(100vh-120px)]`}>
           {/* Sort Dropdown - Top Right */}
           <div className="flex-shrink-0 px-4 py-3 bg-gray-100 border-b border-gray-200 flex justify-end">
             <select
@@ -1926,7 +1936,7 @@ export function SearchPage() {
                     <p className="text-sm text-gray-600">
                       {reservationType === 'Mjesečna'
                         ? `Mjesečna tarifa`
-                        : `${formatDuration()} × €${getDisplayPrice(selectedListing, durationHours, reservationType).toFixed(2)}/h`
+                        : `Cijena parkinga: €${subtotal.toFixed(2)}`
                       }
                     </p>
                     <p className="text-sm font-semibold text-gray-900">€{subtotal.toFixed(2)}</p>
@@ -2058,9 +2068,8 @@ export function SearchPage() {
           >
             {/* Parking lot location markers - Cloud with price (native Marker, no twitch) */}
             {filteredListings.map((listing) => {
-              const pricePerUnit = getDisplayPrice(listing, durationHours, reservationType);
-              const calc = reservationType === 'Mjesečna' ? pricePerUnit : durationHours * pricePerUnit;
-              const subtotal = parseFloat(calc.toFixed(2));
+              const totalPrice = getDisplayPrice(listing, durationHours, reservationType);
+              const subtotal = parseFloat(totalPrice.toFixed(2));
               const price = parseFloat((showTotalPrice ? subtotal + 0.99 + (subtotal * 0.05) : subtotal).toFixed(2));
               const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
               const shouldShowIntegerOnly = showTotalPrice && (reservationType === 'Mjesečna' || price >= 100);
@@ -2203,9 +2212,8 @@ export function SearchPage() {
                 }}
               >
                 {filteredListings.map((listing) => {
-                  const pricePerUnit = getDisplayPrice(listing, durationHours, reservationType);
-                  const calc = reservationType === 'Mjesečna' ? pricePerUnit : durationHours * pricePerUnit;
-                  const subtotal = parseFloat(calc.toFixed(2));
+                  const totalPrice = getDisplayPrice(listing, durationHours, reservationType);
+                  const subtotal = parseFloat(totalPrice.toFixed(2));
                   const price = parseFloat((showTotalPrice ? subtotal + 0.99 + (subtotal * 0.05) : subtotal).toFixed(2));
                   const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
                   const shouldShowIntegerOnly = showTotalPrice && (reservationType === 'Mjesečna' || price >= 100);
@@ -2752,6 +2760,189 @@ export function SearchPage() {
             setEndTime(endTime);
           }}
         />
+      )}
+
+      {/* Arrival Date/Time Picker Modal */}
+      {showArrivalPicker && (
+        <ScrollableDateTimePicker
+          value={arrivalDateTime}
+          onChange={setArrivalDateTime}
+          onConfirm={() => {
+            if (arrivalDateTime) {
+              setShowArrivalPicker(false);
+              setShowDeparturePicker(true);
+            }
+          }}
+          onCancel={() => setShowArrivalPicker(false)}
+          title="Kada dolazite?"
+          subtitle="Odaberite datum i vrijeme dolaska"
+          step="Korak 1 od 2"
+        />
+      )}
+
+      {/* Departure Date/Time Picker Modal */}
+      {showDeparturePicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50">
+          <div className="bg-white w-full md:w-96 rounded-t-3xl md:rounded-3xl p-6 md:p-8 space-y-6">
+            {/* Header */}
+            <div className="text-center space-y-2">
+              <div className="text-sm font-semibold text-black/60 uppercase tracking-wide">Korak 2 od 2</div>
+              <h2 className="text-3xl font-bold text-black">Kada odlazite?</h2>
+              <p className="text-sm text-black/60">Odaberite datum i vrijeme odlaska</p>
+            </div>
+
+            {/* Date Picker */}
+            <div>
+              <label className="text-xs font-semibold text-black/60 mb-2 block">DATUM</label>
+              <div className="border-2 border-gray-300 rounded-2xl p-4 h-32 flex items-center justify-center overflow-hidden bg-gray-50">
+                <div className="flex gap-2 justify-center items-center">
+                  {/* Previous Date */}
+                  {departureDateTime && (
+                    <button
+                      onClick={() => {
+                        const prev = new Date(departureDateTime);
+                        prev.setDate(prev.getDate() - 1);
+                        setDepartureDateTime(prev.toISOString().slice(0, 16));
+                      }}
+                      className="opacity-40 text-center min-w-[80px]"
+                    >
+                      <div className="text-xs text-black/40">
+                        {new Date(new Date(departureDateTime).getTime() - 86400000).toLocaleDateString('hr-HR', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </div>
+                    </button>
+                  )}
+
+                  {/* Current Date */}
+                  <div className="bg-black rounded-xl px-4 py-3 text-white text-center min-w-[100px]">
+                    <div className="text-sm font-bold">
+                      {departureDateTime ? new Date(departureDateTime).toLocaleDateString('hr-HR', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Odaberi'}
+                    </div>
+                    {departureDateTime && (
+                      <div className="text-xs opacity-80">{new Date(departureDateTime).getDate()}. {String(new Date(departureDateTime).getMonth() + 1).padStart(2, '0')}.</div>
+                    )}
+                  </div>
+
+                  {/* Next Date */}
+                  <button
+                    onClick={() => {
+                      const next = new Date(departureDateTime || arrivalDateTime);
+                      next.setDate(next.getDate() + 1);
+                      setDepartureDateTime(next.toISOString().slice(0, 16));
+                    }}
+                    className="opacity-40 text-center min-w-[80px]"
+                  >
+                    <div className="text-xs text-black/40">
+                      {new Date(new Date(departureDateTime || arrivalDateTime).getTime() + 86400000).toLocaleDateString('hr-HR', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Time Picker */}
+            <div>
+              <label className="text-xs font-semibold text-black/60 mb-2 block">VRIJEME</label>
+              <div className="border-2 border-gray-300 rounded-2xl p-4 h-24 flex items-center justify-center bg-gray-50">
+                <div className="flex gap-4 justify-center items-center">
+                  {/* Hour Column */}
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-black">
+                      {departureDateTime ? String(new Date(departureDateTime).getHours()).padStart(2, '0') : '00'}
+                    </div>
+                    <div className="text-xs text-black/40 mt-1">sat</div>
+                  </div>
+
+                  {/* Separator */}
+                  <div className="text-2xl font-bold text-black/40">:</div>
+
+                  {/* Minute Column */}
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-black">
+                      {departureDateTime ? String(new Date(departureDateTime).getMinutes()).padStart(2, '0') : '00'}
+                    </div>
+                    <div className="text-xs text-black/40 mt-1">min</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Time Quick Select */}
+              <div className="grid grid-cols-4 gap-2 mt-3">
+                {[0, 6, 12, 18].map((hour) => (
+                  <button
+                    key={hour}
+                    onClick={() => {
+                      const newDate = new Date(departureDateTime || arrivalDateTime);
+                      newDate.setHours(hour);
+                      newDate.setMinutes(0);
+                      setDepartureDateTime(newDate.toISOString().slice(0, 16));
+                    }}
+                    className={`py-2 px-2 rounded-lg text-sm font-semibold transition-all ${
+                      departureDateTime && new Date(departureDateTime).getHours() === hour
+                        ? 'bg-black text-white'
+                        : 'bg-gray-100 text-black hover:bg-gray-200'
+                    }`}
+                  >
+                    {String(hour).padStart(2, '0')}:00
+                  </button>
+                ))}
+              </div>
+
+              {/* Minute Quick Select */}
+              <div className="grid grid-cols-4 gap-2 mt-2">
+                {[0, 15, 30, 45].map((minute) => (
+                  <button
+                    key={minute}
+                    onClick={() => {
+                      const newDate = new Date(departureDateTime || arrivalDateTime);
+                      newDate.setMinutes(minute);
+                      setDepartureDateTime(newDate.toISOString().slice(0, 16));
+                    }}
+                    className={`py-2 px-2 rounded-lg text-sm font-semibold transition-all ${
+                      departureDateTime && new Date(departureDateTime).getMinutes() === minute
+                        ? 'bg-black text-white'
+                        : 'bg-gray-100 text-black hover:bg-gray-200'
+                    }`}
+                  >
+                    :{String(minute).padStart(2, '0')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Selected Display */}
+            {departureDateTime && (
+              <div className="text-sm text-black/70 text-center px-2">
+                ✓ Odabrano: <span className="font-semibold">{new Date(departureDateTime).toLocaleString('hr-HR')}</span>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="space-y-3 pt-2">
+              <button
+                onClick={() => {
+                  if (departureDateTime) {
+                    setStartTime(arrivalDateTime);
+                    setEndTime(departureDateTime);
+                    setShowDeparturePicker(false);
+                  }
+                }}
+                disabled={!departureDateTime}
+                className="w-full px-6 py-4 bg-black text-white text-lg font-bold rounded-2xl hover:bg-gray-900 disabled:opacity-30 transition-all"
+              >
+                Gotovo
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeparturePicker(false);
+                  setShowArrivalPicker(true);
+                }}
+                className="w-full px-6 py-3 border-2 border-gray-300 rounded-2xl text-black font-semibold hover:bg-gray-50 transition-colors"
+              >
+                Natrag
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
