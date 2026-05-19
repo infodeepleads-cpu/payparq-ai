@@ -12,6 +12,7 @@ export async function GET() {
     const { data: locations, error } = await client
       .from('locations')
       .select('*')
+      .eq('hub_enabled', true)
       .limit(100);
 
     if (error) {
