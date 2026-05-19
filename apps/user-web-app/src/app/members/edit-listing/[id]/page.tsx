@@ -25,6 +25,7 @@ export default function EditListingPage() {
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+    libraries: ['places'],
   });
 
   const [saving, setSaving] = useState(false);
@@ -78,20 +79,43 @@ export default function EditListingPage() {
     try {
       const { data: existing } = await supabase
         .from('locations')
-        .select('verification_metadata')
+        .select('verification_photos')
         .eq('id', id)
         .single();
 
       const meta = existing?.verification_metadata || {};
+      const photoUrls: string[] = [];
 
-      const photoUrls = formData.photos.map(p => p.url);
+      for (const photo of formData.photos) {
+        if (photo.url.startsWith('blob:')) {
+          const response = await fetch(photo.url);
+          const blob = await response.blob();
+          const fileName = `${id}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('locations')
+            .upload(fileName, blob);
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+            continue;
+          }
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('locations')
+            .getPublicUrl(fileName);
+
+          photoUrls.push(publicUrl);
+        } else {
+          photoUrls.push(photo.url);
+        }
+      }
 
       const { error } = await supabase
         .from('locations')
         .update({
           name: formData.name,
           address: formData.address,
-          description: formData.description,
           latitude: formData.latitude ? parseFloat(formData.latitude) : null,
           longitude: formData.longitude ? parseFloat(formData.longitude) : null,
           verification_photos: photoUrls.length > 0 ? photoUrls : null,
@@ -116,12 +140,20 @@ export default function EditListingPage() {
             smartPricing: formData.smartPricing,
             permits: formData.permits,
             postBookingInstructions: formData.postBookingInstructions,
-            photos: formData.photos,
+            additionalDescription: formData.description,
           },
         })
         .eq('id', id);
 
       if (error) throw error;
+
+      const newPhotos = photoUrls.map((url, i) => ({
+        id: i + 1,
+        name: `photo-${i + 1}.jpg`,
+        url,
+      }));
+      setFormData({ ...formData, photos: newPhotos });
+
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
@@ -229,12 +261,19 @@ export default function EditListingPage() {
         postBookingInstructions: data.verification_metadata?.postBookingInstructions || '',
         addPostBookingInfo: !!data.verification_metadata?.postBookingInstructions,
         photos: (() => {
-          const photoUrls = data.verification_photos || data.verification_metadata?.photo_urls || [];
-          return photoUrls.map((url: string, i: number) => ({
-            id: i + 1,
-            name: `photo-${i + 1}.jpg`,
-            url,
-          }));
+          const savedPhotos = data.verification_metadata?.photos || data.verification_photos || [];
+          if (Array.isArray(savedPhotos) && savedPhotos.length > 0) {
+            if (typeof savedPhotos[0] === 'object') {
+              return savedPhotos.filter((p: any) => p.url && !p.url.startsWith('blob:'));
+            }
+            const photoUrls = savedPhotos.filter((url: string) => url && !url.startsWith('blob:'));
+            return photoUrls.map((url: string, i: number) => ({
+              id: i + 1,
+              name: `photo-${i + 1}.jpg`,
+              url,
+            }));
+          }
+          return [];
         })(),
       });
     } catch (err) {
@@ -752,6 +791,23 @@ export default function EditListingPage() {
                 </div>
               )}
               <p className="text-xs text-black/50 mt-2">📍 Koordinate: {formData.latitude}, {formData.longitude}</p>
+            </div>
+
+            {/* Mobile Save Button */}
+            <div className="md:hidden pt-8 border-t border-black/10 space-y-2 sticky bottom-0 bg-white pb-4">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="w-full px-4 py-3 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save All'}
+              </button>
+              <button
+                onClick={() => router.back()}
+                className="w-full px-4 py-3 border border-black/20 rounded-lg text-sm font-semibold text-black hover:bg-black/5 transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
