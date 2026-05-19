@@ -79,7 +79,7 @@ export default function EditListingPage() {
     try {
       const { data: existing } = await supabase
         .from('locations')
-        .select('verification_photos')
+        .select('verification_photos, verification_metadata')
         .eq('id', id)
         .single();
 
@@ -306,6 +306,7 @@ export default function EditListingPage() {
       <PayparqPageHeader
         title="Uredi popis"
         onBack={() => router.back()}
+        lineColor="black"
       />
 
       {/* Success Message */}
