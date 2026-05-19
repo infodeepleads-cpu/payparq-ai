@@ -155,8 +155,15 @@ function SummaryPanel({
       </div>
 
       <div className="lg:hidden">
-        <p className="text-xs font-semibold text-gray-600 text-center">Sesija parkiranja ({durationHours} {durationHours === 1 ? 'sat' : durationHours < 5 ? 'sata' : 'sati'})</p>
-        <p className="font-bold text-gray-900 text-3xl mt-1 text-center">€{amountEur.toFixed(2)}</p>
+        <div className="space-y-2 text-center">
+          <div className="flex items-center justify-center gap-2">
+            <p className="text-sm font-black text-gray-900">{locationName}</p>
+            {displayId && <p className="text-xs font-black text-gray-900">ID: <span className="font-mono font-black text-gray-900">{displayId}</span></p>}
+          </div>
+          <p className="text-xs font-black text-gray-900">{address || locationId}</p>
+        </div>
+        <p className="font-bold text-gray-900 text-3xl mt-4 text-center">€{amountEur.toFixed(2)}</p>
+        <p className="text-xs font-semibold text-gray-600 text-center mt-3">Sesija parkiranja ({durationHours} {durationHours === 1 ? 'sat' : durationHours < 5 ? 'sata' : 'sati'})</p>
       </div>
 
       <div className="border-t border-gray-100 pt-4 md:pt-6">
@@ -688,10 +695,10 @@ function PaidCheckoutForm({
 
             {/* Contact Info Display Widget */}
             <div className="bg-white rounded-none md:rounded-lg border-0 md:border md:border-gray-200 p-2 md:p-6 space-y-5">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Contact Info</p>
+              <p className="text-xs font-black text-gray-900 uppercase tracking-widest">Contact Info</p>
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs font-black text-gray-600 mb-1.5 block leading-none">Email Address</label>
+                  <label className="hidden md:block text-xs font-black text-gray-600 mb-1.5 block leading-none">Email Address</label>
                   <input
                     type="email"
                     placeholder="you@example.com"
@@ -702,7 +709,7 @@ function PaidCheckoutForm({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-black text-gray-600 mb-1.5 block leading-none">Telefon</label>
+                  <label className="hidden md:block text-xs font-black text-gray-600 mb-1.5 block leading-none">Telefon</label>
                   <input
                     type="tel"
                     placeholder="+385 91 234 5678"
@@ -712,7 +719,7 @@ function PaidCheckoutForm({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-black text-gray-600 mb-1.5 block leading-none">Registarska pločica</label>
+                  <label className="text-xs font-black text-gray-900 mb-1.5 block leading-none">Registarska pločica</label>
                   <input
                     type="text"
                     placeholder="ZG-1234-AB"
@@ -724,50 +731,6 @@ function PaidCheckoutForm({
               </div>
             </div>
 
-            {/* Desktop: Payment Method Section */}
-            {!isMobile && (
-              <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6 space-y-4 overflow-hidden">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Način plaćanja</p>
-                <ExpressCheckoutElement
-                  options={{ wallets: { googlePay: 'always', applePay: 'always' } }}
-                  onConfirm={async () => {
-                    if (!stripe || !elements) return;
-                    if (clientSecret && clientSecret !== 'free') {
-                      const piId = clientSecret.split('_secret_')[0];
-                      if (piId?.startsWith('pi_')) {
-                        try {
-                          await fetch('/api/stripe/payment-intent', {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ payment_intent_id: piId, email, plate, phone }),
-                          });
-                        } catch { /* non-blocking */ }
-                      }
-                    }
-                    const piId = clientSecret && clientSecret !== 'free' ? clientSecret.split('_secret_')[0] : '';
-                    const successUrl = piId ? `${window.location.origin}/success?payment_intent=${piId}` : `${window.location.origin}/success`;
-                    const { error } = await stripe.confirmPayment({
-                      elements,
-                      confirmParams: { return_url: successUrl },
-                    });
-                    if (error) console.error(error);
-                  }}
-                />
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-px bg-gray-200" />
-                  <span className="text-xs text-gray-400">ili</span>
-                  <div className="flex-1 h-px bg-gray-200" />
-                </div>
-                <PaymentElement
-                  options={{
-                    layout: { type: 'accordion' },
-                    paymentMethodOrder: ['card', 'google_pay', 'apple_pay', 'paypal'],
-                    wallets: { googlePay: 'auto', applePay: 'auto' },
-                    fields: { billingDetails: { email: 'never', phone: 'never' } },
-                  }}
-                />
-              </div>
-            )}
 
             {/* Error */}
             {submitError && (
@@ -776,85 +739,62 @@ function PaidCheckoutForm({
               </div>
             )}
 
-            <p className="text-center text-xs text-gray-400 pb-1">
-              By completing your purchase you agree to our{' '}
-              <a href="/terms" className="underline hover:text-gray-600">Terms of Service</a>
+            {/* Payment Method Section */}
+            <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6 space-y-4 overflow-hidden">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Način plaćanja</p>
+              <ExpressCheckoutElement
+                options={{ wallets: { googlePay: 'always', applePay: 'always' } }}
+                onConfirm={async () => {
+                  if (!stripe || !elements) return;
+                  if (clientSecret && clientSecret !== 'free') {
+                    const piId = clientSecret.split('_secret_')[0];
+                    if (piId?.startsWith('pi_')) {
+                      try {
+                        await fetch('/api/stripe/payment-intent', {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ payment_intent_id: piId, email, plate, phone }),
+                        });
+                      } catch { /* non-blocking */ }
+                    }
+                  }
+                  const piId = clientSecret && clientSecret !== 'free' ? clientSecret.split('_secret_')[0] : '';
+                  const successUrl = piId ? `${window.location.origin}/success?payment_intent=${piId}` : `${window.location.origin}/success`;
+                  const { error } = await stripe.confirmPayment({
+                    elements,
+                    confirmParams: { return_url: successUrl },
+                  });
+                  if (error) console.error(error);
+                }}
+              />
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-400">ili</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+              <PaymentElement
+                options={{
+                  layout: { type: 'accordion' },
+                  paymentMethodOrder: ['google_pay', 'apple_pay', 'card', 'paypal'],
+                  wallets: { googlePay: 'auto', applePay: 'auto' },
+                  fields: { billingDetails: { email: 'never', phone: 'never' } },
+                }}
+              />
+            </div>
+
+            <p className={`text-center text-xs text-gray-400 pb-3 ${isMobile ? 'block' : 'hidden'}`}>
+              Završetkom kupnje pristajete na naše{' '}
+              <a href="/terms" className="underline hover:text-gray-600">uvjete</a>
             </p>
 
-            {/* Mobile: Single button (GPay > APay > Card) + Change link + CTA | Desktop: CTA button */}
-            {isMobile ? (
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setShowPaymentOptions(!showPaymentOptions)}
-                  className="text-left text-xs font-bold text-black hover:opacity-70 py-2 px-4"
-                >
-                  {showPaymentOptions ? 'Zatvori opcije' : 'Promijeni'}
-                </button>
-
-                {showPaymentOptions && (
-                  <>
-                    <PaymentElement
-                      options={{
-                        layout: { type: 'accordion' },
-                        paymentMethodOrder: ['card', 'paypal'],
-                        wallets: { googlePay: 'never', applePay: 'never' },
-                        fields: { billingDetails: { email: 'never', phone: 'never' } }
-                      }}
-                    />
-                    <button
-                      type="submit"
-                      disabled={!stripe || submitting}
-                      className="w-full py-4 rounded-lg font-bold text-base text-white disabled:opacity-60 transition-opacity shadow-sm bg-blue-600 hover:bg-blue-700 mx-4"
-                    >
-                      {submitting ? 'Obrada...' : isFree ? 'Potvrdi - Besplatno' : 'Plaćajte'}
-                    </button>
-                  </>
-                )}
-
-                {!showPaymentOptions && (
-                  <div className="mx-4 px-0 py-2">
-                    <div style={{ transform: 'scale(1.1)', transformOrigin: 'top center', marginBottom: '0.75rem', marginLeft: '8px', marginRight: '8px' }}>
-                      <ExpressCheckoutElement
-                      options={{
-                        wallets: { googlePay: 'always', applePay: 'never' }
-                      }}
-                      onConfirm={async () => {
-                      if (!stripe || !elements) return;
-                      if (clientSecret && clientSecret !== 'free') {
-                        const piId = clientSecret.split('_secret_')[0];
-                        if (piId?.startsWith('pi_')) {
-                          try {
-                            await fetch('/api/stripe/payment-intent', {
-                              method: 'PUT',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ payment_intent_id: piId, email, plate, phone }),
-                            });
-                          } catch { /* non-blocking */ }
-                        }
-                      }
-                      const piId = clientSecret && clientSecret !== 'free' ? clientSecret.split('_secret_')[0] : '';
-                      const successUrl = piId ? `${window.location.origin}/success?payment_intent=${piId}` : `${window.location.origin}/success`;
-                      const { error } = await stripe.confirmPayment({
-                        elements,
-                        confirmParams: { return_url: successUrl },
-                      });
-                      if (error) console.error(error);
-                    }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <button
-                type="submit"
-                disabled={!stripe || submitting}
-                className="w-full py-4 rounded-lg font-bold text-base text-white disabled:opacity-60 transition-opacity shadow-sm bg-blue-600 hover:bg-blue-700"
-              >
-                {submitting ? 'Obrada...' : isFree ? 'Potvrdi - Besplatno' : 'Plaćajte'}
-              </button>
-            )}
+            {/* CTA Button */}
+            <button
+              type="submit"
+              disabled={!stripe || submitting}
+              className="w-full py-4 rounded-lg font-bold text-base text-white disabled:opacity-60 transition-opacity shadow-sm bg-blue-600 hover:bg-blue-700"
+            >
+              {submitting ? 'Obrada...' : isFree ? 'Potvrdi - Besplatno' : 'Plaćajte'}
+            </button>
 
             <p className="hidden md:block text-center text-xs text-gray-500 pb-1 mt-1">
               Potvrđivanjem plaćanja dopuštate tvrtki INDIREKTNO da vas se tereti za ovo plaćanje i buduća plaćanja u skladu s njenim uvjetima.
