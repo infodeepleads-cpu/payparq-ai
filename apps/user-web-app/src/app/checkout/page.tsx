@@ -310,13 +310,13 @@ function SummaryPanel({
         </div>
 
         <div className="flex flex-col gap-1 mb-4">
-          <div className="flex items-center gap-2 text-xs text-gray-700">
+          <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
             <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
               <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
             </span>
-            <span>Cancel free until start time</span>
+            <span>Otkaži besplatno do vremena početka</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-700">
+          <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
             <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
               <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
             </span>
@@ -331,7 +331,7 @@ function SummaryPanel({
           </div>
         ) : (
           <div className="border-t border-gray-100 pt-4">
-            <p className="text-xs font-semibold text-gray-600 mb-3">Price Breakdown</p>
+            <p className="text-xs font-bold text-gray-900 mb-3">Raščlamba cijena</p>
             <div className="space-y-2 text-xs">
               <div className="flex justify-between text-gray-700">
                 <span>Subtotal</span>
