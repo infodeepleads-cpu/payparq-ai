@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { GoogleMap, Marker, OverlayView, useJsApiLoader } from '@react-google-maps/api';
 import { SiteHeader } from './SiteHeader';
 import { ListingCard } from './ListingCard';
@@ -90,6 +91,8 @@ interface Parking {
 
 export function SearchPage() {
   const { locale } = useLocale();
+  const searchParams = useSearchParams();
+  const [isHubIdMode, setIsHubIdMode] = useState(false);
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
     libraries: GOOGLE_MAPS_LIBRARIES,
@@ -497,9 +500,19 @@ export function SearchPage() {
           });
 
           setListings(parkingListings);
-          setFilteredListings(parkingListings);
-          if (parkingListings.length > 0) {
-            setSelectedListing(parkingListings[0]);
+          const urlHubId = new URLSearchParams(window.location.search).get('hubId');
+          setIsHubIdMode(!!urlHubId);
+          const displayList = urlHubId
+            ? parkingListings.filter((l) => l.id === urlHubId || l.display_id === urlHubId)
+            : parkingListings;
+          setFilteredListings(displayList);
+          if (displayList.length > 0) {
+            setSelectedListing(displayList[0]);
+            if (urlHubId) {
+              setShowDetailsView(true);
+              setShowMobileDetails(true);
+              setMapCenter({ lat: displayList[0].lat, lng: displayList[0].lng });
+            }
           }
         } else {
           setListings([]);
@@ -520,7 +533,6 @@ export function SearchPage() {
     const refreshInterval = setInterval(fetchListings, 60000);
     return () => clearInterval(refreshInterval);
   }, []);
-
 
   // Reset photo index when listing selection changes
   useEffect(() => {
@@ -738,8 +750,10 @@ export function SearchPage() {
     }
 
     console.log(`Sorted result (${sortBy}):`, sorted.slice(0, 5).map(l => ({ name: l.name, dist: haversineKm(ref.lat, ref.lng, l.lat, l.lng).toFixed(2) })));
-    setFilteredListings(sorted);
-  }, [listings, priceRange[0], priceRange[1], selectedFeatures.join(','), selectedFilters.join(','), parkingType, quickFilters.join(','), sortBy, `${searchLocationPin?.lat},${searchLocationPin?.lng}`, durationHours, startTime, endTime]);
+    if (!isHubIdMode) {
+      setFilteredListings(sorted);
+    }
+  }, [listings, priceRange[0], priceRange[1], selectedFeatures.join(','), selectedFilters.join(','), parkingType, quickFilters.join(','), sortBy, `${searchLocationPin?.lat},${searchLocationPin?.lng}`, durationHours, startTime, endTime, isHubIdMode]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -1424,8 +1438,8 @@ export function SearchPage() {
 
       {/* Desktop: Split layout - 2 column (normal) or 3 column (details view) */}
       <div className="hidden md:flex flex-1 overflow-hidden">
-        {/* Parking Lots Cards - 35% (normal) or flex-1 (details) LEFT */}
-        <div className={`flex flex-col overflow-hidden bg-gray-50 border-r border-gray-200 ${showDetailsView ? 'flex-1' : 'w-[35%]'} max-h-[calc(100vh-120px)]`}>
+        {/* Parking Lots Cards - hidden when hubId present */}
+        <div className={`flex flex-col overflow-hidden bg-gray-50 border-r border-gray-200 ${searchParams?.get('hubId') ? 'hidden' : showDetailsView ? 'flex-1' : 'w-[35%]'} max-h-[calc(100vh-120px)]`}>
           {/* Sort Dropdown - Top Right */}
           <div className="flex-shrink-0 px-4 py-3 bg-gray-100 border-b border-gray-200 flex justify-end">
             <select
