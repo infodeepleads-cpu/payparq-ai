@@ -2805,7 +2805,7 @@ export default function MembersPage() {
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">Moji prostori</p>
                   <button
                     type="button"
-                    onClick={() => router.push('/list-your-parking')}
+                    onClick={() => router.push('/host')}
                     className="w-6 h-6 rounded-full bg-[black] text-white flex items-center justify-center hover:bg-[#4330c4] transition-colors"
                     title="Dodaj novi prostor"
                   >

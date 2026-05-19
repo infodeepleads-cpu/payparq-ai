@@ -155,7 +155,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5F3DFC] mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-4"></div>
           <p className="text-sm text-gray-600">Učitavanje...</p>
         </div>
       </div>
@@ -183,12 +183,12 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
         <div className="flex items-center justify-between mb-3 md:mb-6">
           <button
             onClick={() => setCalendarDate(new Date(year, month - 1, 1))}
-            className="text-[#5F3DFC] hover:text-[#4330c4] font-medium text-sm md:text-base"
+            className="text-black hover:text-gray-700 font-medium text-sm md:text-base"
           >← Prethodna</button>
           <h3 className="text-lg md:text-xl font-semibold text-gray-900">{croatianMonths[month]} {year}</h3>
           <button
             onClick={() => setCalendarDate(new Date(year, month + 1, 1))}
-            className="text-[#5F3DFC] hover:text-[#4330c4] font-medium text-sm md:text-base"
+            className="text-black hover:text-gray-700 font-medium text-sm md:text-base"
           >Dalje →</button>
         </div>
 
@@ -218,10 +218,10 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
                     isClosed
                       ? 'border-black bg-gradient-to-br from-black to-black/80 hover:from-black/90 hover:to-black/70 text-white shadow-lg'
                       : isSelected
-                      ? 'border-[#5F3DFC] bg-[#5F3DFC]/10 hover:bg-[#5F3DFC]/20 text-gray-900'
+                      ? 'border-black bg-black/10 hover:bg-black/20 text-gray-900'
                       : config
-                      ? 'border-[#5F3DFC] bg-[#5F3DFC]/5 hover:bg-[#5F3DFC]/10 text-gray-900'
-                      : 'border-[#5F3DFC] bg-[#5F3DFC]/5 hover:bg-[#5F3DFC]/10 text-gray-900'
+                      ? 'border-black bg-black/5 hover:bg-black/10 text-gray-900'
+                      : 'border-black bg-black/5 hover:bg-black/10 text-gray-900'
                   }`}
                 >
                   <p className={`font-bold ${isClosed ? 'text-white' : 'text-gray-900'}`}>{date}</p>
@@ -305,9 +305,9 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
               onClick={() => setIsOpen(id === 'open')}
               className="flex-1 px-3 md:px-4 py-3 md:py-2.5 rounded-lg border-2 text-sm md:text-base font-medium transition-colors min-h-[44px] md:min-h-auto"
               style={{
-                borderColor: (isOpen && id === 'open') || (!isOpen && id === 'close') ? '#5F3DFC' : '#D1D5DB',
-                backgroundColor: (isOpen && id === 'open') || (!isOpen && id === 'close') ? 'rgba(95, 61, 252, 0.05)' : 'white',
-                color: (isOpen && id === 'open') || (!isOpen && id === 'close') ? '#5F3DFC' : '#6B7280',
+                borderColor: (isOpen && id === 'open') || (!isOpen && id === 'close') ? '#000000' : '#D1D5DB',
+                backgroundColor: (isOpen && id === 'open') || (!isOpen && id === 'close') ? 'rgba(0, 0, 0, 0.05)' : 'white',
+                color: (isOpen && id === 'open') || (!isOpen && id === 'close') ? '#000000' : '#6B7280',
               }}
             >
               {label}
@@ -331,7 +331,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
             const num = parseInt(stripped);
             if (!isNaN(num) && num >= 1 && num <= lotCapacity) setCapacity(String(num));
           }}
-          className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 min-h-[44px] md:min-h-auto [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 min-h-[44px] md:min-h-auto [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
         />
       </div>
@@ -345,7 +345,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
               type="time"
               value={openTime}
               onChange={(e) => setOpenTime(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 min-h-[44px] md:min-h-auto"
+              className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 min-h-[44px] md:min-h-auto"
             />
           </div>
           <div className="space-y-2">
@@ -354,7 +354,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
               type="time"
               value={closeTime}
               onChange={(e) => setCloseTime(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 min-h-[44px] md:min-h-auto"
+              className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 min-h-[44px] md:min-h-auto"
             />
           </div>
         </div>
@@ -366,12 +366,12 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
           <div className="flex items-center justify-between">
             <label className="block text-sm md:text-base font-semibold text-gray-900">Cijene</label>
             <div className="flex items-center gap-2 md:gap-3">
-              <span className={`text-sm md:text-base font-medium ${priceMode === 'auto' ? 'text-[#5F3DFC]' : 'text-gray-500'}`}>Auto</span>
+              <span className={`text-sm md:text-base font-medium ${priceMode === 'auto' ? 'text-black' : 'text-gray-500'}`}>Auto</span>
               <button
                 onClick={() => setPriceMode(priceMode === 'auto' ? 'manual' : 'auto')}
                 className="relative inline-flex h-6 md:h-7 w-12 md:w-14 items-center rounded-full transition-colors"
                 style={{
-                  backgroundColor: priceMode === 'manual' ? '#5F3DFC' : '#D1D5DB',
+                  backgroundColor: priceMode === 'manual' ? '#000000' : '#D1D5DB',
                 }}
               >
                 <span
@@ -381,7 +381,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
                   }}
                 />
               </button>
-              <span className={`text-sm md:text-base font-medium ${priceMode === 'manual' ? 'text-[#5F3DFC]' : 'text-gray-500'}`}>Ručno</span>
+              <span className={`text-sm md:text-base font-medium ${priceMode === 'manual' ? 'text-black' : 'text-gray-500'}`}>Ručno</span>
             </div>
           </div>
 
@@ -400,7 +400,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
                     const num = parseFloat(stripped);
                     if (!isNaN(num) && num >= 0) setPriceHourly(stripped);
                   }}
-                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                 />
               </div>
@@ -417,7 +417,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
                     const num = parseFloat(stripped);
                     if (!isNaN(num) && num >= 0) setPriceDaily(stripped);
                   }}
-                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                 />
               </div>
@@ -434,7 +434,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
                     const num = parseFloat(stripped);
                     if (!isNaN(num) && num >= 0) setPriceMonthly(stripped);
                   }}
-                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                 />
               </div>
@@ -469,7 +469,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
             priceDaily: priceDaily === '' ? null : parseFloat(priceDaily),
             priceMonthly: priceMonthly === '' ? null : parseFloat(priceMonthly),
           })}
-          className="flex-1 px-3 md:px-4 py-2.5 md:py-3 bg-[#5F3DFC] text-white rounded-lg text-xs md:text-sm font-medium hover:bg-[#4330c4] transition-colors"
+          className="flex-1 px-3 md:px-4 py-2.5 md:py-3 bg-black text-white rounded-lg text-xs md:text-sm font-medium hover:bg-gray-800 transition-colors"
         >
           Spremi
         </button>

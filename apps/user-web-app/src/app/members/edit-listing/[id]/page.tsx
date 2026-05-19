@@ -84,6 +84,8 @@ export default function EditListingPage() {
 
       const meta = existing?.verification_metadata || {};
 
+      const photoUrls = formData.photos.map(p => p.url);
+
       const { error } = await supabase
         .from('locations')
         .update({
@@ -92,6 +94,7 @@ export default function EditListingPage() {
           description: formData.description,
           latitude: formData.latitude ? parseFloat(formData.latitude) : null,
           longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+          verification_photos: photoUrls.length > 0 ? photoUrls : null,
           verification_metadata: {
             ...meta,
             region: formData.region,
@@ -225,11 +228,14 @@ export default function EditListingPage() {
         permits: data.verification_metadata?.permits || '',
         postBookingInstructions: data.verification_metadata?.postBookingInstructions || '',
         addPostBookingInfo: !!data.verification_metadata?.postBookingInstructions,
-        photos: (data.verification_metadata?.photo_urls || []).map((url: string, i: number) => ({
-          id: i + 1,
-          name: `photo-${i + 1}.jpg`,
-          url,
-        })),
+        photos: (() => {
+          const photoUrls = data.verification_photos || data.verification_metadata?.photo_urls || [];
+          return photoUrls.map((url: string, i: number) => ({
+            id: i + 1,
+            name: `photo-${i + 1}.jpg`,
+            url,
+          }));
+        })(),
       });
     } catch (err) {
       console.error('Error loading listing:', err);
@@ -283,7 +289,7 @@ export default function EditListingPage() {
                   onClick={() => scrollToSection(section.id)}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-all text-sm ${
                     isActive
-                      ? 'bg-[#5F3DFC] text-white'
+                      ? 'bg-black text-white'
                       : 'text-black/60 hover:bg-black/5 hover:text-black'
                   }`}
                 >
@@ -299,7 +305,7 @@ export default function EditListingPage() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="w-full px-4 py-2 bg-[#5F3DFC] text-white rounded-lg text-sm font-semibold hover:bg-[#4330c4] transition-colors disabled:opacity-50"
+              className="w-full px-4 py-2 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save All'}
             </button>
@@ -701,13 +707,33 @@ export default function EditListingPage() {
                     </button>
                   </div>
                 ))}
-                <div className="border-2 border-dashed border-black/20 rounded-lg p-6 flex items-center justify-center text-center cursor-pointer hover:border-black/40 transition-colors">
+                <label className="border-2 border-dashed border-black/20 rounded-lg p-6 flex items-center justify-center text-center cursor-pointer hover:border-black/40 hover:bg-black/2 transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        const newPhotos = Array.from(e.target.files).map((file, idx) => ({
+                          id: Math.max(...formData.photos.map(p => p.id), 0) + idx + 1,
+                          name: file.name.replace(/\.[^/.]+$/, ''),
+                          url: URL.createObjectURL(file),
+                        }));
+                        setFormData({
+                          ...formData,
+                          photos: [...formData.photos, ...newPhotos],
+                        });
+                      }
+                    }}
+                  />
                   <div>
                     <Camera className="w-8 h-8 text-black/40 mx-auto mb-2" />
-                    <p className="text-xs font-semibold text-black/60">Add more photos</p>
+                    <p className="text-xs font-semibold text-black/60">Click to add photos</p>
                   </div>
-                </div>
+                </label>
               </div>
+              <p className="text-xs text-black/50 mt-3">Note: Photos are saved with the listing. They will appear on the search page once saved.</p>
             </div>
 
             {/* SECTION 7: STREET VIEW */}

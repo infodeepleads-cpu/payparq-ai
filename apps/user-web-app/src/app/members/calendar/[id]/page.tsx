@@ -82,6 +82,7 @@ export default function CalendarPage() {
       <PayparqPageHeader
         title="Upravljaj kalendarom i cijenama"
         onBack={() => router.back()}
+        lineColor="black"
       />
 
       <div className="max-w-4xl mx-auto p-4 sm:p-6">

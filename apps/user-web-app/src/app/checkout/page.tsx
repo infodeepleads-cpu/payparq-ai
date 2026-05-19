@@ -640,7 +640,7 @@ function PaidCheckoutForm({
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center">
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#020617] to-[#020617] flex items-center justify-center border border-white/40">
                 <span className="text-sm font-black tracking-tight leading-none text-white">P</span>
               </div>
