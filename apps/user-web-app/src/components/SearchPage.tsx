@@ -88,6 +88,9 @@ interface Parking {
   gettingThere?: string;
   howItWorks?: string;
   spots?: number;
+  baseHourlyRate?: number;
+  baseDailyRate?: number;
+  dateConfigs?: Record<string, { priceHourly?: number; priceDaily?: number; priceMonthly?: number }>;
 }
 
 export function SearchPage() {
@@ -230,6 +233,17 @@ export function SearchPage() {
     return Math.max(1, Math.ceil(diff / 3_600_000));
   })();
 
+  // Resolve base rates for a listing on a specific date, applying any calendar overrides.
+  const resolveRatesForDate = (listing: Parking, isoDatetime: string) => {
+    const d = new Date(isoDatetime);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const dayConfig = listing.dateConfigs?.[dateStr];
+    return {
+      hourly: (dayConfig?.priceHourly ?? listing.baseHourlyRate) || listing.pricePerHour,
+      daily:  (dayConfig?.priceDaily  ?? listing.baseDailyRate)  || listing.pricePerDay,
+    };
+  };
+
   const getDisplayPrice = (listing: Parking, duration: number, type: string): number => {
     if (type === 'Mjesečna') {
       return listing.pricePerMonth || listing.pricePerHour;
@@ -243,34 +257,9 @@ export function SearchPage() {
   };
 
   const subtotal = selectedListing ? (() => {
-    // Recalculate calendar overrides based on current startTime for display
-    const getCalendarAdjustedDisplay = () => {
-      let metadata: any = {};
-      if (selectedListing.verification_metadata) {
-        metadata = typeof selectedListing.verification_metadata === 'string'
-          ? JSON.parse(selectedListing.verification_metadata)
-          : selectedListing.verification_metadata;
-      }
-
-      const startDate = new Date(startTime);
-      const dateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`;
-      const dateConfigs = metadata?.dateConfigs || {};
-      const dayConfig = dateConfigs[dateStr];
-
-      if (dayConfig) {
-        return {
-          hourly: dayConfig.priceHourly || selectedListing.pricePerHour,
-          daily: dayConfig.priceDaily || selectedListing.pricePerDay,
-        };
-      }
-      return { hourly: selectedListing.pricePerHour, daily: selectedListing.pricePerDay };
-    };
-
-    const calendarAdjusted = getCalendarAdjustedDisplay();
-    const displayListing = { ...selectedListing, pricePerHour: calendarAdjusted.hourly, pricePerDay: calendarAdjusted.daily };
-    const totalPrice = getDisplayPrice(displayListing, durationHours, reservationType);
-    // getDisplayPrice already returns total for hourly/daily durations, and flat monthly rate for monthly
-    return parseFloat(totalPrice.toFixed(2));
+    const rates = resolveRatesForDate(selectedListing, startTime);
+    const liveListing = { ...selectedListing, pricePerHour: rates.hourly, pricePerDay: rates.daily };
+    return parseFloat(getDisplayPrice(liveListing, durationHours, reservationType).toFixed(2));
   })() : 0;
   const serviceFee = parseFloat((0.99 + subtotal * 0.05).toFixed(2));
   const totalPrice = parseFloat((subtotal + serviceFee).toFixed(2));
@@ -291,37 +280,8 @@ export function SearchPage() {
   };
 
   const buildCheckoutUrl = (listing: Parking) => {
-    // Recalculate calendar overrides based on current startTime
-    const getCalendarAdjustedPrices = () => {
-      // Find the original listing to get metadata
-      const originalListing = listings.find(l => l.id === listing.id);
-      if (!originalListing) return { hourly: listing.pricePerHour, daily: listing.pricePerDay };
-
-      // Parse metadata
-      let metadata: any = {};
-      if (originalListing.verification_metadata) {
-        metadata = typeof originalListing.verification_metadata === 'string'
-          ? JSON.parse(originalListing.verification_metadata)
-          : originalListing.verification_metadata;
-      }
-
-      const startDate = new Date(startTime);
-      const dateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`;
-      const dateConfigs = metadata?.dateConfigs || {};
-      const dayConfig = dateConfigs[dateStr];
-
-      if (dayConfig) {
-        return {
-          hourly: dayConfig.priceHourly || listing.pricePerHour,
-          daily: dayConfig.priceDaily || listing.pricePerDay,
-        };
-      }
-      return { hourly: listing.pricePerHour, daily: listing.pricePerDay };
-    };
-
-    const calendarAdjusted = getCalendarAdjustedPrices();
-    const checkoutListing = { ...listing, pricePerHour: calendarAdjusted.hourly, pricePerDay: calendarAdjusted.daily };
-
+    const rates = resolveRatesForDate(listing, startTime);
+    const checkoutListing = { ...listing, pricePerHour: rates.hourly, pricePerDay: rates.daily };
     const totalPrice = getDisplayPrice(checkoutListing, durationHours, reservationType);
     const sub = parseFloat(totalPrice.toFixed(2));
     const fee = parseFloat((0.99 + sub * 0.05).toFixed(2));
@@ -555,6 +515,9 @@ export function SearchPage() {
               gettingThere: (metadata.getting_there as string | undefined) || 'Unesite adresu lokacije u navigaciju. Ulaz je označen znakom za parkiranje.',
               howItWorks: (metadata.how_it_works as string | undefined) || '1. Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju\n2. Samo uđite ako nema nikoga\n3. Odvezite se kad budete spremni otići',
               spots: loc.total_spots || loc.capacity,
+              baseHourlyRate: pricePerHour,
+              baseDailyRate: pricePerDay,
+              dateConfigs: metadata?.dateConfigs || {},
             };
           });
 
