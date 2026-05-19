@@ -28,23 +28,17 @@ export default function ListingPage() {
 
   const loadListing = async () => {
     try {
-      if (!supabase) {
+      const res = await fetch(`/api/listings/${id}`);
+      if (!res.ok) {
         setLoading(false);
         return;
       }
-
-      const { data, error } = await supabase
-        .from('locations')
-        .select('id, name, address, capacity, verification_status, display_id')
-        .eq('id', id)
-        .single();
-
-      if (error || !data) {
+      const { location } = await res.json();
+      if (!location) {
         setLoading(false);
         return;
       }
-
-      setListing(data);
+      setListing(location);
     } catch (err) {
       console.error('Error loading listing:', err);
     } finally {

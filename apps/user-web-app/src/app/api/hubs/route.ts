@@ -14,10 +14,8 @@ export async function GET() {
     const { data: locations, error } = await client
       .from('locations')
       .select('id,name,address,display_id,canonical_slug,latitude,longitude,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling')
-      .contains('verification_metadata', { hub_enabled: true })
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
-      .not('canonical_slug', 'is', null)
       .limit(200);
 
     if (error) {
@@ -70,7 +68,8 @@ export async function GET() {
       (locations || []).map(async (loc: DbLocation) => {
         const name = normalizeLocationName(loc.name);
         const label = 'PayParq hub';
-        const href = `/locations/${String(loc.canonical_slug ?? '').trim()}`;
+        const slug = String(loc.canonical_slug ?? '').trim() || loc.id;
+        const href = `/locations/${slug}`;
         const lat = typeof loc.latitude === 'number' ? loc.latitude : 0;
         const lng = typeof loc.longitude === 'number' ? loc.longitude : 0;
         const displayId = String(loc.display_id || loc.id);
