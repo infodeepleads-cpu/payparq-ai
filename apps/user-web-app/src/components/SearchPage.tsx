@@ -243,7 +243,32 @@ export function SearchPage() {
   };
 
   const subtotal = selectedListing ? (() => {
-    const totalPrice = getDisplayPrice(selectedListing, durationHours, reservationType);
+    // Recalculate calendar overrides based on current startTime for display
+    const getCalendarAdjustedDisplay = () => {
+      let metadata: any = {};
+      if (selectedListing.verification_metadata) {
+        metadata = typeof selectedListing.verification_metadata === 'string'
+          ? JSON.parse(selectedListing.verification_metadata)
+          : selectedListing.verification_metadata;
+      }
+
+      const startDate = new Date(startTime);
+      const dateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`;
+      const dateConfigs = metadata?.dateConfigs || {};
+      const dayConfig = dateConfigs[dateStr];
+
+      if (dayConfig) {
+        return {
+          hourly: dayConfig.priceHourly || selectedListing.pricePerHour,
+          daily: dayConfig.priceDaily || selectedListing.pricePerDay,
+        };
+      }
+      return { hourly: selectedListing.pricePerHour, daily: selectedListing.pricePerDay };
+    };
+
+    const calendarAdjusted = getCalendarAdjustedDisplay();
+    const displayListing = { ...selectedListing, pricePerHour: calendarAdjusted.hourly, pricePerDay: calendarAdjusted.daily };
+    const totalPrice = getDisplayPrice(displayListing, durationHours, reservationType);
     // getDisplayPrice already returns total for hourly/daily durations, and flat monthly rate for monthly
     return parseFloat(totalPrice.toFixed(2));
   })() : 0;
@@ -266,7 +291,38 @@ export function SearchPage() {
   };
 
   const buildCheckoutUrl = (listing: Parking) => {
-    const totalPrice = getDisplayPrice(listing, durationHours, reservationType);
+    // Recalculate calendar overrides based on current startTime
+    const getCalendarAdjustedPrices = () => {
+      // Find the original listing to get metadata
+      const originalListing = listings.find(l => l.id === listing.id);
+      if (!originalListing) return { hourly: listing.pricePerHour, daily: listing.pricePerDay };
+
+      // Parse metadata
+      let metadata: any = {};
+      if (originalListing.verification_metadata) {
+        metadata = typeof originalListing.verification_metadata === 'string'
+          ? JSON.parse(originalListing.verification_metadata)
+          : originalListing.verification_metadata;
+      }
+
+      const startDate = new Date(startTime);
+      const dateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`;
+      const dateConfigs = metadata?.dateConfigs || {};
+      const dayConfig = dateConfigs[dateStr];
+
+      if (dayConfig) {
+        return {
+          hourly: dayConfig.priceHourly || listing.pricePerHour,
+          daily: dayConfig.priceDaily || listing.pricePerDay,
+        };
+      }
+      return { hourly: listing.pricePerHour, daily: listing.pricePerDay };
+    };
+
+    const calendarAdjusted = getCalendarAdjustedPrices();
+    const checkoutListing = { ...listing, pricePerHour: calendarAdjusted.hourly, pricePerDay: calendarAdjusted.daily };
+
+    const totalPrice = getDisplayPrice(checkoutListing, durationHours, reservationType);
     const sub = parseFloat(totalPrice.toFixed(2));
     const fee = parseFloat((0.99 + sub * 0.05).toFixed(2));
     const total = parseFloat((showTotalPrice ? sub + fee : sub).toFixed(2));
