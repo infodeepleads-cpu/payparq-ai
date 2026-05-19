@@ -2901,7 +2901,7 @@ export default function MembersPage() {
                     </div>
                     {loc.verification_status === 'verified' && (
                       <Link
-                        href={`/members/listing/${loc.id}`}
+                        href={`/parking/${loc.id}`}
                         className="text-xs text-blue-600 hover:text-blue-800 hover:underline mt-1 block"
                       >
                         Quick Reservation
