@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import LocationClient from './LocationClient';
+import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
 type HubData = {
   id: string;
@@ -13,6 +14,9 @@ type HubData = {
   latitude?: number;
   longitude?: number;
   verification_metadata?: Record<string, unknown>;
+  rate_per_hour?: number;
+  rate_per_hour_floor?: number;
+  rate_per_hour_ceiling?: number;
   base_price_hourly?: number;
   base_price_daily?: number;
   base_price_monthly?: number;
@@ -54,10 +58,17 @@ export default function LocationPage({ params }: { params: Promise<{ slug: strin
     return <div className="flex items-center justify-center min-h-screen">Location not found</div>;
   }
 
+  const pricePerHour = resolveScannerTruthPriceEuro({
+    rate_per_hour: hub.rate_per_hour,
+    base_price_hourly: hub.base_price_hourly,
+    rate_per_hour_floor: hub.rate_per_hour_floor,
+    rate_per_hour_ceiling: hub.rate_per_hour_ceiling,
+  }, 'hourly');
+
   return (
     <LocationClient
       hub={hub}
-      priceLabel={`${hub.base_price_hourly || 'Contact'}€/hr`}
+      priceLabel={`${pricePerHour || 'Contact'}€/hr`}
       hero=""
       faqItems={[]}
       travelTime="15 min"

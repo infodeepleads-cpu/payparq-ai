@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useJsApiLoader } from '@react-google-maps/api';
 import { supabase } from '@/lib/supabase';
-import { MapPin, Camera, Clock, AlertCircle, Menu, X, Square, Calendar, FileText, Map } from 'lucide-react';
+import { MapPin, Camera, Clock, AlertCircle, Menu, X, Square, Calendar, FileText, Map, Euro } from 'lucide-react';
 import { PayparqPageHeader } from '@/components/PayparqPageHeader';
 import { AmenitiesChips } from '@/components/AmenitiesChips';
 
@@ -12,6 +12,7 @@ const SECTIONS = [
   { id: 'location', label: 'Lokacijski detalji', icon: MapPin },
   { id: 'space', label: 'Detalji prostora', icon: Square },
   { id: 'availability', label: 'Dostupnost i radnog vremena', icon: Clock },
+  { id: 'pricing', label: 'Cijene', icon: Euro },
   { id: 'description', label: 'Opis', icon: FileText },
   { id: 'additional', label: 'Dodatne informacije', icon: AlertCircle },
   { id: 'photos', label: 'Fotografije', icon: Camera },
@@ -70,6 +71,9 @@ export default function EditListingPage() {
     permits: '',
     postBookingInstructions: '',
     addPostBookingInfo: false,
+    base_price_hourly: '',
+    base_price_daily: '',
+    base_price_monthly: '',
     photos: [] as { id: number; name: string; url: string }[],
   });
 
@@ -118,6 +122,9 @@ export default function EditListingPage() {
           address: formData.address,
           latitude: formData.latitude ? parseFloat(formData.latitude) : null,
           longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+          base_price_hourly: formData.base_price_hourly ? parseFloat(formData.base_price_hourly) : null,
+          base_price_daily: formData.base_price_daily ? parseFloat(formData.base_price_daily) : null,
+          base_price_monthly: formData.base_price_monthly ? parseFloat(formData.base_price_monthly) : null,
           verification_photos: photoUrls.length > 0 ? photoUrls : null,
           verification_metadata: {
             ...meta,
@@ -260,6 +267,9 @@ export default function EditListingPage() {
         permits: data.verification_metadata?.permits || '',
         postBookingInstructions: data.verification_metadata?.postBookingInstructions || '',
         addPostBookingInfo: !!data.verification_metadata?.postBookingInstructions,
+        base_price_hourly: data.base_price_hourly != null ? String(data.base_price_hourly) : '',
+        base_price_daily: data.base_price_daily != null ? String(data.base_price_daily) : '',
+        base_price_monthly: data.base_price_monthly != null ? String(data.base_price_monthly) : '',
         photos: (() => {
           const savedPhotos = data.verification_metadata?.photos || data.verification_photos || [];
           if (Array.isArray(savedPhotos) && savedPhotos.length > 0) {
@@ -683,7 +693,60 @@ export default function EditListingPage() {
               </div>
             </div>
 
-            {/* SECTION 4: DESCRIPTION */}
+            {/* SECTION 4: PRICING */}
+            <div id="pricing" className="scroll-mt-24 pt-6 border-t border-black/10">
+              <div className="flex items-center gap-2 mb-4">
+                <Euro className="w-5 h-5 text-black" />
+                <h2 className="hidden md:block text-2xl font-bold text-black">Cijene</h2>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Satna cijena (€)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.base_price_hourly}
+                    onChange={(e) => setFormData({ ...formData, base_price_hourly: e.target.value })}
+                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Dnevna cijena (€)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.base_price_daily}
+                    onChange={(e) => setFormData({ ...formData, base_price_daily: e.target.value })}
+                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Mjesečna cijena (€)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.base_price_monthly}
+                    onChange={(e) => setFormData({ ...formData, base_price_monthly: e.target.value })}
+                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs text-blue-700"><strong>Savjet:</strong> Koristite "Upravljaj kalendarom i cijenama" za postavljanje cijena za određene datume.</p>
+              </div>
+            </div>
+
+            {/* SECTION 5: DESCRIPTION */}
             <div id="description" className="scroll-mt-24 pt-6 border-t border-black/10">
               <h2 className="text-2xl font-bold text-black mb-4">Description</h2>
               <textarea
@@ -694,7 +757,7 @@ export default function EditListingPage() {
               />
             </div>
 
-            {/* SECTION 5: ADDITIONAL INFO */}
+            {/* SECTION 6: ADDITIONAL INFO */}
             <div id="additional" className="scroll-mt-24 pt-6 border-t border-black/10">
               <h2 className="text-2xl font-bold text-black mb-4">Additional Information</h2>
 
@@ -721,7 +784,7 @@ export default function EditListingPage() {
               </div>
             </div>
 
-            {/* SECTION 6: PHOTOS */}
+            {/* SECTION 7: PHOTOS */}
             <div id="photos" className="scroll-mt-24 pt-6 border-t border-black/10">
               <div className="flex items-center gap-2 mb-4">
                 <Camera className="w-5 h-5 text-black" />
@@ -777,7 +840,7 @@ export default function EditListingPage() {
               <p className="text-xs text-black/50 mt-3">Note: Photos are saved with the listing. They will appear on the search page once saved.</p>
             </div>
 
-            {/* SECTION 7: STREET VIEW */}
+            {/* SECTION 8: STREET VIEW */}
             <div id="streetview" className="scroll-mt-24 pt-6 border-t border-black/10 pb-8">
               <div className="flex items-center gap-2 mb-4">
                 <Camera className="w-5 h-5 text-black" />

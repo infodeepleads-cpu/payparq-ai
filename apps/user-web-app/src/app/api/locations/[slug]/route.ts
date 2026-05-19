@@ -15,6 +15,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
       .from('locations')
       .select(
         'id, name, canonical_slug, address, display_id, latitude, longitude, ' +
+        'rate_per_hour, rate_per_hour_floor, rate_per_hour_ceiling, ' +
         'base_price_hourly, base_price_daily, base_price_monthly, verification_metadata, verification_photos'
       )
       .eq('canonical_slug', slug)
