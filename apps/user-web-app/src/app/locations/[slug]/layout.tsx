@@ -32,8 +32,8 @@ async function getLocationData(slug: string): Promise<LocationData | null> {
       .eq("canonical_slug", slug)
       .single();
 
-    if (error) throw error;
-    return data as LocationData;
+    if (error || !data) throw error || new Error("No data found");
+    return data;
   } catch (error) {
     console.error("Failed to fetch location metadata:", error);
     return null;
