@@ -226,10 +226,20 @@ export function SearchPage() {
   };
 
   // --- Live pricing helpers ---
+  const parseLocalDateTime = (isoStr: string) => {
+    const [date, time] = isoStr.split('T');
+    if (!date || !time) return new Date();
+    const [year, month, day] = date.split('-').map(Number);
+    const [hour, minute] = time.split(':').map(Number);
+    return new Date(year, month - 1, day, hour, minute, 0, 0);
+  };
+
   const durationHours = (() => {
-    const start = new Date(startTime);
-    const end = new Date(endTime);
+    if (!startTime || !endTime) return 1;
+    const start = parseLocalDateTime(startTime);
+    const end = parseLocalDateTime(endTime);
     const diff = end.getTime() - start.getTime();
+    if (isNaN(diff) || diff < 0) return 1;
     return Math.max(1, Math.ceil(diff / 3_600_000));
   })();
 
@@ -248,11 +258,10 @@ export function SearchPage() {
     if (type === 'Mjesečna') {
       return listing.pricePerMonth || listing.pricePerHour;
     }
-    if (duration < 8) {
-      return listing.pricePerHour * duration;
-    }
     const hourlyTotal = listing.pricePerHour * duration;
-    const dailyTotal = listing.pricePerDay || listing.pricePerHour * duration;
+    if (!listing.pricePerDay) return hourlyTotal;
+    const numberOfDays = Math.ceil(duration / 24);
+    const dailyTotal = listing.pricePerDay * numberOfDays;
     return Math.min(hourlyTotal, dailyTotal);
   };
 
@@ -275,8 +284,15 @@ export function SearchPage() {
     const s = new Date(startTime), e = new Date(endTime);
     const pad = (n: number) => String(n).padStart(2, '0');
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    const dateStr = `${s.getDate()}. ${months[s.getMonth()]}`;
-    return `${dateStr} ${pad(s.getHours())}:${pad(s.getMinutes())} – ${pad(e.getHours())}:${pad(e.getMinutes())}`;
+
+    const sameDay = s.getDate() === e.getDate() && s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear();
+
+    if (sameDay) {
+      const dateStr = `${s.getDate()}. ${months[s.getMonth()]}`;
+      return `${dateStr} ${pad(s.getHours())}:${pad(s.getMinutes())} – ${pad(e.getHours())}:${pad(e.getMinutes())}`;
+    } else {
+      return `${s.getDate()}. ${months[s.getMonth()]} ${pad(s.getHours())}:${pad(s.getMinutes())} – ${e.getDate()}. ${months[e.getMonth()]} ${pad(e.getHours())}:${pad(e.getMinutes())}`;
+    }
   };
 
   const buildCheckoutUrl = (listing: Parking) => {
@@ -2792,6 +2808,7 @@ export function SearchPage() {
           onChange={setArrivalDateTime}
           onConfirm={() => {
             if (arrivalDateTime) {
+              setStartTime(arrivalDateTime);
               setShowArrivalPicker(false);
               setShowDeparturePicker(true);
             }
@@ -2811,11 +2828,26 @@ export function SearchPage() {
           onConfirm={() => {
             let finalDepartureTime = departureDateTime;
             if (!finalDepartureTime && arrivalDateTime) {
-              const arrivalDate = new Date(arrivalDateTime);
-              arrivalDate.setHours(arrivalDate.getHours() + 3);
-              finalDepartureTime = arrivalDate.toISOString().slice(0, 16);
+              const [date, time] = arrivalDateTime.split('T');
+              const [year, month, day] = date.split('-').map(Number);
+              let [hour, minute] = time.split(':').map(Number);
+              hour += 3;
+              if (hour >= 24) {
+                hour -= 24;
+                const nextDay = new Date(year, month - 1, day + 1);
+                const ny = nextDay.getFullYear();
+                const nm = String(nextDay.getMonth() + 1).padStart(2, '0');
+                const nd = String(nextDay.getDate()).padStart(2, '0');
+                const nh = String(hour).padStart(2, '0');
+                const nmm = String(minute).padStart(2, '0');
+                finalDepartureTime = `${ny}-${nm}-${nd}T${nh}:${nmm}`;
+              } else {
+                const nh = String(hour).padStart(2, '0');
+                const nmm = String(minute).padStart(2, '0');
+                finalDepartureTime = `${date}T${nh}:${nmm}`;
+              }
             }
-            if (finalDepartureTime) {
+            if (finalDepartureTime && arrivalDateTime) {
               setStartTime(arrivalDateTime);
               setEndTime(finalDepartureTime);
               setShowDeparturePicker(false);

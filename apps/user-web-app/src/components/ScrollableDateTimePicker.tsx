@@ -137,6 +137,14 @@ export function ScrollableDateTimePicker({
           })}
         </div>
 
+        {/* Selected Time Preview */}
+        <div className="bg-black/5 rounded-lg p-3 text-center">
+          <div className="text-xs text-black/60 mb-1">Odabrano vrijeme:</div>
+          <div className="text-2xl md:text-3xl font-bold text-black">
+            {selectedDate.getDate()}. {new Intl.DateTimeFormat('hr-HR', { month: 'long' }).format(selectedDate)} {String(selectedDate.getHours()).padStart(2, '0')}:{String(selectedDate.getMinutes()).padStart(2, '0')}
+          </div>
+        </div>
+
         {/* Time Picker */}
         <div className="space-y-2">
           <label className="text-xs font-semibold text-black/50 uppercase tracking-wide">Vrijeme</label>
@@ -177,9 +185,19 @@ export function ScrollableDateTimePicker({
 
         {/* Action Buttons */}
         <div className="space-y-2 pt-2">
+          {!value && (
+            <div className="text-xs text-black/60 text-center px-2 py-2 bg-blue-50 rounded-lg">
+              ℹ️ Korišćenje zadane vrijednosti. Promijenite ako trebate drugačije vrijeme.
+            </div>
+          )}
           <button
             onClick={onConfirm}
-            className="w-full px-5 py-3 md:py-4 bg-black text-white font-bold rounded-2xl hover:bg-gray-900 active:scale-95 transition-all"
+            disabled={!value}
+            className={`w-full px-5 py-3 md:py-4 font-bold rounded-2xl transition-all ${
+              value
+                ? 'bg-black text-white hover:bg-gray-900 active:scale-95'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
             Nastavi →
           </button>
