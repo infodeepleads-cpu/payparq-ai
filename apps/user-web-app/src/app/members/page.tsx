@@ -2900,17 +2900,27 @@ export default function MembersPage() {
                       </button>
                     </div>
                     {loc.verification_status === 'verified' && (
-                      <Link
-                        href={`/search?hubId=${loc.id}`}
-                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline mt-1 block"
-                      >
-                        Quick Reservation
-                      </Link>
+                      <div className="mt-2 px-2">
+                        <Link
+                          href={`/search?hubId=${loc.id}`}
+                          className="text-xs text-blue-600 hover:text-blue-800 hover:underline inline-block"
+                        >
+                          Quick Reservation
+                        </Link>
+                      </div>
                     )}
                   </div>
                 ))}
               </div>
             )}
+              <div className="mt-4 pt-3 border-t border-black/10">
+                <button
+                  onClick={() => setActiveItem("activity")}
+                  className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                >
+                  Moja rezervacija →
+                </button>
+              </div>
               </div>
             </div>
 
