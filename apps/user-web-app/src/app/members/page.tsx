@@ -1078,6 +1078,33 @@ export default function MembersPage() {
   }, [hasMemberIdentity, refreshHomeContext]);
 
   useEffect(() => {
+    if (devSignedIn) {
+      setOwnerListingsLoading(true);
+      setTimeout(() => {
+        setOwnerListings([
+          {
+            id: 'dev-1',
+            name: 'Parkiranje Ivica',
+            address: 'Ivanova ulica 10, Split',
+            verification_status: 'verified',
+            capacity: 5,
+            display_id: 'IVA-001',
+            verification_metadata: { section_status: { section1: true, section2: true, section3: true } }
+          },
+          {
+            id: 'dev-2',
+            name: 'Safe Parking Center',
+            address: 'Centar grada, Split',
+            verification_status: 'verified',
+            capacity: 20,
+            display_id: 'SPC-001',
+            verification_metadata: { section_status: { section1: true, section2: true, section3: true } }
+          }
+        ]);
+        setOwnerListingsLoading(false);
+      }, 500);
+      return;
+    }
     if (!user || !supabase) return;
     setOwnerListingsLoading(true);
     supabase
@@ -1089,7 +1116,7 @@ export default function MembersPage() {
         setOwnerListings(data ?? []);
         setOwnerListingsLoading(false);
       });
-  }, [user, searchParams]);
+  }, [user, searchParams, devSignedIn]);
 
   useEffect(() => {
     if (!user || !supabase) return;
@@ -2913,14 +2940,6 @@ export default function MembersPage() {
                 ))}
               </div>
             )}
-              <div className="mt-4 pt-3 border-t border-black/10">
-                <button
-                  onClick={() => setActiveItem("activity")}
-                  className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium"
-                >
-                  Moja rezervacija →
-                </button>
-              </div>
               </div>
             </div>
 
