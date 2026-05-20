@@ -1116,7 +1116,7 @@ export default function MembersPage() {
         setOwnerListings(data ?? []);
         setOwnerListingsLoading(false);
       });
-  }, [user, searchParams, devSignedIn]);
+  }, [user, supabase]);
 
   useEffect(() => {
     if (!user || !supabase) return;
