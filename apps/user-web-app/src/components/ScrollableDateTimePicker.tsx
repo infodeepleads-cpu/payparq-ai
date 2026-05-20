@@ -37,7 +37,7 @@ export function ScrollableDateTimePicker({
       const isoString = defaultTime.toISOString().slice(0, 16);
       onChange(isoString);
     }
-  }, []);
+  }, [value]);
   const [viewMonth, setViewMonth] = useState<Date>(new Date(now.getFullYear(), now.getMonth()));
   const daysContainerRef = useRef<HTMLDivElement>(null);
 

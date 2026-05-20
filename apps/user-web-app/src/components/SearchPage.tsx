@@ -2809,9 +2809,15 @@ export function SearchPage() {
           value={departureDateTime}
           onChange={setDepartureDateTime}
           onConfirm={() => {
-            if (departureDateTime) {
+            let finalDepartureTime = departureDateTime;
+            if (!finalDepartureTime && arrivalDateTime) {
+              const arrivalDate = new Date(arrivalDateTime);
+              arrivalDate.setHours(arrivalDate.getHours() + 3);
+              finalDepartureTime = arrivalDate.toISOString().slice(0, 16);
+            }
+            if (finalDepartureTime) {
               setStartTime(arrivalDateTime);
-              setEndTime(departureDateTime);
+              setEndTime(finalDepartureTime);
               setShowDeparturePicker(false);
             }
           }}
