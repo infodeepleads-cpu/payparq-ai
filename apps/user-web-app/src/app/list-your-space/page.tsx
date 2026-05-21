@@ -658,8 +658,23 @@ export default function ListYourSpace() {
                 </div>
               </div>
             </div>
-            <div className="pt-6 border-t border-white/10">
-              <FooterBrand />
+            <div className="pt-12 border-t border-white/10 space-y-4">
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold text-white">Postani operativni partner</h3>
+                <p className="text-sm text-white/70">Upravljajte parkirnim mjestima i zaradite dodatni dohodak bez napora.</p>
+                <Link href="/operativni-partner" className="inline-block px-4 py-2 bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white text-sm font-semibold rounded-lg hover:shadow-lg transition-shadow">
+                  Registriraj se
+                </Link>
+              </div>
+              <div className="pt-4 border-t border-white/10">
+                <p className="text-white/70 text-sm mb-2">Već imate račun?</p>
+                <Link href="/members" className="text-[#5F3DFC] text-sm font-semibold hover:text-[#4330c4] transition-colors">
+                  Prijavite se
+                </Link>
+              </div>
+              <div className="pt-4 border-t border-white/10">
+                <FooterBrand />
+              </div>
             </div>
           </div>
         </section>

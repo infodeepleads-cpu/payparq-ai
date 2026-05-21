@@ -154,7 +154,7 @@ export function SiteHeader({ hideAnnouncementBar = false }: { hideAnnouncementBa
                 Get in Touch
               </Link>
               <Link
-                href="/pay"
+                href="/search"
                 className="px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
               >
                 Pay Now
