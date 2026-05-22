@@ -128,6 +128,22 @@ const localHrOverrides = new Map<string, string>([
   ["Calendar", "Kalendar"],
   ["Manage calendar and pricing", "Upravljaj kalendarom i cijenama"],
   ["Manage calendar", "Upravljaj kalendarom"],
+  // Day abbreviations (must not be auto-translated)
+  ["pon", "pon"],
+  ["uto", "uto"],
+  ["sri", "sri"],
+  ["čet", "čet"],
+  ["pet", "pet"],
+  ["sub", "sub"],
+  ["ned", "ned"],
+  // Full day names
+  ["Monday", "Ponedjeljak"],
+  ["Tuesday", "Utorak"],
+  ["Wednesday", "Srijeda"],
+  ["Thursday", "Četvrtak"],
+  ["Friday", "Petak"],
+  ["Saturday", "Subota"],
+  ["Sunday", "Nedjelja"],
 ]);
 
 function shouldTranslateText(text: string) {
