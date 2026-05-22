@@ -433,17 +433,17 @@ export default function ListYourSpace() {
 
               {/* Step 2: Pay */}
               <div className="grid md:grid-cols-2 gap-8 items-center md:grid-flow-dense">
+                <div>
+                  <div className="text-4xl font-black text-[#5F3DFC] mb-4">2</div>
+                  <h3 className="text-4xl font-bold text-black mb-4">Plaćanje</h3>
+                  <p className="text-lg text-black/70">Odaberite datume i vrijeme, dovršite sigurnu uplatu i dobijte trenutnu potvrdu.</p>
+                </div>
                 <div className="rounded-xl overflow-hidden h-64 md:h-80 shadow-lg">
                   <img
                     src="https://images.unsplash.com/photo-1556740738-b6a63e27c4df?w=600&h=500&fit=crop"
                     alt="Pay"
                     className="w-full h-full object-cover"
                   />
-                </div>
-                <div>
-                  <div className="text-4xl font-black text-[#5F3DFC] mb-4">2</div>
-                  <h3 className="text-4xl font-bold text-black mb-4">Plaćanje</h3>
-                  <p className="text-lg text-black/70">Odaberite datume i vrijeme, dovršite sigurnu uplatu i dobijte trenutnu potvrdu.</p>
                 </div>
               </div>
 
