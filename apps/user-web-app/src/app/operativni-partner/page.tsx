@@ -188,7 +188,7 @@ export default function OperativniPartner() {
                         <select
                           value={companyCountry}
                           onChange={(e) => setCompanyCountry(e.target.value)}
-                          className="w-full px-3 py-2 pl-9 bg-gray-100 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-[#5F3DFC] focus:text-black transition-colors appearance-none cursor-pointer text-black"
+                          className="w-full px-3 py-2 pl-9 bg-gray-100 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-black focus:text-black transition-colors appearance-none cursor-pointer text-black"
                           style={{
                             backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
                             backgroundRepeat: 'no-repeat',
@@ -212,7 +212,7 @@ export default function OperativniPartner() {
                       <select
                         value={experienceLevel}
                         onChange={(e) => setExperienceLevel(e.target.value)}
-                        className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-[#5F3DFC] focus:text-black transition-colors appearance-none cursor-pointer text-black"
+                        className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-black focus:text-black transition-colors appearance-none cursor-pointer text-black"
                         style={{
                           backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
                           backgroundRepeat: 'no-repeat',
@@ -232,10 +232,10 @@ export default function OperativniPartner() {
                       <input
                         type="checkbox"
                         id="terms"
-                        className="w-4 h-4 rounded border-black/20 mt-0.5 cursor-pointer accent-[#5F3DFC]"
+                        className="w-4 h-4 rounded border-black/20 mt-0.5 cursor-pointer accent-black"
                       />
                       <label htmlFor="terms" className="text-xs text-black/70 cursor-pointer leading-tight">
-                        Registracijom se slažete s našim <span className="font-semibold text-[#5F3DFC] hover:underline">Uvjetima korištenja</span> i <span className="font-semibold text-[#5F3DFC] hover:underline">Politikom privatnosti</span>
+                        Registracijom se slažete s našim <span className="font-semibold text-black hover:text-black/70 underline">Uvjetima korištenja</span> i <span className="font-semibold text-black hover:text-black/70 underline">Politikom privatnosti</span>
                       </label>
                     </div>
 
@@ -252,14 +252,14 @@ export default function OperativniPartner() {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full mt-3 bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white font-semibold py-2.5 rounded-lg hover:shadow-lg transition-shadow text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full mt-3 bg-black text-white font-semibold py-2.5 rounded-lg hover:shadow-lg transition-shadow text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSubmitting ? 'Registracija...' : 'Registriraj se sada'}
                     </button>
 
                     <div className="text-center pt-2 space-y-1">
                       <p className="text-xs text-black/70">Već imate račun?</p>
-                      <Link href="/members" className="text-xs font-semibold text-[#5F3DFC] hover:text-[#4330c4] transition-colors inline-block">
+                      <Link href="/members" className="text-xs font-semibold text-black hover:text-black/70 transition-colors inline-block">
                         Prijavite se
                       </Link>
                     </div>
@@ -301,7 +301,7 @@ export default function OperativniPartner() {
                       {faq.q}
                     </h3>
                     <ChevronDown
-                      className={`w-5 h-5 text-[#5F3DFC] flex-shrink-0 ml-4 transition-transform ${
+                      className={`w-5 h-5 text-black flex-shrink-0 ml-4 transition-transform ${
                         openFaq === i ? 'rotate-180' : ''
                       }`}
                     />
@@ -317,7 +317,7 @@ export default function OperativniPartner() {
 
         {/* CTA Banner */}
         <section className="relative py-16 md:py-20">
-          <div className="absolute inset-0 bg-gradient-to-r from-white to-[#5F3DFC]"></div>
+          <div className="absolute inset-0 bg-white"></div>
           <div className="relative max-w-4xl mx-auto px-6 md:px-12 text-center">
             <h2 className="text-3xl md:text-4xl font-semibold text-black mb-4">
               Spremni za partnerstvo?
@@ -331,7 +331,7 @@ export default function OperativniPartner() {
                 e.preventDefault();
                 document.documentElement.scrollTop = 0;
               }}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white text-sm font-semibold shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white text-sm font-semibold shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer"
             >
               <span>Postani partner</span>
               <span className="text-lg">→</span>
@@ -431,7 +431,7 @@ export default function OperativniPartner() {
                 e.preventDefault();
                 document.documentElement.scrollTop = 0;
               }}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white font-semibold hover:shadow-xl transition-all whitespace-nowrap cursor-pointer"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white font-semibold hover:shadow-xl transition-all whitespace-nowrap cursor-pointer"
             >
               <span>Registriraj se</span>
               <span>→</span>
