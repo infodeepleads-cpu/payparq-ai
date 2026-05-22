@@ -90,7 +90,7 @@ export default function OperativniPartner() {
   const faqs = [
     {
       q: 'Što je operativni partner?',
-      a: 'Operativni partner upravlja parkirnim mjestima u ime vlasnika. Preuzimamo sve operativne obaveze dok vi zarađujete.',
+      a: 'Operativni partner upravlja parkirnim mjestima u ime vlasnika.',
     },
     {
       q: 'Koji su zahtjevi za partnerstvo?',
