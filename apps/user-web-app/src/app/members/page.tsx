@@ -2858,7 +2858,7 @@ export default function MembersPage() {
                         if (!isComplete) {
                           router.push(`/list-your-parking?edit=${loc.id}`);
                         } else {
-                          router.push(`/members/listing/${loc.id}`);
+                          router.push(`/members/calendar/${loc.id}`);
                         }
                       }}
                       className="flex-1 text-left"
@@ -2880,7 +2880,7 @@ export default function MembersPage() {
                           e.stopPropagation();
                           router.push(`/members/calendar/${loc.id}`);
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-purple-500 hover:text-purple-700 transition-all"
+                        className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-purple-500 hover:text-purple-700 transition-all"
                         title="Upravljaj kalendarom i cijenama"
                       >
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -2898,7 +2898,7 @@ export default function MembersPage() {
                             router.push(`/members/edit-listing/${loc.id}`);
                           }
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-blue-500 hover:text-blue-700 transition-all"
+                        className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-blue-500 hover:text-blue-700 transition-all"
                         title="Uredi lot"
                       >
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -2918,7 +2918,7 @@ export default function MembersPage() {
                             setActionError(err.message || 'Greška pri brisanju');
                           }
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-red-500 hover:text-red-700 transition-all"
+                        className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-red-500 hover:text-red-700 transition-all"
                         title="Obriši lot"
                       >
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
