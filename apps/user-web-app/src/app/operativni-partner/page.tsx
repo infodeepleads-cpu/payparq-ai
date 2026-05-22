@@ -271,7 +271,7 @@ export default function OperativniPartner() {
                 <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight mb-4 text-white">
                   Vlasnik si parking tvrtke?
                 </h1>
-                <p className="text-lg text-white/80 mb-8">
+                <p className="text-lg text-white/80 mb-8" style={{ marginTop: '-1cm' }}>
                   Postanite PayParq operativni partner i zarađujte upravljajući parkirnim mjestima u vašoj regiji.
                 </p>
               </div>
