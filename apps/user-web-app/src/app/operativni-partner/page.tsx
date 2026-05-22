@@ -121,10 +121,10 @@ export default function OperativniPartner() {
           backgroundPosition: 'center',
           backgroundAttachment: 'fixed',
         }}>
-          <div className="relative max-w-6xl mx-auto px-6 md:px-12">
-            <div className="flex flex-col md:grid md:grid-cols-2 gap-12 items-center justify-center">
-              <div className="flex justify-center md:justify-end md:order-2 md:col-span-1 order-1" style={{ marginTop: '-90px', marginRight: '-60px' }}>
-                <form id="register-form" onSubmit={handleRegisterSubmit} className="rounded-2xl bg-white px-8 pt-10 pb-12 shadow-lg flex flex-col justify-start w-full max-w-md">
+          <div className="relative max-w-6xl mx-auto px-4 md:px-12">
+            <div className="flex flex-col md:grid md:grid-cols-2 gap-6 md:gap-12 items-center justify-center">
+              <div className="flex justify-center md:justify-end md:order-2 md:col-span-1 order-1 w-full md:w-auto md:mr-[-60px] md:mt-[-90px]">
+                <form id="register-form" onSubmit={handleRegisterSubmit} className="rounded-2xl bg-white px-6 md:px-8 pt-8 md:pt-10 pb-10 md:pb-12 shadow-lg flex flex-col justify-start w-full max-w-sm md:max-w-md">
                   <h3 className="text-3xl font-bold text-black mb-4">Postani PayParq Operativni Partner</h3>
 
                   <div className="space-y-4 flex-1 flex flex-col">
