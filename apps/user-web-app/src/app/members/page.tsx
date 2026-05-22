@@ -2891,13 +2891,7 @@ export default function MembersPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            const sections = loc.verification_metadata?.section_status || { section1: false, section2: false, section3: false };
-                            const isComplete = sections.section1 && sections.section2 && sections.section3;
-                            if (!isComplete) {
-                              router.push(`/list-your-parking?edit=${loc.id}`);
-                            } else {
-                              router.push(`/members/edit-listing/${loc.id}`);
-                            }
+                            router.push(`/list-your-parking?edit=${loc.id}`);
                           }}
                           className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-0.5 md:p-1 text-blue-500 hover:text-blue-700 transition-all"
                           title="Uredi lot"
