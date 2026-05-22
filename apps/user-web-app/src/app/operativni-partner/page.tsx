@@ -111,19 +111,23 @@ export default function OperativniPartner() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
+    <div className="min-h-screen text-white flex flex-col">
       <SiteHeader />
-      <main className="flex-1 bg-white pt-24 md:pt-28">
+      <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative pt-20 pb-16 md:pt-28 md:pb-20">
-          <div className="absolute inset-0 bg-white md:bg-gradient-to-r md:from-white md:to-[#5F3DFC]"></div>
+        <section className="relative pt-40 pb-32 md:pt-56 md:pb-40" style={{
+          backgroundImage: 'url("https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=2000&h=1200&fit=crop")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed',
+        }}>
           <div className="relative max-w-6xl mx-auto px-6 md:px-12">
             <div className="flex flex-col md:grid md:grid-cols-2 gap-12 items-center justify-center">
-              <div className="flex justify-center md:justify-center md:order-2 md:col-span-1 order-1" style={{ marginTop: '-70px' }}>
-                <form id="register-form" onSubmit={handleRegisterSubmit} className="rounded-2xl bg-white p-4 shadow-lg flex flex-col justify-start w-full max-w-sm">
-                  <h3 className="text-lg font-bold text-black mb-3">Postani PayParq Operativni Partner</h3>
+              <div className="flex justify-center md:justify-end md:order-2 md:col-span-1 order-1" style={{ marginTop: '-90px', marginRight: '-60px' }}>
+                <form id="register-form" onSubmit={handleRegisterSubmit} className="rounded-2xl bg-white px-8 pt-10 pb-12 shadow-lg flex flex-col justify-start w-full max-w-md">
+                  <h3 className="text-3xl font-bold text-black mb-4">Postani PayParq Operativni Partner</h3>
 
-                  <div className="space-y-2.5 flex-1 flex flex-col">
+                  <div className="space-y-4 flex-1 flex flex-col">
                     <div>
                       <label className="text-xs font-semibold text-black/80 mb-0.5 block">Naziv tvrtke</label>
                       <input
@@ -131,7 +135,7 @@ export default function OperativniPartner() {
                         placeholder="Vaš naziv tvrtke"
                         value={companyName}
                         onChange={(e) => setCompanyName(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-[#5F3DFC] transition-colors placeholder:text-black/40"
+                        className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/40"
                       />
                     </div>
 
@@ -142,7 +146,7 @@ export default function OperativniPartner() {
                         placeholder="Ime i prezime"
                         value={contactPerson}
                         onChange={(e) => setContactPerson(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-[#5F3DFC] transition-colors placeholder:text-black/40"
+                        className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/40"
                       />
                     </div>
 
@@ -153,22 +157,26 @@ export default function OperativniPartner() {
                         placeholder="Upišite vašu email adresu"
                         value={companyEmail}
                         onChange={(e) => setCompanyEmail(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-[#5F3DFC] transition-colors placeholder:text-black/40"
+                        className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/40"
                       />
                     </div>
 
-                    <div>
-                      <label className="text-xs font-semibold text-black/80 mb-1.5 block">Mobilni telefon</label>
-                      <div className="relative">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-black/70 pointer-events-none">
-                          {COUNTRIES.find(c => c.code === companyCountry)?.phone}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-xs font-semibold text-black/80 mb-1.5 block">Pozivni broj</label>
+                        <div className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black flex items-center gap-1.5">
+                          <span>{COUNTRIES.find(c => c.code === companyCountry)?.flag}</span>
+                          <span className="font-semibold">{COUNTRIES.find(c => c.code === companyCountry)?.phone}</span>
                         </div>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-xs font-semibold text-black/80 mb-1.5 block">Broj mobilnog telefona</label>
                         <input
                           type="tel"
                           placeholder="1 234 5678"
                           value={companyPhone}
                           onChange={(e) => setCompanyPhone(e.target.value)}
-                          className="w-full px-4 py-2.5 pl-16 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-[#5F3DFC] transition-colors placeholder:text-black/40"
+                          className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black text-left focus:outline-none focus:border-black transition-colors placeholder:text-black/40"
                         />
                       </div>
                     </div>
@@ -260,10 +268,10 @@ export default function OperativniPartner() {
               </div>
 
               <div className="md:order-1 md:col-span-1 order-2">
-                <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight mb-4">
-                  <span className="text-[#5F3DFC]">Upravljajte parking mjestima</span> <span className="text-black">za PayParq.</span>
+                <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight mb-4 text-white">
+                  Vlasnik si parking tvrtke?
                 </h1>
-                <p className="text-lg text-black/70 mb-8">
+                <p className="text-lg text-white/80 mb-8">
                   Postanite PayParq operativni partner i zarađujte upravljajući parkirnim mjestima u vašoj regiji.
                 </p>
               </div>
