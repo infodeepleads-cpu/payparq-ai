@@ -267,11 +267,11 @@ export default function OperativniPartner() {
                 </form>
               </div>
 
-              <div className="md:order-1 md:col-span-1 order-2">
-                <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight mb-4 text-white">
+              <div className="md:order-1 md:col-span-1 order-2" style={{ marginTop: '-3cm' }}>
+                <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight mb-8 text-white">
                   Vlasnik si parking tvrtke?
                 </h1>
-                <p className="text-lg text-white/80 mb-8" style={{ marginTop: '-1cm' }}>
+                <p className="text-lg text-white/80 mb-8">
                   Postanite PayParq operativni partner i zarađujte upravljajući parkirnim mjestima u vašoj regiji.
                 </p>
               </div>
