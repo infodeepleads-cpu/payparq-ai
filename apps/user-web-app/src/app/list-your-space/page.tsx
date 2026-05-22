@@ -157,7 +157,7 @@ export default function ListYourSpace() {
       <SiteHeader />
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative pt-20 pb-32 md:pt-28 md:pb-40" style={{
+        <section className="relative pt-40 pb-32 md:pt-56 md:pb-40" style={{
           backgroundImage: 'url("https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=2000&h=1200&fit=crop")',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
