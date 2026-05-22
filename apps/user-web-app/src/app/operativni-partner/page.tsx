@@ -89,8 +89,12 @@ export default function OperativniPartner() {
 
   const faqs = [
     {
-      q: 'Što je operativni partner?',
-      a: 'Operativni partner upravlja parkirnim mjestima u ime vlasnika.',
+      q: 'Što je partner',
+      a: 'Partner je poduzeće ili osoba koja surađuje s PayParqom u upravljanju parkirnih mjesta.',
+    },
+    {
+      q: 'Što radi Payparq operativni partner?',
+      a: 'Operativni partner upravlja parkirnim mjestima u ime vlasnika - preuzima sve operativne obaveze i odgovore.',
     },
     {
       q: 'Koji su zahtjevi za partnerstvo?',
@@ -122,32 +126,34 @@ export default function OperativniPartner() {
           backgroundAttachment: 'fixed',
         }}>
           <div className="relative max-w-6xl mx-auto px-4 md:px-12">
-            <div className="flex flex-col md:grid md:grid-cols-2 gap-6 md:gap-12 items-center justify-center">
-              <div className="flex justify-center md:justify-end md:order-2 md:col-span-1 order-1 w-full md:w-auto md:mr-[-60px] md:mt-[-90px]" style={{ marginTop: '-0.7cm' }}>
-                <form id="register-form" onSubmit={handleRegisterSubmit} className="rounded-2xl bg-white px-6 md:px-8 pt-8 md:pt-10 pb-10 md:pb-12 shadow-lg flex flex-col justify-start w-full max-w-sm md:max-w-md">
-                  <h3 className="text-3xl font-bold text-black mb-4">Postani PayParq Operativni Partner</h3>
+            <div className="flex flex-col md:grid md:grid-cols-2 gap-1 md:gap-12 items-center justify-center px-4 md:px-0">
+              <div className="flex justify-center md:justify-end md:order-2 md:col-span-1 order-1 w-full md:w-auto md:mr-[-60px] md:mt-[-90px]">
+                <form id="register-form" onSubmit={handleRegisterSubmit} className="rounded-2xl bg-white px-6 md:px-8 pt-14 md:pt-10 pb-10 md:pb-12 shadow-lg flex flex-col justify-start w-full max-w-sm md:max-w-md">
+                  <h3 className="text-3xl font-bold text-black mb-6">Postani PayParq Operativni Partner</h3>
 
                   <div className="space-y-4 flex-1 flex flex-col">
-                    <div>
-                      <label className="text-xs font-semibold text-black/80 mb-0.5 block">Naziv tvrtke</label>
-                      <input
-                        type="text"
-                        placeholder="Vaš naziv tvrtke"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/40"
-                      />
-                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs font-semibold text-black/80 mb-0.5 block">Naziv tvrtke</label>
+                        <input
+                          type="text"
+                          placeholder="Vaš naziv tvrtke"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/40"
+                        />
+                      </div>
 
-                    <div>
-                      <label className="text-xs font-semibold text-black/80 mb-0.5 block">Osoba za kontakt</label>
-                      <input
-                        type="text"
-                        placeholder="Ime i prezime"
-                        value={contactPerson}
-                        onChange={(e) => setContactPerson(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/40"
-                      />
+                      <div>
+                        <label className="text-xs font-semibold text-black/80 mb-0.5 block">Osoba za kontakt</label>
+                        <input
+                          type="text"
+                          placeholder="Ime i prezime"
+                          value={contactPerson}
+                          onChange={(e) => setContactPerson(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/40"
+                        />
+                      </div>
                     </div>
 
                     <div>
@@ -267,11 +273,11 @@ export default function OperativniPartner() {
                 </form>
               </div>
 
-              <div className="md:order-1 md:col-span-1 order-2" style={{ marginTop: '-3cm' }}>
-                <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight mb-6 text-white">
+              <div className="md:order-1 md:col-span-1 order-2 md:mt-[-2cm]" style={{ marginTop: '0' }}>
+                <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight mb-6 text-white">
                   Vlasnik si parking tvrtke?
                 </h1>
-                <p className="text-lg text-white/80 mb-8" style={{ marginTop: '0.5cm' }}>
+                <p className="text-lg md:text-xl text-white/80 mb-8" style={{ marginTop: '0.5cm' }}>
                   Postanite PayParq operativni partner i zarađujte upravljajući parkirnim mjestima u vašoj regiji.
                 </p>
               </div>
