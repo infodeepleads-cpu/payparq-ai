@@ -846,7 +846,9 @@ export function SearchPage() {
   }, [filterModalOpen]);
 
   useEffect(() => {
-    const isModalOpen = allParkingDropdownOpen || filterModalOpen || homeDropdownOpen || mobileMenuOpen || sortModalOpen || showDestinationPicker || showPredictions || showMobileSearchEdit || showArrivalPicker || showDeparturePicker || showMobileDetails;
+    // Don't include showMobileDetails - fixed inset-0 overlay already prevents background interaction
+    // Also prevents scroll issues in details content
+    const isModalOpen = allParkingDropdownOpen || filterModalOpen || homeDropdownOpen || mobileMenuOpen || sortModalOpen || showDestinationPicker || showPredictions || showMobileSearchEdit || showArrivalPicker || showDeparturePicker;
 
     const preventScroll = (e: TouchEvent) => { e.preventDefault(); };
 
@@ -870,7 +872,7 @@ export function SearchPage() {
       document.body.style.overflowX = '';
       document.documentElement.style.overflowX = '';
     };
-  }, [allParkingDropdownOpen, filterModalOpen, homeDropdownOpen, mobileMenuOpen, sortModalOpen, showDestinationPicker, showPredictions, showMobileSearchEdit, showArrivalPicker, showDeparturePicker, showMobileDetails]);
+  }, [allParkingDropdownOpen, filterModalOpen, homeDropdownOpen, mobileMenuOpen, sortModalOpen, showDestinationPicker, showPredictions, showMobileSearchEdit, showArrivalPicker, showDeparturePicker]);
 
   useEffect(() => {
     setPhotoIndex(0);
