@@ -406,6 +406,7 @@ function Field({ label, note, ...props }: { label: string; note?: string } & Rea
 function PaidCheckoutForm({
   amountEur, locationName, checkIn: initialCheckIn, checkOut: initialCheckOut,
   locationId, displayId, originalAmountCents, onAmountChange, isFree, address, clientSecret,
+  phCents = 0, pdCents = 0, pmCents = 0,
 }: {
   amountEur: number;
   locationName: string;
@@ -418,6 +419,9 @@ function PaidCheckoutForm({
   isFree?: boolean;
   address?: string;
   clientSecret?: string | null;
+  phCents?: number;
+  pdCents?: number;
+  pmCents?: number;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -437,12 +441,13 @@ function PaidCheckoutForm({
   const serviceFeeEurCents = Math.round((99 + (displayAmountCents * 0.05)));
   const totalWithFeeEurCents = displayAmountCents + serviceFeeEurCents;
 
-  // Hourly rate derived from original booking — used to reprice on duration change
-  const originalDurationHours = Math.max(
-    0.5,
-    (new Date(initialCheckOut).getTime() - new Date(initialCheckIn).getTime()) / (1000 * 60 * 60)
-  );
-  const hourlyRateCents = originalAmountCents / originalDurationHours;
+  function calcAmountCents(durationHours: number): number {
+    const ph = phCents || (originalAmountCents / Math.max(0.5, (new Date(initialCheckOut).getTime() - new Date(initialCheckIn).getTime()) / (1000 * 60 * 60)));
+    const hourly = durationHours * ph;
+    const daily = pdCents ? Math.ceil(durationHours / 24) * pdCents : Infinity;
+    const monthly = pmCents || Infinity;
+    return Math.max(100, Math.round(Math.min(hourly, daily, monthly)));
+  }
 
   const [promoStatus, setPromoStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle');
   const [promoInput, setPromoInput] = useState('');
@@ -496,18 +501,18 @@ function PaidCheckoutForm({
   const handleCheckInChange = useCallback((newCheckIn: string) => {
     setCheckIn(newCheckIn);
     const newDurationHours = Math.max(0.5, (new Date(checkOut).getTime() - new Date(newCheckIn).getTime()) / (1000 * 60 * 60));
-    const newAmountCents = Math.max(100, Math.round(newDurationHours * hourlyRateCents));
+    const newAmountCents = calcAmountCents(newDurationHours);
     setDisplayAmountCents(newAmountCents);
     updatePIAmount(newAmountCents);
-  }, [checkOut, hourlyRateCents, clientSecret]);
+  }, [checkOut, clientSecret, phCents, pdCents, pmCents]);
 
   const handleCheckOutChange = useCallback((newCheckOut: string) => {
     setCheckOut(newCheckOut);
     const newDurationHours = Math.max(0.5, (new Date(newCheckOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60));
-    const newAmountCents = Math.max(100, Math.round(newDurationHours * hourlyRateCents));
+    const newAmountCents = calcAmountCents(newDurationHours);
     setDisplayAmountCents(newAmountCents);
     updatePIAmount(newAmountCents);
-  }, [checkIn, hourlyRateCents, clientSecret]);
+  }, [checkIn, clientSecret, phCents, pdCents, pmCents]);
 
   const handleAddHours = useCallback((hours: number, addCents: number) => {
     const newCheckOut = new Date(checkOut);
@@ -684,7 +689,7 @@ function PaidCheckoutForm({
             onCheckOutChange={handleCheckOutChange}
             onDatePickerToggle={setDatePickerOpen}
             onAddHours={handleAddHours}
-            hourlyRateCents={hourlyRateCents}
+            hourlyRateCents={phCents || undefined}
           />
 
           {/* ── Right: form ── */}
@@ -833,6 +838,9 @@ function CheckoutInner() {
   const locationName = searchParams.get('name') || 'Parking';
   const address = searchParams.get('address') || '';
   const displayId = searchParams.get('display_id') || '';
+  const phCents = parseInt(searchParams.get('ph') || '0', 10);
+  const pdCents = parseInt(searchParams.get('pd') || '0', 10);
+  const pmCents = parseInt(searchParams.get('pm') || '0', 10);
 
   const [amountCents, setAmountCents] = useState(initialAmountCents);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -958,6 +966,7 @@ function CheckoutInner() {
         isFree={clientSecret === 'free'}
         address={address}
         clientSecret={clientSecret}
+        phCents={phCents} pdCents={pdCents} pmCents={pmCents}
       />
     </Elements>
   );

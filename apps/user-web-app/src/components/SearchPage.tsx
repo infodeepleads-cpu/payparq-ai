@@ -328,6 +328,9 @@ export function SearchPage() {
       amount_cents: Math.round(total * 100).toString(),
       name: listing.name || listing.address,
       address: listing.address,
+      ph: Math.round(rates.hourly * 100).toString(),
+      ...(rates.daily ? { pd: Math.round(rates.daily * 100).toString() } : {}),
+      ...(listing.pricePerMonth ? { pm: Math.round(listing.pricePerMonth * 100).toString() } : {}),
       ...(listing.display_id ? { display_id: listing.display_id } : {}),
     });
     return `/checkout?${params.toString()}`;
