@@ -2478,7 +2478,7 @@ export function SearchPage() {
           </div>
 
           {/* Details Content */}
-          <div className="w-full bg-white overflow-y-auto flex-1">
+          <div className="w-full bg-white overflow-y-auto overflow-x-hidden flex-1">
             <div className="px-4 pb-6 space-y-0">
               {/* Photo Carousel */}
               {selectedListing.photos && selectedListing.photos.length > 0 && (
