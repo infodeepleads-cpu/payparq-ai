@@ -1040,7 +1040,7 @@ export function SearchPage() {
 
           {/* Menu Dropdown on Right */}
           <div className="flex items-center gap-3">
-            <a href="/host" className="text-xs font-semibold px-2 py-1 hover:opacity-70 transition-opacity" style={{ color: '#5F3DFC' }}>
+            <a href="/host" className="text-xs font-semibold px-2 py-1 hover:opacity-70 transition-opacity" style={{ color: '#000000' }}>
               {locale === 'en' ? 'List' : 'Objavi'}
             </a>
             <div className="relative" ref={mobileMenuRef}>
