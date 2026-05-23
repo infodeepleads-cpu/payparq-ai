@@ -165,7 +165,7 @@ export function SiteHeader({ hideAnnouncementBar = false }: { hideAnnouncementBa
             <div className="md:hidden border-t border-black/5 bg-white px-0 pb-3">
               <div className="flex flex-col gap-2 pt-2 text-[12px] font-medium text-black w-full max-w-xs mx-auto">
                 <Link
-                  href="/home"
+                  href="/main"
                   className="w-full block py-3 text-center hover:bg-gray-100 transition-colors text-[12px] font-medium text-black"
                   onClick={() => setMobileOpen(false)}
                 >

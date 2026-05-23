@@ -32,6 +32,11 @@ const nextConfig: NextConfig = {
         destination: "/terms",
         permanent: true,
       },
+      {
+        source: "/main",
+        destination: "https://www.payparq.com/main",
+        permanent: false,
+      },
     ];
   },
 
