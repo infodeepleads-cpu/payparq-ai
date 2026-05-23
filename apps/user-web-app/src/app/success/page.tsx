@@ -709,18 +709,29 @@ function SuccessContent() {
   };
 
   const handleDownloadPass = () => {
+    console.log('[Download] Button clicked');
     const passCard = document.querySelector('[data-pass-card]') as HTMLElement;
-    if (!passCard) return;
-    const element = passCard.cloneNode(true) as HTMLElement;
-    element.style.margin = '0';
-    const opt = {
-      margin: 10,
-      filename: `payparq-parking-pass-${resCode || 'pass'}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
-    } as const;
-    html2pdf().set(opt).from(element).save();
+    console.log('[Download] passCard element:', passCard);
+    if (!passCard) {
+      console.log('[Download] No pass card found');
+      return;
+    }
+    try {
+      const element = passCard.cloneNode(true) as HTMLElement;
+      element.style.margin = '0';
+      const opt = {
+        margin: 10,
+        filename: `payparq-parking-pass-${resCode || 'pass'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+      } as const;
+      console.log('[Download] Starting PDF generation');
+      html2pdf().set(opt).from(element).save();
+      console.log('[Download] PDF generation complete');
+    } catch (err) {
+      console.error('[Download] Error:', err);
+    }
   };
 
   const SUPPORT_WHATSAPP = '385915963139';
