@@ -1327,9 +1327,12 @@ export function SearchPage() {
                 </svg>
               </button>
               {allParkingDropdownOpen && (
-                <>
-                  <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setAllParkingDropdownOpen(false)} />
-                  <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 p-6 w-[90%] max-w-[400px]">
+                <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center" onClick={() => setAllParkingDropdownOpen(false)}>
+                  <div
+                    ref={allParkingDropdownRef}
+                    className="bg-white rounded-xl shadow-2xl p-6 w-[90%] max-w-[400px] max-h-[70vh] overflow-y-auto"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <div className="flex justify-between items-center mb-4">
                       <p className="text-sm font-semibold text-gray-900">Browse by category</p>
                       <button
@@ -1341,7 +1344,7 @@ export function SearchPage() {
                         </svg>
                       </button>
                     </div>
-                    <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto">
+                    <div className="flex flex-col gap-2">
                       {parkingCategories.map((cat) => {
                         const isListLot = (cat as any).link;
                         if (isListLot) {
@@ -1378,7 +1381,7 @@ export function SearchPage() {
                       })}
                     </div>
                   </div>
-                </>
+                </div>
               )}
             </>
           )}
