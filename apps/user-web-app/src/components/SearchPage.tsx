@@ -846,29 +846,25 @@ export function SearchPage() {
   }, [filterModalOpen]);
 
   useEffect(() => {
-    const isModalOpen = allParkingDropdownOpen || filterModalOpen || homeDropdownOpen || mobileMenuOpen;
+    const isModalOpen = allParkingDropdownOpen || filterModalOpen || homeDropdownOpen || mobileMenuOpen || sortModalOpen || showDestinationPicker;
+
+    const preventScroll = (e: TouchEvent) => { e.preventDefault(); };
 
     if (isModalOpen) {
       document.body.style.overflow = 'hidden';
       document.documentElement.style.overflow = 'hidden';
-
-      const preventScroll = (e: TouchEvent) => {
-        if (isModalOpen) {
-          e.preventDefault();
-        }
-      };
-
       document.addEventListener('touchmove', preventScroll, { passive: false });
-      return () => {
-        document.removeEventListener('touchmove', preventScroll);
-        document.body.style.overflow = '';
-        document.documentElement.style.overflow = '';
-      };
     } else {
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
     }
-  }, [allParkingDropdownOpen, filterModalOpen, homeDropdownOpen, mobileMenuOpen]);
+
+    return () => {
+      document.removeEventListener('touchmove', preventScroll);
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, [allParkingDropdownOpen, filterModalOpen, homeDropdownOpen, mobileMenuOpen, sortModalOpen, showDestinationPicker]);
 
   useEffect(() => {
     setPhotoIndex(0);
