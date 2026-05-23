@@ -846,7 +846,7 @@ export function SearchPage() {
   }, [filterModalOpen]);
 
   useEffect(() => {
-    const isModalOpen = allParkingDropdownOpen || filterModalOpen || homeDropdownOpen || mobileMenuOpen || sortModalOpen || showDestinationPicker;
+    const isModalOpen = allParkingDropdownOpen || filterModalOpen || homeDropdownOpen || mobileMenuOpen || sortModalOpen || showDestinationPicker || showPredictions || showMobileSearchEdit || showArrivalPicker || showDeparturePicker;
 
     const preventScroll = (e: TouchEvent) => { e.preventDefault(); };
 
@@ -864,7 +864,7 @@ export function SearchPage() {
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
     };
-  }, [allParkingDropdownOpen, filterModalOpen, homeDropdownOpen, mobileMenuOpen, sortModalOpen, showDestinationPicker]);
+  }, [allParkingDropdownOpen, filterModalOpen, homeDropdownOpen, mobileMenuOpen, sortModalOpen, showDestinationPicker, showPredictions, showMobileSearchEdit, showArrivalPicker, showDeparturePicker]);
 
   useEffect(() => {
     setPhotoIndex(0);
