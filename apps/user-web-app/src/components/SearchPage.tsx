@@ -162,8 +162,15 @@ export function SearchPage() {
       e.preventDefault();
       setPwaPrompt(e);
     };
+    const handleAppInstalled = () => {
+      setPwaPrompt(null);
+    };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
   }, []);
 
   const handleInstallPWA = async () => {
@@ -1055,9 +1062,11 @@ export function SearchPage() {
                   <a href="/members" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200">
                     Log In
                   </a>
-                  <button onClick={handleInstallPWA} className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
-                    Install App
-                  </button>
+                  {pwaPrompt && (
+                    <button onClick={handleInstallPWA} className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
+                      Install App
+                    </button>
+                  )}
                 </div>
               )}
             </div>
