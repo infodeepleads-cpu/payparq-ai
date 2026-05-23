@@ -1316,7 +1316,7 @@ export function SearchPage() {
 
           {/* All Parking Options Dropdown - only show for hourly/daily */}
           {reservationType !== 'Mjesecna' && (
-            <div ref={allParkingDropdownRef} className="relative">
+            <>
               <button
                 onClick={() => setAllParkingDropdownOpen(!allParkingDropdownOpen)}
                 className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:border-gray-400 text-sm font-medium text-gray-900"
@@ -1326,48 +1326,61 @@ export function SearchPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                 </svg>
               </button>
-            {allParkingDropdownOpen && (
-              <div className="absolute top-full mt-2 left-0 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-4 w-[320px]">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Browse by category</p>
-                <div className="flex flex-col gap-2">
-                  {parkingCategories.map((cat) => {
-                    const isListLot = (cat as any).link;
-                    if (isListLot) {
-                      return (
-                        <a
-                          key={cat.id}
-                          href={(cat as any).link}
-                          className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 border border-gray-100 text-left transition-colors"
-                          onClick={() => setAllParkingDropdownOpen(false)}
-                        >
-                          <div translate="no">
-                            <p className="text-sm font-semibold text-gray-900">{cat.label}</p>
-                            <p className="text-xs text-gray-500">{cat.description}</p>
-                          </div>
-                        </a>
-                      );
-                    }
-                    return (
+              {allParkingDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setAllParkingDropdownOpen(false)} />
+                  <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 p-6 w-[90%] max-w-[400px]">
+                    <div className="flex justify-between items-center mb-4">
+                      <p className="text-sm font-semibold text-gray-900">Browse by category</p>
                       <button
-                        key={cat.id}
-                        className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 border border-gray-100 text-left transition-colors"
-                        onClick={() => {
-                          setDestinationVenueType(cat.id as 'airport' | 'city' | 'event');
-                          setShowDestinationPicker(true);
-                          setAllParkingDropdownOpen(false);
-                        }}
+                        onClick={() => setAllParkingDropdownOpen(false)}
+                        className="text-gray-500 hover:text-gray-700"
                       >
-                        <div translate="no">
-                          <p className="text-sm font-semibold text-gray-900">{cat.label}</p>
-                          <p className="text-xs text-gray-500">{cat.description}</p>
-                        </div>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                       </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            </div>
+                    </div>
+                    <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto">
+                      {parkingCategories.map((cat) => {
+                        const isListLot = (cat as any).link;
+                        if (isListLot) {
+                          return (
+                            <a
+                              key={cat.id}
+                              href={(cat as any).link}
+                              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 border border-gray-100 text-left transition-colors"
+                              onClick={() => setAllParkingDropdownOpen(false)}
+                            >
+                              <div translate="no">
+                                <p className="text-sm font-semibold text-gray-900">{cat.label}</p>
+                                <p className="text-xs text-gray-500">{cat.description}</p>
+                              </div>
+                            </a>
+                          );
+                        }
+                        return (
+                          <button
+                            key={cat.id}
+                            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 border border-gray-100 text-left transition-colors"
+                            onClick={() => {
+                              setDestinationVenueType(cat.id as 'airport' | 'city' | 'event');
+                              setShowDestinationPicker(true);
+                              setAllParkingDropdownOpen(false);
+                            }}
+                          >
+                            <div translate="no">
+                              <p className="text-sm font-semibold text-gray-900">{cat.label}</p>
+                              <p className="text-xs text-gray-500">{cat.description}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
           )}
 
           {/* Right: Toggle show total price */}
@@ -1529,9 +1542,9 @@ export function SearchPage() {
               }}
               className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="relevance">Poredaj po relevantnosti</option>
-              <option value="distance">Poredaj po udaljenosti</option>
-              <option value="price">Poredaj po cijeni</option>
+              <option value="relevance">Poredaj po Relevantnosti</option>
+              <option value="distance">Poredaj po Udaljenosti</option>
+              <option value="price">Poredaj po Cijeni</option>
             </select>
           </div>
 
