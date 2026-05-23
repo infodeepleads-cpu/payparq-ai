@@ -2147,6 +2147,7 @@ export function SearchPage() {
               mapRef.current = map;
             }}
             options={{
+              mapTypeControl: false,
               styles: [
                 {
                   featureType: 'poi',
@@ -2305,6 +2306,9 @@ export function SearchPage() {
                 zoom={15}
                 center={searchLocationPin || mapCenter}
                 mapContainerStyle={{ width: '100%', height: '100%', minHeight: 'calc(100vh - 200px)' }}
+                options={{
+                  mapTypeControl: false,
+                }}
                 onLoad={(map) => {
                   mapRef.current = map;
                 }}
@@ -2332,7 +2336,8 @@ export function SearchPage() {
                       key={listing.id}
                       position={{ lat: listing.lat, lng: listing.lng }}
                       onClick={() => {
-                        setShowMobileMap(false);
+                        setSelectedListing(listing);
+                        setShowMobileDetails(true);
                       }}
                       icon={{
                         url: iconUrl,
