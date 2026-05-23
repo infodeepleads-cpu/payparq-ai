@@ -375,7 +375,7 @@ function ValetTab({ userId }: { userId: string | null }) {
     setProcessing(null);
   }
 
-  const typeLabel = (type: string) => type === 'valet' ? 'Valet' : 'Shuttle';
+  const typeLabel = (type: string) => type === 'valet' ? 'Valet' : 'Prijevoz';
   const typeColor = (type: string) => type === 'valet' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700';
 
   if (loading) return <p className="text-sm text-black/40">Loading...</p>;
