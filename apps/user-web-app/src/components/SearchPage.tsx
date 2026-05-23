@@ -925,7 +925,7 @@ export function SearchPage() {
               className="bg-white border-none text-sm font-medium text-gray-900 p-0 pr-6 focus:outline-none cursor-pointer w-full leading-none -ml-1 min-w-[400px]"
             >
               <option value="Satna/dnevna">Satna/dnevna</option>
-              <option value="Mjesecna">Mjesecna</option>
+              <option value="Mjesečna">Mjesečna</option>
             </select>
           </div>
 
@@ -1149,7 +1149,7 @@ export function SearchPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="Satna/dnevna">Satna/dnevna</option>
-                <option value="Mjesecna">Mjesecna</option>
+                <option value="Mjesečna">Mjesečna</option>
               </select>
             </div>
 
@@ -1283,7 +1283,7 @@ export function SearchPage() {
           </button>
 
           {/* Quick filter buttons - only show for hourly/daily */}
-          {reservationType !== 'Mjesecna' && (
+          {reservationType !== 'Mjesečna' && (
             <button
               onClick={() => toggleQuickFilter('instant-access')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -1319,7 +1319,7 @@ export function SearchPage() {
           </button>
 
           {/* All Parking Options Dropdown - only show for hourly/daily */}
-          {reservationType !== 'Mjesecna' && (
+          {reservationType !== 'Mjesečna' && (
             <>
               <button
                 onClick={() => setAllParkingDropdownOpen(!allParkingDropdownOpen)}
@@ -2233,7 +2233,7 @@ export function SearchPage() {
               </svg>
               Filtri
             </button>
-            {reservationType !== 'Mjesecna' && (
+            {reservationType !== 'Mjesečna' && (
               <button
                 onClick={() => toggleQuickFilter('instant-access')}
                 className={`px-2 py-1 rounded-full text-xs font-medium transition-colors flex-shrink-0 ${
