@@ -1502,7 +1502,7 @@ export function SearchPage() {
                     onChange={() => setSortBy(option.value as typeof sortBy)}
                     className="w-4 h-4 accent-[#000000] cursor-pointer"
                   />
-                  <span className="text-sm font-medium text-gray-900">{option.label}</span>
+                  <span className="text-sm font-medium text-gray-900 capitalize">{option.label}</span>
                 </label>
               ))}
             </div>
