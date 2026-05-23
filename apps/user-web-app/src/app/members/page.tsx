@@ -1443,7 +1443,7 @@ export default function MembersPage() {
       items.push({ id: 'valet', label: `Valet parking (${buyAddonValetDays} dan/a)`, price_cents: priceCents, quantity: buyAddonValetDays });
     }
     if (buyAddonShuttleOn && (cfg.shuttle as Record<string,unknown>)?.enabled && !homeContext.shuttleEnabled) {
-      items.push({ id: 'shuttle', label: 'Shuttle (1 smjer)', price_cents: Number((cfg.shuttle as Record<string,unknown>)?.price_cents ?? 200) });
+      items.push({ id: 'shuttle', label: 'Prijevoz (1 smjer)', price_cents: Number((cfg.shuttle as Record<string,unknown>)?.price_cents ?? 200) });
     }
     if (buyAddonEvOn && (cfg.ev_charging as Record<string,unknown>)?.enabled && !purchased.includes('ev_charging')) {
       items.push({ id: 'ev_charging', label: 'EV punjenje', price_cents: Number((cfg.ev_charging as Record<string,unknown>)?.price_cents ?? 2000) });
