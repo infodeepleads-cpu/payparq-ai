@@ -310,13 +310,13 @@ export function SearchPage() {
     const fee = parseFloat((0.99 + sub * 0.05).toFixed(2));
     const total = parseFloat((showTotalPrice ? sub + fee : sub).toFixed(2));
 
-    // For monthly bookings, set duration to 1 month
-    let checkoutStartTime = startTime;
-    let checkoutEndTime = endTime;
+    // Convert naive local datetimes to UTC ISO so the server doesn't misread them as UTC
+    let checkoutStartTime = parseLocalDateTime(startTime).toISOString();
+    let checkoutEndTime = parseLocalDateTime(endTime).toISOString();
     if (reservationType === 'Mjesečna') {
-      const start = new Date(startTime);
+      const start = parseLocalDateTime(startTime);
       const end = new Date(start);
-      end.setMonth(end.getMonth() + 1); // Add 1 month
+      end.setMonth(end.getMonth() + 1);
       checkoutStartTime = start.toISOString();
       checkoutEndTime = end.toISOString();
     }
