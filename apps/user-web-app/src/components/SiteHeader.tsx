@@ -2,14 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Download } from "lucide-react";
-import { useInstallPrompt } from "@/hooks/useInstallPrompt";
+import { ChevronDown } from "lucide-react";
 
 export function SiteHeader({ hideAnnouncementBar = false }: { hideAnnouncementBar?: boolean }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
-  const { showPrompt, isIOS, handleInstall, handleDismiss } = useInstallPrompt('payparq-install-prompt');
 
   return (
     <header
@@ -271,18 +269,6 @@ export function SiteHeader({ hideAnnouncementBar = false }: { hideAnnouncementBa
                 >
                   Get in Touch
                 </Link>
-                {showPrompt && (
-                  <button
-                    onClick={() => {
-                      handleInstall();
-                      setMobileOpen(false);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 mt-2 border-t border-gray-200 py-3 text-center hover:bg-gray-100 transition-colors text-[12px] font-semibold"
-                  >
-                    <Download className="w-4 h-4" />
-                    Install App
-                  </button>
-                )}
                 <Link
                   href="/pay"
                   className="mt-2 inline-flex w-full justify-center items-center bg-[#5F3DFC] py-3 text-[12px] font-semibold text-white shadow-sm hover:bg-[#4330c4] transition-colors"
