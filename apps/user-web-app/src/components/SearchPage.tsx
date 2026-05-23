@@ -2291,11 +2291,19 @@ export function SearchPage() {
 
         {/* Mobile List/Map - Hidden when details open */}
         {!showMobileDetails && (showMobileMap ? (
-          <div className="flex-1 overflow-hidden w-full">
+          <div className="flex-1 overflow-hidden w-full relative">
+            {filteredListings.length === 0 && (
+              <div className="absolute inset-0 bg-black/50 z-40 flex items-center justify-center pointer-events-none">
+                <div className="bg-white rounded-lg p-6 text-center max-w-sm">
+                  <p className="text-gray-900 font-semibold mb-2">Nema dostupnih mjesta blizu tog područja</p>
+                  <p className="text-sm text-gray-600">Pokušajte sa bližom lokacijom, drugačijim datumima ili vremenima</p>
+                </div>
+              </div>
+            )}
             {isLoaded ? (
               <GoogleMap
                 zoom={15}
-                center={mapCenter}
+                center={searchLocationPin || mapCenter}
                 mapContainerStyle={{ width: '100%', height: '100%', minHeight: 'calc(100vh - 200px)' }}
                 onLoad={(map) => {
                   mapRef.current = map;
