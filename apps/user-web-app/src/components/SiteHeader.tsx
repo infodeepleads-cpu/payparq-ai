@@ -164,6 +164,9 @@ export function SiteHeader({ hideAnnouncementBar = false }: { hideAnnouncementBa
           {mobileOpen && (
             <div className="md:hidden border-t border-black/5 bg-white px-0 pb-3">
               <div className="flex flex-col gap-2 pt-2 text-[12px] font-medium text-black w-full max-w-xs mx-auto">
+                <Link href="/home" className="w-full py-3 text-center hover:bg-gray-100 transition-colors">
+                  Početna
+                </Link>
                 <Link href="/vision" className="w-full py-3 text-center hover:bg-gray-100 transition-colors">
                   Experience
                 </Link>
