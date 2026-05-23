@@ -2294,8 +2294,8 @@ export function SearchPage() {
         {!showMobileDetails && (showMobileMap ? (
           <div className="flex-1 overflow-hidden w-full relative">
             {filteredListings.length === 0 && (
-              <div className="absolute inset-0 bg-black/50 z-40 flex items-center justify-center pointer-events-none">
-                <div className="bg-white rounded-lg p-6 text-center max-w-sm">
+              <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center flex-col gap-4">
+                <div className="bg-white rounded-lg p-6 text-center max-w-sm shadow-lg">
                   <p className="text-gray-900 font-semibold mb-2">Nema dostupnih mjesta blizu tog područja</p>
                   <p className="text-sm text-gray-600">Pokušajte sa bližom lokacijom, drugačijim datumima ili vremenima</p>
                 </div>
