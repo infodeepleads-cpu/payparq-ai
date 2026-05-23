@@ -1207,7 +1207,7 @@ function SuccessContent() {
           {/* Members zona — slim single link + download */}
           {summary?.email && (
             <div className="flex items-center justify-center gap-4 py-3">
-              <button onClick={handleDownloadPass} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
+              <button type="button" onClick={handleDownloadPass} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
                 ⬇ Preuzmi Pass
               </button>
               <span style={{ color: '#94a3b8' }}>·</span>
