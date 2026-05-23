@@ -846,6 +846,17 @@ export function SearchPage() {
   }, [filterModalOpen]);
 
   useEffect(() => {
+    if (allParkingDropdownOpen || filterModalOpen || homeDropdownOpen || mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [allParkingDropdownOpen, filterModalOpen, homeDropdownOpen, mobileMenuOpen]);
+
+  useEffect(() => {
     setPhotoIndex(0);
     setShowVehicleModal(false);
     setVehicleInput('');
@@ -1055,8 +1066,8 @@ export function SearchPage() {
               </button>
               {mobileMenuOpen && (
                 <div className="absolute top-full mt-1 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[160px] sm:min-w-[180px]">
-                  <a href="/" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 rounded-t-lg">
-                    Home
+                  <a href="/main" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 rounded-t-lg" onClick={() => setMobileMenuOpen(false)}>
+                    Početna
                   </a>
                   <a href="/members" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200">
                     Log In
