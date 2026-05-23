@@ -156,15 +156,11 @@ function SummaryPanel({
       </div>
 
       <div className="lg:hidden">
-        <div className="space-y-2 text-center">
-          <div className="flex items-center justify-center gap-2">
-            <p className="text-sm font-black text-gray-900">{locationName}</p>
-            {displayId && <p className="text-xs font-black text-gray-900">ID: <span className="font-mono font-black text-gray-900">{displayId}</span></p>}
-          </div>
-          <p className="text-xs font-black text-gray-900">{address || locationId}</p>
+        <p className="text-xs font-semibold text-gray-600 text-center">Sesija parkiranja ({durationHours} {durationHours === 1 ? 'sat' : durationHours < 5 ? 'sata' : 'sati'})</p>
+        <p className="font-bold text-gray-900 text-3xl mt-2 text-center">€{amountEur.toFixed(2)}</p>
+        <div className="mt-3 text-center">
+          <p className="text-xs text-gray-600">{locationName} {displayId && <span className="text-gray-700">ID: <span className="font-mono font-medium">{displayId}</span></span>}</p>
         </div>
-        <p className="font-bold text-gray-900 text-3xl mt-4 text-center">€{amountEur.toFixed(2)}</p>
-        <p className="text-xs font-semibold text-gray-600 text-center mt-3">Sesija parkiranja ({durationHours} {durationHours === 1 ? 'sat' : durationHours < 5 ? 'sata' : 'sati'})</p>
       </div>
 
       <div className="border-t border-gray-100 pt-4 md:pt-6">
@@ -338,7 +334,7 @@ function SummaryPanel({
             <div className="text-2xl font-bold text-green-600">CHECKOUT FREE</div>
           </div>
         ) : (
-          <div className="border-t border-gray-100 pt-4">
+          <div className="border-t border-gray-100 pt-4 hidden lg:block">
             <p className="text-xs font-bold text-gray-900 mb-3">Raščlamba cijena</p>
             <div className="space-y-2 text-xs">
               <div className="flex justify-between text-gray-700">
@@ -723,7 +719,7 @@ function PaidCheckoutForm({
                   <label className="text-xs font-black text-gray-900 mb-1.5 block leading-none">Registarska pločica</label>
                   <input
                     type="text"
-                    placeholder="ZG-1234-AB"
+                    placeholder="MA679XX"
                     value={plate}
                     onChange={(e) => setPlate(e.target.value.toUpperCase())}
                     className="w-full border border-gray-300 rounded-md px-3.5 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-colors uppercase"
