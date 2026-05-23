@@ -719,11 +719,33 @@ function SuccessContent() {
     try {
       const element = passCard.cloneNode(true) as HTMLElement;
       element.style.margin = '0';
+
+      // Remove unsupported oklab colors from all elements
+      const removeOklabColors = (el: Element) => {
+        const style = window.getComputedStyle(el);
+        if (el instanceof HTMLElement) {
+          const bgColor = style.backgroundColor;
+          if (bgColor && bgColor.includes('oklab')) {
+            el.style.backgroundColor = '#ffffff';
+          }
+          const textColor = style.color;
+          if (textColor && textColor.includes('oklab')) {
+            el.style.color = '#000000';
+          }
+          const borderColor = style.borderColor;
+          if (borderColor && borderColor.includes('oklab')) {
+            el.style.borderColor = '#cccccc';
+          }
+        }
+        Array.from(el.children).forEach(child => removeOklabColors(child));
+      };
+      removeOklabColors(element);
+
       const opt = {
         margin: 10,
         filename: `payparq-parking-pass-${resCode || 'pass'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
+        html2canvas: { scale: 2, allowTaint: true, useCORS: true },
         jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
       } as const;
       console.log('[Download] Starting PDF generation');
