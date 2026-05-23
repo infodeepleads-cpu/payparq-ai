@@ -846,25 +846,31 @@ export function SearchPage() {
   }, [filterModalOpen]);
 
   useEffect(() => {
-    const isModalOpen = allParkingDropdownOpen || filterModalOpen || homeDropdownOpen || mobileMenuOpen || sortModalOpen || showDestinationPicker || showPredictions || showMobileSearchEdit || showArrivalPicker || showDeparturePicker;
+    const isModalOpen = allParkingDropdownOpen || filterModalOpen || homeDropdownOpen || mobileMenuOpen || sortModalOpen || showDestinationPicker || showPredictions || showMobileSearchEdit || showArrivalPicker || showDeparturePicker || showMobileDetails;
 
     const preventScroll = (e: TouchEvent) => { e.preventDefault(); };
 
     if (isModalOpen) {
       document.body.style.overflow = 'hidden';
       document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflowX = 'hidden';
+      document.documentElement.style.overflowX = 'hidden';
       document.addEventListener('touchmove', preventScroll, { passive: false });
     } else {
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
+      document.body.style.overflowX = '';
+      document.documentElement.style.overflowX = '';
     }
 
     return () => {
       document.removeEventListener('touchmove', preventScroll);
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
+      document.body.style.overflowX = '';
+      document.documentElement.style.overflowX = '';
     };
-  }, [allParkingDropdownOpen, filterModalOpen, homeDropdownOpen, mobileMenuOpen, sortModalOpen, showDestinationPicker, showPredictions, showMobileSearchEdit, showArrivalPicker, showDeparturePicker]);
+  }, [allParkingDropdownOpen, filterModalOpen, homeDropdownOpen, mobileMenuOpen, sortModalOpen, showDestinationPicker, showPredictions, showMobileSearchEdit, showArrivalPicker, showDeparturePicker, showMobileDetails]);
 
   useEffect(() => {
     setPhotoIndex(0);
