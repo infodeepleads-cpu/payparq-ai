@@ -92,7 +92,10 @@ function SummaryPanel({
     for (let i = 0; i < 30; i++) {
       const date = new Date(today);
       date.setDate(date.getDate() + i);
-      const formatted = date.toISOString().slice(0, 10);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const formatted = `${year}-${month}-${day}`;
       const label = date.toLocaleString('en-US', { month: 'short', day: 'numeric' });
       dates.push({ value: formatted, label });
     }
@@ -126,10 +129,8 @@ function SummaryPanel({
     if (!dateStr || !timeStr) return '';
     const [year, month, day] = dateStr.split('-').map(Number);
     const [hours, minutes] = timeStr.split(':').map(Number);
-    const d = new Date();
-    d.setFullYear(year, month - 1, day);
-    d.setHours(hours, minutes, 0, 0);
-    return d.toISOString();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`;
   }
 
   function handleApplyDateChanges() {
@@ -253,13 +254,13 @@ function SummaryPanel({
                 onClick={handleApplyDateChanges}
                 className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors"
               >
-                Apliciraj
+                Promijeni
               </button>
               <button
                 onClick={() => setShowDatePicker(false)}
                 className="w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors"
               >
-                Otkazati
+                Odustani
               </button>
             </div>
           </div>
