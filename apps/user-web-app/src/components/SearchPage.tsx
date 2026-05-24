@@ -364,7 +364,6 @@ export function SearchPage() {
   const clearAllFilters = () => {
     setSelectedFilters([]);
   };
-  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
 
   const setSearchLocation = (value: string | undefined) => {
     setSearchLocationState(value || '');
@@ -597,21 +596,27 @@ export function SearchPage() {
   useEffect(() => {
     if (!isLoaded || !showPredictions) return;
 
-    const map = new google.maps.Map(document.createElement('div'));
-    placesServiceRef.current = new google.maps.places.PlacesService(map);
-
     if (searchLocation.length > 2) {
+      const sessionToken = new google.maps.places.AutocompleteSessionToken();
       const service = new google.maps.places.AutocompleteService();
+
       service.getPlacePredictions(
-        { input: searchLocation, bounds: new google.maps.LatLngBounds({ lat: 45, lng: 15 }, { lat: 46, lng: 17 }) },
-        (predictions, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-            setPredictions(predictions);
-          } else {
-            setPredictions([]);
+        {
+          input: searchLocation,
+          sessionToken,
+          locationBias: {
+            center: { lat: 45.5, lng: 15.9 },
+            radius: 150000 // ~150km radius covering Split & Zagreb
           }
         }
-      );
+      ).then((response) => {
+        setPredictions(response.predictions || []);
+      }).catch((error) => {
+        console.error('Autocomplete error:', error);
+        setPredictions([]);
+      });
+    } else {
+      setPredictions([]);
     }
   }, [searchLocation, showPredictions, isLoaded]);
 
@@ -623,10 +628,12 @@ export function SearchPage() {
     const input = document.querySelector('input[placeholder="Search location..."]') as HTMLInputElement;
     if (input) input.blur();
 
-    // Get place details to get coordinates
-    const service = new google.maps.places.PlacesService(new google.maps.Map(document.createElement('div')));
-    service.getDetails({ placeId }, (place, status) => {
-      if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+    // Get place details to get coordinates using new Place API
+    const place = new google.maps.places.Place({ id: placeId });
+    place.fetchFields({
+      fields: ['geometry', 'displayName']
+    }).then(() => {
+      if (place.geometry?.location) {
         const lat = place.geometry.location.lat();
         const lng = place.geometry.location.lng();
         setMapCenter({
@@ -636,6 +643,8 @@ export function SearchPage() {
         setSearchLocationPin({ lat, lng });
         addToRecentSearches(mainText || '', lat, lng);
       }
+    }).catch((error) => {
+      console.error('Place details error:', error);
     });
   };
 
