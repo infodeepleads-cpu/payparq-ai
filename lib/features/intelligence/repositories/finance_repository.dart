@@ -181,25 +181,30 @@ class FinanceRepository {
     if (token == null || token.isEmpty) throw Exception('Sign in required.');
     final baseUrl = AppConfig.webAppBaseUrl;
     final uri = Uri.parse('$baseUrl/api/admin/owner-ledger');
-    final response = await http.get(
-      uri,
-      headers: {'Authorization': 'Bearer $token'},
-    );
-    final payload = _normalizePayload(response.body);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(_extractPayloadError(payload) ?? 'Failed to load ledger.');
+    final client = http.Client();
+    try {
+      final response = await client.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 10));
+      final payload = _normalizePayload(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception(_extractPayloadError(payload) ?? 'Failed to load ledger.');
+      }
+      final list = payload['owners'];
+      if (list is List) {
+        return (list as List).cast<Map<String, dynamic>>().map((owner) {
+          final entries = owner['entries'] as List?;
+          return {
+            ...owner as Map<String, dynamic>,
+            'entries': entries ?? [],
+          };
+        }).toList();
+      }
+      return [];
+    } finally {
+      client.close();
     }
-    final list = payload['owners'];
-    if (list is List) {
-      return (list as List).cast<Map<String, dynamic>>().map((owner) {
-        final entries = owner['entries'] as List?;
-        return {
-          ...owner as Map<String, dynamic>,
-          'entries': entries ?? [],
-        };
-      }).toList();
-    }
-    return [];
   }
 
   Future<void> allocateOwnerPayout({
