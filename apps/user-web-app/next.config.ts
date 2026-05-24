@@ -81,8 +81,5 @@ const nextConfig: NextConfig = {
 export default withSentryConfig(nextConfig, {
   org: "payparq",
   project: "javascript-nextjs",
-  silent: !process.env.CI,
-  widenClientFileUpload: true,
-  disableLogger: true,
-  automaticVercelMonitors: true,
+  silent: true,
 });
