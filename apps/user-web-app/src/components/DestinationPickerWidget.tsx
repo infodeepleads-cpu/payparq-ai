@@ -266,7 +266,15 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
                     type="text"
                     placeholder="Search venues..."
                     value={searchFilter}
-                    onChange={(e) => { setSearchFilter(e.target.value); setShowVenues(true); }}
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+                      setSearchFilter(newValue);
+                      setShowVenues(true);
+                      // Clear old selection when user types new search
+                      if (newValue.length > 0 && selectedVenue?.name !== newValue) {
+                        setSelectedVenue(null);
+                      }
+                    }}
                     onFocus={() => setShowVenues(true)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-sm text-gray-900"
                   />
