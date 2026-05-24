@@ -419,23 +419,7 @@ export async function POST(req: NextRequest) {
   const flowType =
     (payload.flowType ?? payload.flow_type ?? "").toString().trim() ||
     "lpr_auto_charge";
-  const splitPlan = location.ownerStripeReady && location.ownerStripeAccountId
-    ? buildStripeSplitPlan({
-      chargedAmountCents: amountCents,
-      sessionAmountCents: amountCents,
-      parkTaxiDailyTicketTotalCents: toCents(
-        location.dailyTicketUnitAmountCents * quantity,
-      ),
-      sessionQuantity: quantity,
-      pricingType,
-      flowType,
-      destinationAccountId: location.ownerStripeAccountId,
-      expenseRate: location.splitExpenseRate,
-      taxRate: location.splitTaxRate,
-      fixedExpenseCents: location.splitFixedExpenseCents,
-      payoutMode: location.lotPayoutMode,
-    })
-    : null;
+  const splitPlan = null;
   const splitMetadata = buildStripeSplitMetadata({ splitPlan });
 
   let stripeCustomerId = (userMetadata.stripe_customer_id ?? "").toString()
