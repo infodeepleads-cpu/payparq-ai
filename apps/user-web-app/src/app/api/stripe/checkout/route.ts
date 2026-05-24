@@ -1898,31 +1898,6 @@ export async function GET(req: NextRequest) {
     minimumChargeApplied,
   }));
   const submitMessage = submitMessageBase;
-  const shouldUseSupabaseCheckout = lotPayoutMode !== "hub";
-  if (shouldUseSupabaseCheckout) {
-    const fallbackUrl = buildSupabaseFunctionCheckoutUrl({
-      locationId: resolvedLocationId,
-      displayId: resolvedDisplayId || undefined,
-      flowType: flow_type,
-      pricingType: pricing_type,
-      checkIn: effectiveCheckIn || undefined,
-      checkOut: finalCheckOut || undefined,
-      quantity,
-      reservationDescription,
-      allowPromotionCodes,
-      customerEmail: normalizedCustomerEmail ?? undefined,
-      customerPhone: normalizedCustomerPhone ?? undefined,
-      plateNumber: plate_number || undefined,
-      extendTargetSessionId,
-      extendMinutes,
-    });
-    if (!fallbackUrl) {
-      return NextResponse.json({ error: "supabase_checkout_unavailable" }, {
-        status: 500,
-      });
-    }
-    return NextResponse.redirect(fallbackUrl, 303);
-  }
   try {
     const splitPlan = ownerStripeReady && ownerStripeAccountId
       ? buildStripeSplitPlan({
