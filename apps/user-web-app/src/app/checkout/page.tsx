@@ -73,7 +73,18 @@ function SummaryPanel({
   const discountEur = promoDiscountCents / 100;
   const isFree = amountEur <= 0;
 
-  const durationHours = checkIn && checkOut ? Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60)) : 1;
+  const durationHours = (() => {
+    if (!checkIn?.trim() || !checkOut?.trim()) return 1;
+    try {
+      const start = new Date(checkIn);
+      const end = new Date(checkOut);
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) return 1;
+      const diff = end.getTime() - start.getTime();
+      return Math.max(1, Math.round(diff / (1000 * 60 * 60)));
+    } catch {
+      return 1;
+    }
+  })();
   const [showPromoDropdown, setShowPromoDropdown] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempCheckIn, setTempCheckIn] = useState(checkIn);
