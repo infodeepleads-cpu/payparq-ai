@@ -232,14 +232,14 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end z-[60] md:items-center md:justify-center">
-      <div className="bg-white w-full md:max-w-2xl md:rounded-2xl rounded-t-2xl shadow-2xl max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-5 md:slide-in-from-bottom-0">
+      <div className="bg-white w-full md:max-w-2xl md:rounded-2xl rounded-t-2xl shadow-2xl max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-5 md:slide-in-from-bottom-0 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
           <h2 className="text-lg md:text-xl font-semibold text-gray-900">Kamo ideš?</h2>
           <button onClick={onClose} className="text-sm font-semibold text-gray-600 hover:text-gray-900">Odustani</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto overscroll-contain">
           <div className="p-4 md:p-6 space-y-4">
               {/* Tab selector */}
               <div className="flex gap-2">
@@ -266,7 +266,15 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
                     type="text"
                     placeholder="Search venues..."
                     value={searchFilter}
-                    onChange={(e) => { setSearchFilter(e.target.value); setShowVenues(true); }}
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+                      setSearchFilter(newValue);
+                      setShowVenues(true);
+                      // Clear old selection when user types or deletes search text
+                      if (selectedVenue?.name !== newValue) {
+                        setSelectedVenue(null);
+                      }
+                    }}
                     onFocus={() => setShowVenues(true)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-sm text-gray-900"
                   />
@@ -274,7 +282,7 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
 
                 {/* Venues dropdown - shown when focused or searching */}
                 {showVenues && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-[140px] overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-[200px] md:max-h-[140px] overflow-y-auto overscroll-contain">
                     {searchFilter.length === 0 && (
                       <div className="p-1.5 border-b border-gray-200">
                         <p className="text-xs font-semibold text-gray-700 px-2 py-0.5">3 nearest:</p>
@@ -305,19 +313,19 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
               {/* Date and time pickers */}
               <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-3">
                 <p className="text-xs font-semibold text-gray-700">When do you need parking?</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <select value={startDate.toISOString().slice(0, 10)} onChange={(e) => handleStartDateChange(e.target.value)} className="px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black">
+                <div className="grid grid-cols-2 gap-2 w-full">
+                  <select value={startDate.toISOString().slice(0, 10)} onChange={(e) => handleStartDateChange(e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black overflow-hidden">
                     {generateDateOptions().map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
-                  <select value={getLocalTimeString(startDate)} onChange={(e) => handleStartTimeChange(e.target.value)} className="px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black">
+                  <select value={getLocalTimeString(startDate)} onChange={(e) => handleStartTimeChange(e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black overflow-hidden">
                     {generateTimeOptions().map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <select value={endDate.toISOString().slice(0, 10)} onChange={(e) => handleEndDateChange(e.target.value)} className="px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black">
+                <div className="grid grid-cols-2 gap-2 w-full">
+                  <select value={endDate.toISOString().slice(0, 10)} onChange={(e) => handleEndDateChange(e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black overflow-hidden">
                     {generateDateOptions().map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
-                  <select value={getLocalTimeString(endDate)} onChange={(e) => handleEndTimeChange(e.target.value)} className="px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black">
+                  <select value={getLocalTimeString(endDate)} onChange={(e) => handleEndTimeChange(e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black overflow-hidden">
                     {generateTimeOptions().map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
                 </div>

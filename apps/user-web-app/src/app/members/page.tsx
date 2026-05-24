@@ -268,6 +268,121 @@ function readMemberPlates(currentUser: User | null) {
   return [];
 }
 
+function PayoutsPanel({ user }: { user: User | null }) {
+  const [earnings, setEarnings] = useState<{ pending_cents: number; total_earned_cents: number; ledger: any[]; payouts: any[] } | null>(null);
+  const [bankDetails, setBankDetails] = useState<{ bank_iban: string | null; bank_account_holder: string | null; bank_country: string; configured: boolean } | null>(null);
+  const [editingBank, setEditingBank] = useState(false);
+  const [ibanInput, setIbanInput] = useState('');
+  const [holderInput, setHolderInput] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
+
+  useEffect(() => {
+    if (!user) return;
+    supabase?.auth.getSession().then(({ data }) => {
+      const token = data.session?.access_token;
+      if (!token) return;
+      fetch('/api/owners/earnings', { headers: { authorization: `Bearer ${token}` } })
+        .then(r => r.json()).then(setEarnings).catch(() => {});
+      fetch('/api/owners/bank-details', { headers: { authorization: `Bearer ${token}` } })
+        .then(r => r.json()).then(setBankDetails).catch(() => {});
+    });
+  }, [user]);
+
+  async function saveBank() {
+    if (!ibanInput || !holderInput) return;
+    setSaving(true);
+    setSaveMsg('');
+    const { data } = await supabase!.auth.getSession();
+    const token = data.session?.access_token;
+    const res = await fetch('/api/owners/bank-details', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ bank_iban: ibanInput, bank_account_holder: holderInput }),
+    });
+    setSaving(false);
+    if (res.ok) {
+      setSaveMsg('Saved');
+      setEditingBank(false);
+      const details = await fetch('/api/owners/bank-details', { headers: { authorization: `Bearer ${token}` } }).then(r => r.json());
+      setBankDetails(details);
+    } else {
+      setSaveMsg('Error saving');
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold tracking-tight text-black">Payouts</h2>
+        <p className="text-sm text-black/70">Your earnings and bank account for payouts.</p>
+      </div>
+
+      {/* Earnings summary */}
+      <div className="rounded-lg border border-black/10 p-4 space-y-3">
+        <p className="text-xs font-semibold text-black/50 uppercase">Earnings</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-[11px] text-black/50 uppercase font-semibold">Pending</p>
+            <p className="text-xl font-bold text-black">€{((earnings?.pending_cents ?? 0) / 100).toFixed(2)}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-black/50 uppercase font-semibold">Total Earned</p>
+            <p className="text-xl font-bold text-black">€{((earnings?.total_earned_cents ?? 0) / 100).toFixed(2)}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Bank details */}
+      <div className="rounded-lg border border-black/10 p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-black/50 uppercase">Bank Account</p>
+          <button type="button" onClick={() => { setEditingBank(!editingBank); setIbanInput(''); setHolderInput(''); }} className="text-xs text-blue-600 underline">
+            {editingBank ? 'Cancel' : bankDetails?.configured ? 'Edit' : 'Add'}
+          </button>
+        </div>
+        {!editingBank && bankDetails?.configured && (
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-black">{bankDetails.bank_account_holder}</p>
+            <p className="text-sm text-black/60 font-mono">{bankDetails.bank_iban}</p>
+          </div>
+        )}
+        {!editingBank && !bankDetails?.configured && (
+          <p className="text-sm text-black/50">No bank account added. Add your IBAN to receive payouts.</p>
+        )}
+        {editingBank && (
+          <div className="space-y-2">
+            <input type="text" placeholder="IBAN (e.g. HR1210010051863000160)" value={ibanInput} onChange={e => setIbanInput(e.target.value)} className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm font-mono" />
+            <input type="text" placeholder="Account Holder Name" value={holderInput} onChange={e => setHolderInput(e.target.value)} className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm" />
+            <button type="button" onClick={saveBank} disabled={saving} className="w-full px-3 py-2 rounded-lg bg-black text-white text-sm font-semibold disabled:opacity-50">
+              {saving ? 'Saving...' : 'Save Bank Details'}
+            </button>
+            {saveMsg && <p className="text-xs text-center text-black/60">{saveMsg}</p>}
+          </div>
+        )}
+      </div>
+
+      {/* Payout history */}
+      {(earnings?.payouts?.length ?? 0) > 0 && (
+        <div className="rounded-lg border border-black/10 p-4 space-y-2">
+          <p className="text-xs font-semibold text-black/50 uppercase">Payout History</p>
+          {earnings!.payouts.map((p: any) => (
+            <div key={p.id} className="flex items-center justify-between py-1.5 border-b border-black/5 last:border-0">
+              <div>
+                <p className="text-sm font-semibold text-black">€{(p.owner_amount_cents / 100).toFixed(2)}</p>
+                <p className="text-[11px] text-black/50">{p.paid_at ? new Date(p.paid_at).toLocaleDateString() : new Date(p.created_at).toLocaleDateString()}</p>
+              </div>
+              <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${p.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                {p.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MembersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -2646,99 +2761,7 @@ export default function MembersPage() {
     }
 
     if (activeItem === "payouts" && (user || devSignedIn)) {
-      return (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <h2 className="text-lg font-semibold tracking-tight text-black">
-              Payouts
-            </h2>
-            <p className="text-sm text-black/70">
-              Manage Stripe Connect and view your revenue.
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
-              <button
-                type="button"
-                onClick={() => setIsStripeConnectExpanded(!isStripeConnectExpanded)}
-                className="w-full flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#7C3AED] flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10.5 1.5H2.75A1.25 1.25 0 001.5 2.75v14.5A1.25 1.25 0 002.75 18.5h14.5a1.25 1.25 0 001.25-1.25V9.5m-15-4h12m-12 6h12m-8-8v16" strokeWidth="1.5" stroke="currentColor" fill="none"/>
-                    </svg>
-                  </div>
-                  <div className="text-left">
-                    <h3 className="text-sm font-semibold text-black">Stripe Connect</h3>
-                    <p className="text-[11px] text-black/60">
-                      {isStripeConnectConnected ? "Povezan račun" : "Poveži svoju bankovnu račun"}
-                    </p>
-                  </div>
-                </div>
-                <svg
-                  className={`w-5 h-5 text-[#7C3AED] transition-transform ${isStripeConnectExpanded ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                </svg>
-              </button>
-              {isStripeConnectExpanded && (
-                <div className="mt-4 space-y-3">
-                  <p className="text-sm text-black/70">
-                    Poveži Stripe račun kako bi prihvatio plaćanja i upravlyao transakcijama.
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!supabase) return;
-                        try {
-                          const { data, error } = await supabase.functions.invoke('create-connect-account');
-                          if (error) throw error;
-                          if (data?.url) {
-                            window.location.href = data.url;
-                          }
-                        } catch (err) {
-                          console.error('Stripe Connect error:', err);
-                        }
-                      }}
-                      className="px-4 py-2 rounded-lg bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] transition-colors"
-                    >
-                      Poveži Stripe račun
-                    </button>
-                    <button
-                      type="button"
-                      className="px-4 py-2 rounded-lg border border-[#7C3AED] text-[#7C3AED] text-sm font-semibold hover:bg-purple-50 transition-colors"
-                    >
-                      Poveži isti račun s PayParq-a
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="rounded-lg border border-black/10 bg-black/2 p-4">
-              <p className="text-sm font-semibold text-black mb-3">Revenue & Payouts</p>
-              <div className="space-y-2.5">
-                <div>
-                  <p className="text-[11px] text-black/60 uppercase font-semibold">Total Revenue</p>
-                  <p className="text-2xl font-bold text-black">€0.00</p>
-                </div>
-                <div className="border-t border-black/10 pt-2.5">
-                  <p className="text-[11px] text-black/60 uppercase font-semibold">Pending</p>
-                  <p className="text-lg font-semibold text-orange-600">€0.00</p>
-                </div>
-                <button className="w-full mt-2 px-3 py-2 rounded-lg bg-black text-white text-xs font-semibold hover:bg-gray-800 transition-colors">
-                  View Details
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
+      return <PayoutsPanel user={user} />;
     }
 
     if (activeItem === "calendars" && (user || devSignedIn)) {

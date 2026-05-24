@@ -128,72 +128,67 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
+        const meta = session.metadata || {};
 
-        // Extract metadata
-        const {
-          listingId,
-          startDate,
-          startTime,
-          duration,
-          pricePerHour,
-          plate,
-          plateNumber,
-          customerEmail,
-          customer_email,
-        } = session.metadata || {};
+        // New-format checkout (from /api/stripe/checkout)
+        const locationId = meta.location_id || meta.listingId || '';
+        const chargedCents = parseInt(meta.charged_amount_cents || '0') || (session.amount_total || 0);
+        const commissionRate = parseFloat(meta.lot_commission_rate || '0.15');
+        const plate = meta.plate_number || meta.plate || meta.plateNumber || '';
+        const customerEmail = meta.customer_email || meta.customerEmail || session.customer_details?.email || '';
 
-        if (!listingId || !startDate || !startTime || !duration) {
-          throw new Error('Missing booking metadata');
+        if (locationId) {
+          const { data: location } = await supabase
+            .from('locations')
+            .select('owner_id, name')
+            .eq('id', locationId)
+            .maybeSingle();
+
+          if (location?.owner_id) {
+            // Calculate ledger amounts
+            // Stripe fee: ~2.9% + €0.30
+            const stripeFee = Math.round(chargedCents * 0.029) + 30;
+            const afterStripeFee = chargedCents - stripeFee;
+            // Service fee: €0.99 + 5% of charged amount (always to PayParq)
+            const serviceFee = 99 + Math.round(chargedCents * 0.05);
+            const distributable = Math.max(0, afterStripeFee - serviceFee);
+            // Owner gets (1 - commissionRate) of distributable
+            const ownerReserved = Math.round(distributable * (1 - commissionRate));
+            const payparqReserved = distributable - ownerReserved;
+
+            await supabase.from('owner_ledger').insert({
+              owner_id: location.owner_id,
+              location_id: locationId,
+              stripe_session_id: session.id,
+              stripe_payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : null,
+              charged_amount_cents: chargedCents,
+              stripe_fee_cents: stripeFee,
+              service_fee_cents: serviceFee,
+              commission_rate: commissionRate,
+              owner_reserved_cents: ownerReserved,
+              payparq_reserved_cents: payparqReserved,
+              flow_type: meta.flow_type || '',
+              pricing_type: meta.pricing_type || '',
+              check_in: meta.check_in || '',
+              check_out: meta.check_out || '',
+              status: 'reserved',
+            });
+
+            await sendPaymentNotification(location.owner_id, {
+              location: location.name || 'Parking lot',
+              amount: chargedCents,
+              plate: plate || null,
+              customerEmail: customerEmail || null,
+              startDate: meta.check_in || meta.startDate || null,
+              startTime: meta.startTime || null,
+              duration: meta.duration || null,
+            });
+
+            console.log('[webhook] Ledger entry created for owner:', location.owner_id);
+          }
         }
 
-        // Create parking session record
-        const checkoutTime = new Date(startDate + 'T' + startTime);
-        const checkinTime = new Date(
-          checkoutTime.getTime() + parseInt(duration) * 60 * 60 * 1000
-        );
-
-        const { error: bookingError } = await supabase
-          .from('parking_sessions')
-          .insert({
-            location_id: listingId,
-            user_id: null, // Will be set from auth context in production
-            booking_time: new Date().toISOString(),
-            checkout_time: checkoutTime.toISOString(),
-            checkin_time: checkinTime.toISOString(),
-            duration: parseInt(duration),
-            total_cost: (session.amount_total || 0) / 100, // Convert cents to dollars
-            status: 'confirmed',
-            payment_id: session.payment_intent,
-            metadata: {
-              session_id: session.id,
-              price_per_hour: parseFloat(pricePerHour || '0'),
-            },
-          });
-
-        if (bookingError) {
-          throw bookingError;
-        }
-
-        // Get lot owner and send notification
-        const { data: location } = await supabase
-          .from('locations')
-          .select('owner_id, name')
-          .eq('id', listingId)
-          .single();
-
-        if (location?.owner_id) {
-          await sendPaymentNotification(location.owner_id, {
-            location: location.name || 'Parking lot',
-            amount: session.amount_total || 0,
-            plate: plate || plateNumber || session.customer_details?.email || null,
-            customerEmail: customerEmail || customer_email || session.customer_details?.email || null,
-            startDate: startDate || null,
-            startTime: startTime || null,
-            duration: duration || null,
-          });
-        }
-
-        console.log('Booking created successfully:', listingId);
+        console.log('[webhook] checkout.session.completed:', session.id);
         break;
       }
 

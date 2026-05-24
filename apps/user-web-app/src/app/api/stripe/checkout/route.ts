@@ -934,9 +934,6 @@ async function resolveLocationPricing(
   );
   const lotPayoutMode = resolveLotPayoutMode(verificationMetadata);
   const isLocationsSectionRequest = displayId.trim().length > 0;
-  if (isLocationsSectionRequest && lotPayoutMode !== "hub") {
-    throw { status: 404, message: "location_not_found" };
-  }
   const ownerId = String((data as { owner_id?: string | null }).owner_id ?? "")
     .trim();
   let ownerStripeAccountId: string | null = null;
@@ -1407,24 +1404,7 @@ export async function POST(req: NextRequest) {
   }) {
     const payment_method_types = params.paymentMethodTypes ??
       ["card", "sepa_debit"];
-    const splitPlan = ownerStripeReady && ownerStripeAccountId
-      ? buildStripeSplitPlan({
-        chargedAmountCents: params.chargedAmountCents,
-        sessionAmountCents: params.sessionAmountCents,
-        parkTaxiDailyTicketTotalCents: toCents(
-          dailyTicketUnitAmountCents * params.sessionQuantity,
-        ),
-        sessionQuantity: params.sessionQuantity,
-        pricingType: pricing_type,
-        flowType: flow_type,
-        destinationAccountId: ownerStripeAccountId,
-        expenseRate: splitExpenseRate,
-        taxRate: splitTaxRate,
-        fixedExpenseCents: splitFixedExpenseCents,
-        caseOwnerFixedPayoutCents,
-        payoutMode: lotPayoutMode,
-      })
-      : null;
+    const splitPlan = null;
     const splitMetadata = buildStripeSplitMetadata({
       splitPlan,
       caseOwnerFixedPayoutCents,
@@ -1457,12 +1437,6 @@ export async function POST(req: NextRequest) {
       ...buildStripeSplitPaymentIntentData(splitPlan),
       metadata: checkoutMetadata,
     };
-    if (
-      requiresLiveSplit({ ownerStripeReady, ownerStripeAccountId }) &&
-      !hasLiveSplitEvidence({ splitPlan, splitMetadata, paymentIntentData })
-    ) {
-      throw new Error("split_configuration_missing");
-    }
     return await stripe.checkout.sessions.create({
       mode: "payment",
       success_url: params.checkoutSuccessUrl,
@@ -1898,50 +1872,8 @@ export async function GET(req: NextRequest) {
     minimumChargeApplied,
   }));
   const submitMessage = submitMessageBase;
-  const shouldUseSupabaseCheckout = lotPayoutMode !== "hub";
-  if (shouldUseSupabaseCheckout) {
-    const fallbackUrl = buildSupabaseFunctionCheckoutUrl({
-      locationId: resolvedLocationId,
-      displayId: resolvedDisplayId || undefined,
-      flowType: flow_type,
-      pricingType: pricing_type,
-      checkIn: effectiveCheckIn || undefined,
-      checkOut: finalCheckOut || undefined,
-      quantity,
-      reservationDescription,
-      allowPromotionCodes,
-      customerEmail: normalizedCustomerEmail ?? undefined,
-      customerPhone: normalizedCustomerPhone ?? undefined,
-      plateNumber: plate_number || undefined,
-      extendTargetSessionId,
-      extendMinutes,
-    });
-    if (!fallbackUrl) {
-      return NextResponse.json({ error: "supabase_checkout_unavailable" }, {
-        status: 500,
-      });
-    }
-    return NextResponse.redirect(fallbackUrl, 303);
-  }
   try {
-    const splitPlan = ownerStripeReady && ownerStripeAccountId
-      ? buildStripeSplitPlan({
-        chargedAmountCents,
-        sessionAmountCents,
-        parkTaxiDailyTicketTotalCents: toCents(
-          dailyTicketUnitAmountCents * quantity,
-        ),
-        sessionQuantity: quantity,
-        pricingType: pricing_type,
-        flowType: flow_type,
-        destinationAccountId: ownerStripeAccountId,
-        expenseRate: splitExpenseRate,
-        taxRate: splitTaxRate,
-        fixedExpenseCents: splitFixedExpenseCents,
-        caseOwnerFixedPayoutCents,
-        payoutMode: lotPayoutMode,
-      })
-      : null;
+    const splitPlan = null;
     const splitMetadata = buildStripeSplitMetadata({
       splitPlan,
       caseOwnerFixedPayoutCents,
@@ -1974,14 +1906,6 @@ export async function GET(req: NextRequest) {
       ...buildStripeSplitPaymentIntentData(splitPlan),
       metadata: checkoutMetadata,
     };
-    if (
-      requiresLiveSplit({ ownerStripeReady, ownerStripeAccountId }) &&
-      !hasLiveSplitEvidence({ splitPlan, splitMetadata, paymentIntentData })
-    ) {
-      return NextResponse.json({ error: "split_configuration_missing" }, {
-        status: 409,
-      });
-    }
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       success_url: checkoutSuccessUrl,
