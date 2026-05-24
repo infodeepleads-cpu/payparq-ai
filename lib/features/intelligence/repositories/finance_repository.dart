@@ -190,7 +190,15 @@ class FinanceRepository {
       throw Exception(_extractPayloadError(payload) ?? 'Failed to load ledger.');
     }
     final list = payload['owners'];
-    if (list is List) return list.cast<Map<String, dynamic>>();
+    if (list is List) {
+      return (list as List).cast<Map<String, dynamic>>().map((owner) {
+        final entries = owner['entries'] as List?;
+        return {
+          ...owner as Map<String, dynamic>,
+          'entries': entries ?? [],
+        };
+      }).toList();
+    }
     return [];
   }
 

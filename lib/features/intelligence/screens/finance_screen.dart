@@ -35,6 +35,9 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
   bool _isLoadingLedger = false;
   String? _ledgerError;
   final Map<String, bool> _payoutSubmitting = {};
+  final Map<String, bool> _expandedOwners = {};
+  final Map<String, TextEditingController> _percentageControllers = {};
+  final Map<String, double> _calculatedAmounts = {};
 
   @override
   void initState() {
@@ -48,6 +51,9 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
     _manualAmountController.dispose();
     _manualWeekLabelController.dispose();
     _manualNoteController.dispose();
+    for (final c in _percentageControllers.values) {
+      c.dispose();
+    }
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -429,86 +435,208 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
           ],
           if (_ownerLedger.isNotEmpty) ...[
             const SizedBox(height: 16),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowHeight: 36,
-                dataRowHeight: 56,
-                columnSpacing: 16,
-                columns: [
-                  DataColumn(label: Text('Owner', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
-                  DataColumn(label: Text('Earned', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
-                  DataColumn(label: Text('Pending', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
-                  DataColumn(label: Text('Bank', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
-                  DataColumn(label: Text('Action', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600))),
-                ],
-                rows: _ownerLedger.map((owner) {
-                  final id = owner['owner_id'] as String;
-                  final email = owner['email'] as String? ?? id;
-                  final holder = owner['bank_account_holder'] as String? ?? '';
-                  final bankConfigured = owner['bank_configured'] == true;
-                  final ownerReserved = (owner['owner_reserved_cents'] as int? ?? 0) / 100;
-                  final bookingCount = owner['booking_count'] as int? ?? 0;
-                  final isSubmitting = _payoutSubmitting[id] == true;
-                  return DataRow(cells: [
-                    DataCell(Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(holder.isNotEmpty ? holder : email, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
-                        if (holder.isNotEmpty) Text(email, style: GoogleFonts.inter(fontSize: 10, color: Colors.black45)),
-                      ],
-                    )),
-                    DataCell(Text('€${(ownerReserved + (owner['owner_paid_cents'] as int? ?? 0) / 100).toStringAsFixed(2)}',
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600))),
-                    DataCell(Text('€${ownerReserved.toStringAsFixed(2)}',
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.green.shade700))),
-                    DataCell(Text(bankConfigured ? '✓ OK' : '✗ Missing',
-                        style: GoogleFonts.inter(fontSize: 12, color: bankConfigured ? Colors.green : Colors.orange))),
-                    DataCell(
-                      isSubmitting
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                          : SizedBox(
-                              width: 100,
-                              child: ElevatedButton(
-                                onPressed: bankConfigured ? () => _showPayoutDialog(owner) : null,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: bankConfigured ? const Color(0xFF34D399) : Colors.grey,
-                                  foregroundColor: Colors.black,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                                  elevation: 0,
-                                ),
-                                child: Text('Pay', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
-                              ),
-                            ),
+            ..._ownerLedger.map((owner) {
+              final id = owner['owner_id'] as String;
+              final email = owner['email'] as String? ?? id;
+              final holder = owner['bank_account_holder'] as String? ?? '';
+              final bankConfigured = owner['bank_configured'] == true;
+              final ownerReserved = (owner['owner_reserved_cents'] as int? ?? 0) / 100;
+              final payparqReserved = (owner['payparq_reserved_cents'] as int? ?? 0) / 100;
+              final entries = (owner['entries'] as List?) ?? [];
+              final isExpanded = _expandedOwners[id] == true;
+              final isSubmitting = _payoutSubmitting[id] == true;
+
+              if (!_percentageControllers.containsKey(id)) {
+                _percentageControllers[id] = TextEditingController(text: '100');
+              }
+
+              return Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
                     ),
-                  ]);
-                }).toList(),
-              ),
-            ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        GestureDetector(
+                          onTap: () => setState(() => _expandedOwners[id] = !isExpanded),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(holder.isNotEmpty ? holder : email,
+                                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700)),
+                                    if (holder.isNotEmpty) Text(email, style: GoogleFonts.inter(fontSize: 11, color: Colors.black45)),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text('€${(ownerReserved + payparqReserved).toStringAsFixed(2)}',
+                                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                                  Text('To pay: €${ownerReserved.toStringAsFixed(2)}',
+                                      style: GoogleFonts.inter(fontSize: 11, color: Colors.green.shade700, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                              const SizedBox(width: 12),
+                              Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
+                            ],
+                          ),
+                        ),
+                        if (isExpanded) ...[
+                          const SizedBox(height: 16),
+                          Text('Lots:', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 8),
+                          ...entries.map((entry) {
+                            final locName = (entry['location_name'] as String?) ?? 'Unknown';
+                            final entryOwnerCents = (entry['owner_reserved_cents'] as int?) ?? 0;
+                            final entryPayparqCents = (entry['payparq_reserved_cents'] as int?) ?? 0;
+                            final entryTotal = entryOwnerCents + entryPayparqCents;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(locName, style: GoogleFonts.inter(fontSize: 11)),
+                                  ),
+                                  Text('€${(entryTotal / 100).toStringAsFixed(2)}',
+                                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
+                                  const SizedBox(width: 8),
+                                  Text('(Owner: €${(entryOwnerCents / 100).toStringAsFixed(2)})',
+                                      style: GoogleFonts.inter(fontSize: 10, color: Colors.black45)),
+                                ],
+                              ),
+                            );
+                          }),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Pay percentage:', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
+                                    const SizedBox(height: 6),
+                                    SizedBox(
+                                      width: 120,
+                                      child: TextField(
+                                        controller: _percentageControllers[id],
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                        onChanged: (val) => setState(() {}),
+                                        decoration: InputDecoration(
+                                          suffix: Text('%', style: GoogleFonts.inter(fontSize: 12)),
+                                          border: const OutlineInputBorder(),
+                                          isDense: true,
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text('Amount:', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      '€${_calculatePayoutAmount(id, ownerReserved).toStringAsFixed(2)}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.green.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: (isSubmitting || !bankConfigured) ? null : () => _showPayoutDialog(owner),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: bankConfigured ? const Color(0xFF34D399) : Colors.grey,
+                                foregroundColor: Colors.black,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                elevation: 0,
+                              ),
+                              child: isSubmitting
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                                    )
+                                  : Text(
+                                      bankConfigured
+                                          ? Lang.sel(isHr, 'Confirm & Pay', 'Potvrdi i Plati')
+                                          : Lang.sel(isHr, 'Bank details missing', 'Nedostaju bankovni podaci'),
+                                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              );
+            }),
           ],
         ],
       ),
     );
   }
 
+  double _calculatePayoutAmount(String ownerId, double fullAmount) {
+    final percentage = double.tryParse(_percentageControllers[ownerId]?.text ?? '100') ?? 100;
+    return (fullAmount * percentage) / 100;
+  }
+
   void _showPayoutDialog(Map<String, dynamic> owner) {
     final id = owner['owner_id'] as String;
     final name = (owner['bank_account_holder'] as String? ?? owner['email'] as String? ?? id);
     final ownerReserved = (owner['owner_reserved_cents'] as int? ?? 0) / 100;
+    final payparqReserved = (owner['payparq_reserved_cents'] as int? ?? 0) / 100;
+    final payoutAmount = _calculatePayoutAmount(id, ownerReserved);
+    final payparqKeeps = ownerReserved + payparqReserved - payoutAmount;
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Pay $name'),
-        content: Text('Send €${ownerReserved.toStringAsFixed(2)} to owner?\n\nPayParq keeps the platform fee.'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Total revenue: €${(ownerReserved + payparqReserved).toStringAsFixed(2)}',
+                style: GoogleFonts.inter(fontSize: 12)),
+            Text('PayParq commission: €${payparqReserved.toStringAsFixed(2)}',
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.orange)),
+            const Divider(),
+            Text('Pay to owner: €${payoutAmount.toStringAsFixed(2)}',
+                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.green)),
+            Text('PayParq keeps: €${payparqKeeps.toStringAsFixed(2)}',
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.black45)),
+          ],
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              _handleAllocatePayout(id, ownerReserved);
+              _handleAllocatePayout(id, payoutAmount);
             },
             child: const Text('Confirm'),
           ),
