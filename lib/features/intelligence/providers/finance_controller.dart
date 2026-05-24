@@ -33,6 +33,32 @@ class FinanceController {
     }
   }
 
+  Future<List<Map<String, dynamic>>> loadOwnerLedger() async {
+    try {
+      return await _repo.loadOwnerLedger();
+    } catch (e) {
+      throw AppError('Failed to load owner ledger: $e', cause: e);
+    }
+  }
+
+  Future<void> allocateOwnerPayout({
+    required String ownerId,
+    required int ownerAmountCents,
+    required int payparqAmountCents,
+    String? notes,
+  }) async {
+    try {
+      await _repo.allocateOwnerPayout(
+        ownerId: ownerId,
+        ownerAmountCents: ownerAmountCents,
+        payparqAmountCents: payparqAmountCents,
+        notes: notes,
+      );
+    } catch (e) {
+      throw AppError('Payout failed: $e', cause: e);
+    }
+  }
+
   Future<String> sendManualPayout({
     required String recipientId,
     required String role,

@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../theme.dart';
 import '../../../../logic/providers/auth_providers.dart';
 import '../../../../logic/providers/locale_provider.dart';
 import '../providers/finance_controller.dart';
 import '../../../../services/error_mapper.dart';
-import '../../../../utils/async_action_handler.dart';
 import '../../../../utils/role_labels.dart';
 
 class FinanceScreen extends ConsumerStatefulWidget {
@@ -19,10 +17,7 @@ class FinanceScreen extends ConsumerStatefulWidget {
 
 class _FinanceScreenState extends ConsumerState<FinanceScreen>
     with WidgetsBindingObserver {
-  bool _isConnecting = false;
-  bool _isLoadingDashboard = false;
   bool _isSubmittingManualPayout = false;
-  String? _selectedCountryCode;
   String _manualPayoutRole = 'officer';
   bool _refreshProfileOnResume = false;
   String? _manualPayoutError;
@@ -34,6 +29,15 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
   final TextEditingController _manualWeekLabelController =
       TextEditingController();
   final TextEditingController _manualNoteController = TextEditingController();
+
+  // Owner ledger payout state
+  List<Map<String, dynamic>> _ownerLedger = [];
+  bool _isLoadingLedger = false;
+  String? _ledgerError;
+  final Map<String, bool> _payoutSubmitting = {};
+  final Map<String, bool> _expandedOwners = {};
+  final Map<String, TextEditingController> _percentageControllers = {};
+  final Map<String, double> _calculatedAmounts = {};
 
   @override
   void initState() {
@@ -47,6 +51,9 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
     _manualAmountController.dispose();
     _manualWeekLabelController.dispose();
     _manualNoteController.dispose();
+    for (final c in _percentageControllers.values) {
+      c.dispose();
+    }
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -59,136 +66,38 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
     }
   }
 
-  String? _normalizeCountryCode(dynamic raw) {
-    if (raw == null) return null;
-    final value = raw.toString().trim().toUpperCase();
-    if (RegExp(r'^[A-Z]{2}$').hasMatch(value)) {
-      return value;
+  Future<void> _loadOwnerLedger() async {
+    setState(() { _isLoadingLedger = true; _ledgerError = null; });
+    try {
+      final owners = await ref.read(financeControllerProvider).loadOwnerLedger();
+      if (!mounted) return;
+      setState(() {
+        _ownerLedger = owners;
+        _ledgerError = null;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _ledgerError = e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoadingLedger = false);
     }
-    return null;
   }
 
-  String _resolveConnectCountry(Map<String, dynamic>? profile) {
-    final fromProfile = _normalizeCountryCode(profile?['stripe_country']) ??
-        _normalizeCountryCode(profile?['country_code']) ??
-        _normalizeCountryCode(profile?['country']) ??
-        _normalizeCountryCode(profile?['billing_country']) ??
-        _normalizeCountryCode(profile?['legal_country']);
-    if (fromProfile != null) return fromProfile;
-    final localeCountry =
-        _normalizeCountryCode(Localizations.localeOf(context).countryCode);
-    if (localeCountry != null) return localeCountry;
-    return 'HR';
-  }
-
-  String _effectiveConnectCountry(Map<String, dynamic>? profile) {
-    return _normalizeCountryCode(_selectedCountryCode) ??
-        _resolveConnectCountry(profile);
-  }
-
-  Future<void> _pickStripeCountry(Map<String, dynamic>? profile) async {
-    final isHr = ref.read(localeIsCroatianProvider);
-    final controller = TextEditingController(
-      text: _effectiveConnectCountry(profile),
-    );
-    final selected = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          Lang.sel(isHr, 'Stripe Country', 'Stripe država'),
-        ),
-        content: TextField(
-          controller: controller,
-          textCapitalization: TextCapitalization.characters,
-          maxLength: 2,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: Lang.sel(isHr, 'Country Code', 'Kod države'),
-            hintText: 'US',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(Lang.sel(isHr, 'Cancel', 'Odustani')),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final code = _normalizeCountryCode(controller.text);
-              if (code == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      Lang.sel(
-                        isHr,
-                        'Use a valid 2-letter country code.',
-                        'Unesite ispravan dvoslovni kod države.',
-                      ),
-                    ),
-                  ),
-                );
-                return;
-              }
-              Navigator.of(context).pop(code);
-            },
-            child: Text(Lang.sel(isHr, 'Save', 'Spremi')),
-          ),
-        ],
-      ),
-    );
-    if (!mounted || selected == null) return;
-    setState(() => _selectedCountryCode = selected);
-  }
-
-  Future<void> _handleStripeConnect() async {
-    setState(() => _isConnecting = true);
-    final profile = ref.read(userProfileProvider).value;
-    final country = _effectiveConnectCountry(profile);
-
-    await AsyncActionHandler.run<void>(
-      context: context,
-      action: () async {
-        final url = await ref
-            .read(financeControllerProvider)
-            .createConnectAccount(country: country);
-        if (await canLaunchUrl(Uri.parse(url))) {
-          _refreshProfileOnResume = true;
-          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-        } else {
-          throw Exception('Could not launch onboarding URL');
-        }
-      },
-      errorBuilder: ErrorMapper.message,
-      onError: (_) {
-        if (mounted) setState(() => _isConnecting = false);
-      },
-    );
-    ref.invalidate(userProfileProvider);
-    if (mounted) setState(() => _isConnecting = false);
-  }
-
-  Future<void> _handleOpenDashboard() async {
-    setState(() => _isLoadingDashboard = true);
-
-    await AsyncActionHandler.run<void>(
-      context: context,
-      action: () async {
-        final url =
-            await ref.read(financeControllerProvider).getDashboardLink();
-        if (await canLaunchUrl(Uri.parse(url))) {
-          _refreshProfileOnResume = true;
-          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-        } else {
-          throw Exception('Could not launch dashboard URL');
-        }
-      },
-      errorBuilder: ErrorMapper.message,
-      onError: (_) {
-        if (mounted) setState(() => _isLoadingDashboard = false);
-      },
-    );
-    ref.invalidate(userProfileProvider);
-    if (mounted) setState(() => _isLoadingDashboard = false);
+  Future<void> _handleAllocatePayout(String ownerId, double ownerAmount) async {
+    setState(() { _payoutSubmitting[ownerId] = true; });
+    try {
+      await ref.read(financeControllerProvider).allocateOwnerPayout(
+        ownerId: ownerId,
+        ownerAmountCents: (ownerAmount * 100).round(),
+        payparqAmountCents: 0,
+      );
+      if (!mounted) return;
+      await _loadOwnerLedger();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Payout sent ✓')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+    } finally {
+      if (mounted) setState(() => _payoutSubmitting[ownerId] = false);
+    }
   }
 
   Future<void> _handleManualPayoutSubmit() async {
@@ -291,16 +200,6 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
           ? const Center(child: CircularProgressIndicator())
           : Builder(
               builder: (_) {
-                final String accountId =
-                    (resolvedProfile?['stripe_account_id'] ?? '')
-                        .toString()
-                        .trim();
-                final bool hasStripeAccount = accountId.isNotEmpty;
-                final bool onboardingComplete =
-                    resolvedProfile?['stripe_onboarding_complete'] == true;
-                final bool isConnected = hasStripeAccount || onboardingComplete;
-                final bool needsOnboarding =
-                    hasStripeAccount && !onboardingComplete;
                 final bool canSendRolePayouts = userRole == 'super_admin';
                 final availableLocations =
                     availableLocationsAsync.value ?? const [];
@@ -318,64 +217,15 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
 
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(48),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        Lang.sel(isHr, 'Finance', 'Financije'),
-                        style: GoogleFonts.inter(
-                          fontSize: 40,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                          letterSpacing: -1,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        Lang.sel(
-                            isHr,
-                            'Manage your payouts, commissions, and Stripe connection.',
-                            'Upravljajte isplatama, provizijama i Stripe povezivanjem.'),
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      _buildStripeStatusCard(
-                        isConnected: isConnected,
-                        onboardingComplete: onboardingComplete,
-                        needsOnboarding: needsOnboarding,
-                        accountId: hasStripeAccount ? accountId : null,
-                        profile: resolvedProfile,
-                      ),
-                      if (canSendRolePayouts) ...[
-                        const SizedBox(height: 20),
-                        _buildManualPayoutCard(),
-                      ],
-                      const SizedBox(height: 20),
-                      _buildSplitPolicyCard(
-                        onboardingComplete: onboardingComplete,
-                        activeLocation:
-                            activeLocation.isEmpty ? null : activeLocation,
-                      ),
-                    ],
-                  ),
+                  child: canSendRolePayouts ? _buildOwnerPayoutsCard() : const SizedBox.shrink(),
                 );
               },
             ),
     );
   }
 
-  Widget _buildStripeStatusCard({
-    required bool isConnected,
-    required bool onboardingComplete,
-    required bool needsOnboarding,
-    required String? accountId,
-    required Map<String, dynamic>? profile,
-  }) {
+  Widget _buildOwnerEarningsCard() {
     final isHr = ref.watch(localeIsCroatianProvider);
-    final selectedCountry = _effectiveConnectCountry(profile);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(40),
@@ -390,183 +240,367 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: isConnected ? Colors.green : Colors.orange,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        onboardingComplete
-                            ? Lang.sel(isHr, 'CONNECTED', 'POVEZANO')
-                            : isConnected
-                                ? Lang.sel(isHr, 'SETUP IN PROGRESS',
-                                    'POSTAVLJANJE U TIJEKU')
-                                : Lang.sel(
-                                    isHr, 'ACTION REQUIRED', 'POTREBNA AKCIJA'),
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    if (accountId != null)
-                      Text(
-                        'ID: $accountId',
-                        style: GoogleFonts.inter(
-                          color: Colors.white.withValues(alpha: 0.5),
-                          fontSize: 12,
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  onboardingComplete
-                      ? Lang.sel(
-                          isHr,
-                          'Your account is ready to receive payouts.',
-                          'Vaš račun je spreman za primanje isplata.')
-                      : (needsOnboarding
-                          ? Lang.sel(
-                              isHr,
-                              'Finish Stripe onboarding to enable payouts and full account access.',
-                              'Dovršite Stripe uključivanje za isplate i puni pristup računu.')
-                          : Lang.sel(
-                              isHr,
-                              'Connect your Stripe Express account to start receiving automated payouts.',
-                              'Povežite svoj Stripe Express račun za automatske isplate.')),
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  onboardingComplete
-                      ? Lang.sel(
-                          isHr,
-                          'All parking revenue (minus commissions) is automatically transferred to your IBAN.',
-                          'Sav prihod od parkiranja (minus provizije) automatski se prenosi na vaš IBAN.')
-                      : (needsOnboarding
-                          ? Lang.sel(
-                              isHr,
-                              'You can reopen onboarding at any time to complete pending Stripe requirements.',
-                              'Uključivanje možete ponovno otvoriti u bilo kojem trenutku za dovršavanje Stripe zahtjeva.')
-                          : Lang.sel(
-                              isHr,
-                              'Onboarding takes less than 2 minutes via Stripe\'s secure platform.',
-                              'Uključivanje traje manje od 2 minute putem sigurnog Stripe sustava.')),
-                  style: GoogleFonts.inter(
-                    color: Colors.white.withValues(alpha: 0.6),
-                    fontSize: 14,
-                  ),
-                ),
-                if (!onboardingComplete) ...[
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Text(
-                        '${Lang.sel(isHr, 'Country', 'Država')}: $selectedCountry',
-                        style: GoogleFonts.inter(
-                          color: Colors.white.withValues(alpha: 0.75),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      TextButton(
-                        onPressed: () => _pickStripeCountry(profile),
-                        child: Text(
-                          Lang.sel(isHr, 'Change', 'Promijeni'),
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
+          Text(
+            Lang.sel(isHr, 'Your Earnings', 'Vaša zarada'),
+            style: GoogleFonts.inter(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(width: 48),
-          Column(
+          const SizedBox(height: 6),
+          Text(
+            Lang.sel(isHr,
+              'Manage your bank account and view payout history in Members.',
+              'Upravljajte svojom bankovnom računom i pogledajte historiju isplata u Članovima.'),
+            style: GoogleFonts.inter(
+              color: Colors.white.withValues(alpha: 0.6),
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
             children: [
-              ElevatedButton(
-                onPressed: (_isConnecting || _isLoadingDashboard)
-                    ? null
-                    : (onboardingComplete
-                        ? _handleOpenDashboard
-                        : _handleStripeConnect),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      Lang.sel(isHr, 'Pending', 'U tijeku'),
+                      style: GoogleFonts.inter(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '€0.00',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      Lang.sel(isHr, 'Total Earned', 'Ukupno zaradio'),
+                      style: GoogleFonts.inter(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '€0.00',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
+            child: Text(
+              Lang.sel(isHr, 'Go to Members → Payouts', 'Idi na Članove → Isplate'),
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOwnerPayoutsCard() {
+    final isHr = ref.watch(localeIsCroatianProvider);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  Lang.sel(isHr, 'Owner Ledger', 'Knjiga vlasnika'),
+                  style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.black),
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: _isLoadingLedger ? null : _loadOwnerLedger,
+                icon: _isLoadingLedger
+                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                    : const Icon(Icons.refresh, size: 16),
+                label: Text(Lang.sel(isHr, 'Refresh', 'Osvježi'),
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   elevation: 0,
                 ),
-                child: (_isConnecting || _isLoadingDashboard)
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.black),
-                      )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(isConnected ? Icons.dashboard : Icons.add_link),
-                          const SizedBox(width: 12),
-                          Text(
-                            onboardingComplete
-                                ? Lang.sel(isHr, 'OPEN DASHBOARD',
-                                    'OTVORI NADZORNU PLOČU')
-                                : (needsOnboarding
-                                    ? Lang.sel(isHr, 'COMPLETE ONBOARDING',
-                                        'DOVRŠI UKLJUČIVANJE')
-                                    : Lang.sel(isHr, 'CONNECT STRIPE',
-                                        'POVEŽI STRIPE')),
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+              ),
+            ],
+          ),
+          if (_ledgerError != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8)),
+              child: Text(_ledgerError!, style: GoogleFonts.inter(fontSize: 12, color: Colors.red.shade700)),
+            ),
+          ],
+          if (_ownerLedger.isEmpty && !_isLoadingLedger) ...[
+            const SizedBox(height: 16),
+            Text(
+              Lang.sel(isHr, 'No pending payouts.', 'Nema pending isplata.'),
+              style: GoogleFonts.inter(fontSize: 13, color: Colors.black45),
+            ),
+          ],
+          if (_ownerLedger.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            ..._ownerLedger.map((owner) {
+              final id = owner['owner_id'] as String;
+              final email = owner['email'] as String? ?? id;
+              final holder = owner['bank_account_holder'] as String? ?? '';
+              final bankConfigured = owner['bank_configured'] == true;
+              final ownerReserved = (owner['owner_reserved_cents'] as int? ?? 0) / 100;
+              final payparqReserved = (owner['payparq_reserved_cents'] as int? ?? 0) / 100;
+              final entries = (owner['entries'] as List?) ?? [];
+              final isExpanded = _expandedOwners[id] == true;
+              final isSubmitting = _payoutSubmitting[id] == true;
+
+              if (!_percentageControllers.containsKey(id)) {
+                _percentageControllers[id] = TextEditingController(text: '100');
+              }
+
+              return Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        GestureDetector(
+                          onTap: () => setState(() => _expandedOwners[id] = !isExpanded),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(holder.isNotEmpty ? holder : email,
+                                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700)),
+                                    if (holder.isNotEmpty) Text(email, style: GoogleFonts.inter(fontSize: 11, color: Colors.black45)),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text('€${(ownerReserved + payparqReserved).toStringAsFixed(2)}',
+                                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                                  Text('To pay: €${ownerReserved.toStringAsFixed(2)}',
+                                      style: GoogleFonts.inter(fontSize: 11, color: Colors.green.shade700, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                              const SizedBox(width: 12),
+                              Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
+                            ],
+                          ),
+                        ),
+                        if (isExpanded) ...[
+                          const SizedBox(height: 16),
+                          Text('Lots:', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 8),
+                          ...entries.map((entry) {
+                            final locName = (entry['location_name'] as String?) ?? 'Unknown';
+                            final entryOwnerCents = (entry['owner_reserved_cents'] as int?) ?? 0;
+                            final entryPayparqCents = (entry['payparq_reserved_cents'] as int?) ?? 0;
+                            final entryTotal = entryOwnerCents + entryPayparqCents;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(locName, style: GoogleFonts.inter(fontSize: 11)),
+                                  ),
+                                  Text('€${(entryTotal / 100).toStringAsFixed(2)}',
+                                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
+                                  const SizedBox(width: 8),
+                                  Text('(Owner: €${(entryOwnerCents / 100).toStringAsFixed(2)})',
+                                      style: GoogleFonts.inter(fontSize: 10, color: Colors.black45)),
+                                ],
+                              ),
+                            );
+                          }),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Pay percentage:', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
+                                    const SizedBox(height: 6),
+                                    SizedBox(
+                                      width: 120,
+                                      child: TextField(
+                                        controller: _percentageControllers[id],
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                        onChanged: (val) => setState(() {}),
+                                        decoration: InputDecoration(
+                                          suffix: Text('%', style: GoogleFonts.inter(fontSize: 12)),
+                                          border: const OutlineInputBorder(),
+                                          isDense: true,
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text('Amount:', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      '€${_calculatePayoutAmount(id, ownerReserved).toStringAsFixed(2)}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.green.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: (isSubmitting || !bankConfigured) ? null : () => _showPayoutDialog(owner),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: bankConfigured ? const Color(0xFF34D399) : Colors.grey,
+                                foregroundColor: Colors.black,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                elevation: 0,
+                              ),
+                              child: isSubmitting
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                                    )
+                                  : Text(
+                                      bankConfigured
+                                          ? Lang.sel(isHr, 'Confirm & Pay', 'Potvrdi i Plati')
+                                          : Lang.sel(isHr, 'Bank details missing', 'Nedostaju bankovni podaci'),
+                                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
+                                    ),
                             ),
                           ),
                         ],
-                      ),
-              ),
-              if (isConnected)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: TextButton(
-                    onPressed: () {}, // Future: Update IBAN/Identity
-                    child: Text(
-                      Lang.sel(isHr, 'Update Details', 'Ažuriraj podatke'),
-                      style: GoogleFonts.inter(
-                        color: Colors.white.withValues(alpha: 0.6),
-                      ),
+                      ],
                     ),
                   ),
-                ),
-            ],
+                  const SizedBox(height: 12),
+                ],
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+
+  double _calculatePayoutAmount(String ownerId, double fullAmount) {
+    final percentage = double.tryParse(_percentageControllers[ownerId]?.text ?? '100') ?? 100;
+    return (fullAmount * percentage) / 100;
+  }
+
+  void _showPayoutDialog(Map<String, dynamic> owner) {
+    final id = owner['owner_id'] as String;
+    final name = (owner['bank_account_holder'] as String? ?? owner['email'] as String? ?? id);
+    final ownerReserved = (owner['owner_reserved_cents'] as int? ?? 0) / 100;
+    final payparqReserved = (owner['payparq_reserved_cents'] as int? ?? 0) / 100;
+    final payoutAmount = _calculatePayoutAmount(id, ownerReserved);
+    final payparqKeeps = ownerReserved + payparqReserved - payoutAmount;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Pay $name'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Total revenue: €${(ownerReserved + payparqReserved).toStringAsFixed(2)}',
+                style: GoogleFonts.inter(fontSize: 12)),
+            Text('PayParq commission: €${payparqReserved.toStringAsFixed(2)}',
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.orange)),
+            const Divider(),
+            Text('Pay to owner: €${payoutAmount.toStringAsFixed(2)}',
+                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.green)),
+            Text('PayParq keeps: €${payparqKeeps.toStringAsFixed(2)}',
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.black45)),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _handleAllocatePayout(id, payoutAmount);
+            },
+            child: const Text('Confirm'),
           ),
         ],
       ),
@@ -574,7 +608,6 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
   }
 
   Widget _buildSplitPolicyCard({
-    required bool onboardingComplete,
     required Map<String, dynamic>? activeLocation,
   }) {
     final isHr = ref.watch(localeIsCroatianProvider);
@@ -724,17 +757,11 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
           ),
           const SizedBox(height: 12),
           Text(
-            onboardingComplete
-                ? Lang.sel(
-                    isHr,
-                    'Active for Stripe-connected lots. Non-onboarded lots fall back to platform-only collection.',
-                    'Aktivno za lotove povezane na Stripe. Lotovi bez dovršenog uključivanja koriste naplatu samo na platformu.',
-                  )
-                : Lang.sel(
-                    isHr,
-                    'Connect Stripe to activate automated owner/platform split payouts.',
-                    'Povežite Stripe za aktivaciju automatske podjele isplata između vlasnika i platforme.',
-                  ),
+            Lang.sel(
+              isHr,
+              'Active split payout policy for all lots. Payouts processed via owner bank details.',
+              'Aktivna pravila za podjelu isplata za sve lotove. Isplate se obrađuju preko podataka банke vlasnika.',
+            ),
             style: GoogleFonts.inter(
               fontSize: 13,
               color: AppTheme.textSecondary,
