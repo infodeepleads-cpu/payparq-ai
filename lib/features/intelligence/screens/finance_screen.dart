@@ -217,45 +217,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
 
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(48),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        Lang.sel(isHr, 'Finance', 'Financije'),
-                        style: GoogleFonts.inter(
-                          fontSize: 40,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                          letterSpacing: -1,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        Lang.sel(
-                            isHr,
-                            'Manage your payouts, commissions, and Stripe connection.',
-                            'Upravljajte isplatama, provizijama i Stripe povezivanjem.'),
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      if (userRole != 'super_admin')
-                        _buildOwnerEarningsCard(),
-                      if (canSendRolePayouts) ...[
-                        const SizedBox(height: 20),
-                        _buildOwnerPayoutsCard(),
-                        const SizedBox(height: 20),
-                        _buildManualPayoutCard(),
-                      ],
-                      const SizedBox(height: 20),
-                      _buildSplitPolicyCard(
-                        activeLocation:
-                            activeLocation.isEmpty ? null : activeLocation,
-                      ),
-                    ],
-                  ),
+                  child: canSendRolePayouts ? _buildOwnerPayoutsCard() : const SizedBox.shrink(),
                 );
               },
             ),
