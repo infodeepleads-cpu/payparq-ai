@@ -176,6 +176,50 @@ class FinanceRepository {
     return _client.auth.currentSession?.accessToken;
   }
 
+  Future<List<Map<String, dynamic>>> loadOwnerLedger() async {
+    final token = await _resolveValidAccessToken(forceRefresh: false);
+    if (token == null || token.isEmpty) throw Exception('Sign in required.');
+    final baseUrl = AppConfig.webAppBaseUrl;
+    final uri = Uri.parse('$baseUrl/api/admin/owner-ledger');
+    final response = await http.get(
+      uri,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    final payload = _normalizePayload(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(_extractPayloadError(payload) ?? 'Failed to load ledger.');
+    }
+    final list = payload['owners'];
+    if (list is List) return list.cast<Map<String, dynamic>>();
+    return [];
+  }
+
+  Future<void> allocateOwnerPayout({
+    required String ownerId,
+    required int ownerAmountCents,
+    required int payparqAmountCents,
+    String? notes,
+  }) async {
+    final token = await _resolveValidAccessToken(forceRefresh: false);
+    if (token == null || token.isEmpty) throw Exception('Sign in required.');
+    final baseUrl = AppConfig.webAppBaseUrl;
+    final uri = Uri.parse('$baseUrl/api/payouts/allocate');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({
+        'owner_id': ownerId,
+        'owner_amount_cents': ownerAmountCents,
+        'payparq_amount_cents': payparqAmountCents,
+        'notes': notes ?? '',
+      }),
+    );
+    final payload = _normalizePayload(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(_extractPayloadError(payload) ?? 'Payout failed.');
+    }
+  }
+
   Map<String, dynamic> _normalizePayload(dynamic payload) {
     if (payload is Map<String, dynamic>) return payload;
     if (payload is Map) return Map<String, dynamic>.from(payload);
