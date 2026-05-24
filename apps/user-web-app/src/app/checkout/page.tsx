@@ -163,8 +163,8 @@ function SummaryPanel({
         </div>
       </div>
 
-      <div className="border-t border-gray-100 pt-4 md:pt-6">
-        <div className="mb-4">
+      <div className="border-t border-gray-100 pt-2 md:pt-6">
+        <div>
           <p className="text-xs font-semibold text-gray-400 mb-2.5">Check-in → Check-out</p>
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <span className="text-sm font-medium text-gray-900 leading-tight truncate">
@@ -264,7 +264,7 @@ function SummaryPanel({
         document.body
       )}
 
-      <div className="border-t border-gray-100 pt-6 space-y-4">
+      <div className="-mt-4 md:-mt-6 border-t border-gray-100 pt-3 md:pt-4 space-y-4">
         <div className="grid grid-cols-3 gap-2">
           {[{ h: 1, cents: add1hCents }, { h: 2, cents: add2hCents }, { h: 3, cents: add3hCents }].map(({ h, cents }) => {
             const isSelected = selectedAddOn === h;
@@ -648,10 +648,10 @@ function PaidCheckoutForm({
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#020617] to-[#020617] flex items-center justify-center border border-white/40">
-                <span className="text-sm font-black tracking-tight leading-none text-white">P</span>
+                <span className="text-sm md:text-base font-semibold tracking-tight leading-none text-white">P</span>
               </div>
             </div>
             <span className="text-base font-black tracking-tight text-black">payparq</span>
@@ -696,7 +696,7 @@ function PaidCheckoutForm({
           <form onSubmit={handleSubmit} className="space-y-0 md:space-y-4 px-0 md:px-0">
 
             {/* Contact Info Display Widget */}
-            <div className="bg-white rounded-none md:rounded-lg border-0 md:border md:border-gray-200 p-2 md:p-6 space-y-5">
+            <div className="bg-white rounded-none md:rounded-lg border-0 md:border md:border-gray-200 p-2 md:p-6 space-y-2 md:space-y-5">
               <p className="text-xs font-black text-gray-900 uppercase tracking-widest">Contact Info</p>
               <div className="space-y-3">
                 <div>
@@ -721,7 +721,7 @@ function PaidCheckoutForm({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-black text-gray-900 mb-1.5 block leading-none">Registarska pločica</label>
+                  <label className="text-xs font-black text-gray-900 mb-1.5 block leading-none uppercase tracking-widest">Registarska pločica</label>
                   <input
                     type="text"
                     placeholder="MA679XX"
@@ -775,7 +775,13 @@ function PaidCheckoutForm({
                 <div className="flex-1 h-px bg-gray-200" />
               </div>
               <PaymentElement
-                options={{
+                key={isMobile ? 'mobile' : 'desktop'}
+                options={isMobile ? {
+                  layout: { type: 'tabs' },
+                  paymentMethodOrder: ['card'],
+                  wallets: { googlePay: 'never', applePay: 'never' },
+                  fields: { billingDetails: { email: 'never', phone: 'never' } },
+                } : {
                   layout: { type: 'accordion' },
                   paymentMethodOrder: ['google_pay', 'apple_pay', 'card', 'paypal'],
                   wallets: { googlePay: 'auto', applePay: 'auto' },
@@ -784,7 +790,7 @@ function PaidCheckoutForm({
               />
             </div>
 
-            <p className={`text-center text-xs text-gray-400 pb-3 ${isMobile ? 'block' : 'hidden'}`}>
+            <p className={`text-center text-xs text-gray-400 mb-1 mt-1 ${isMobile ? 'block' : 'hidden'}`}>
               Završetkom kupnje pristajete na naše{' '}
               <a href="/terms" className="underline hover:text-gray-600">uvjete</a>
             </p>
@@ -797,6 +803,7 @@ function PaidCheckoutForm({
             >
               {submitting ? 'Obrada...' : isFree ? 'Potvrdi - Besplatno' : 'Plaćajte'}
             </button>
+
 
             <p className="hidden md:block text-center text-xs text-gray-500 pb-1 mt-1">
               Potvrđivanjem plaćanja dopuštate tvrtki INDIREKTNO da vas se tereti za ovo plaćanje i buduća plaćanja u skladu s njenim uvjetima.
