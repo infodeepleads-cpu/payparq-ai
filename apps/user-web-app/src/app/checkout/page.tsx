@@ -790,7 +790,7 @@ function PaidCheckoutForm({
               />
             </div>
 
-            <p className={`text-center text-xs text-gray-400 mb-1 mt-1 ${isMobile ? 'block' : 'hidden'}`}>
+            <p className="text-center text-xs text-gray-400 mb-1 mt-1">
               Završetkom kupnje pristajete na naše{' '}
               <a href="/terms" className="underline hover:text-gray-600">uvjete</a>
             </p>
