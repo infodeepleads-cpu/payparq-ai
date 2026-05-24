@@ -212,7 +212,14 @@ class _VerificationInboxScreenState
                                   child: Stack(
                                     children: [
                                       Center(
-                                        child: Image.network(photos[index]),
+                                        child: Image.network(
+                                          photos[index],
+                                          errorBuilder: (context, error, stackTrace) => const Icon(
+                                            Icons.broken_image_outlined,
+                                            size: 64,
+                                            color: Colors.white54,
+                                          ),
+                                        ),
                                       ),
                                       Positioned(
                                         top: 40,
