@@ -631,11 +631,11 @@ export function SearchPage() {
     // Get place details to get coordinates using new Place API
     const place = new google.maps.places.Place({ id: placeId });
     place.fetchFields({
-      fields: ['geometry', 'displayName']
+      fields: ['location']
     }).then(() => {
-      if (place.geometry?.location) {
-        const lat = place.geometry.location.lat();
-        const lng = place.geometry.location.lng();
+      if (place.location) {
+        const lat = place.location.lat();
+        const lng = place.location.lng();
         setMapCenter({
           lat,
           lng,
