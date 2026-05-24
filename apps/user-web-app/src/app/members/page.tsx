@@ -293,6 +293,7 @@ export default function MembersPage() {
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
   const [isStripeConnectExpanded, setIsStripeConnectExpanded] = useState(false);
   const [isStripeConnectConnected, setIsStripeConnectConnected] = useState(false);
+  const [copiedLotId, setCopiedLotId] = useState<string | null>(null);
   const [actionProcessing, setActionProcessing] = useState<ActionProcessing | null>(null);
   const [actionError, setActionError] = useState("");
   const [activityLoading, setActivityLoading] = useState(false);
@@ -1118,19 +1119,33 @@ export default function MembersPage() {
       });
   }, [user, supabase]);
 
-  useEffect(() => {
+  const refreshStripeConnectStatus = useCallback(async () => {
     if (!user || !supabase) return;
-    supabase
+    const { data, error } = await supabase
       .from('stripe_accounts')
       .select('stripe_account_id, is_connected')
       .eq('user_id', user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.is_connected) {
-          setIsStripeConnectConnected(true);
-        }
-      });
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.warn('[StripeConnect] status check failed:', error.message);
+      return;
+    }
+    setIsStripeConnectConnected(
+      Boolean(data?.is_connected) || Boolean(data?.stripe_account_id)
+    );
   }, [user]);
+
+  useEffect(() => {
+    void refreshStripeConnectStatus();
+  }, [refreshStripeConnectStatus]);
+
+  useEffect(() => {
+    if (activeItem === 'payouts') {
+      void refreshStripeConnectStatus();
+    }
+  }, [activeItem, refreshStripeConnectStatus]);
 
   useEffect(() => {
     if (!hasMemberIdentity || typeof window === "undefined") {
@@ -2895,13 +2910,37 @@ export default function MembersPage() {
                       </div>
                     </div>
                     {loc.verification_status === 'verified' && (
-                      <div className="px-2 pb-2">
+                      <div className="px-2 pb-2 flex items-center gap-1.5">
                         <Link
                           href={`/search?hubId=${loc.id}`}
                           className="text-[10px] text-blue-600 hover:text-blue-800 hover:underline inline-block"
                         >
                           Brza rezervacija
                         </Link>
+                        <button
+                          type="button"
+                          title="Kopiraj link"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const url = `${window.location.origin}/search?hubId=${loc.id}`;
+                            navigator.clipboard.writeText(url).then(() => {
+                              setCopiedLotId(loc.id);
+                              setTimeout(() => setCopiedLotId(null), 1500);
+                            });
+                          }}
+                          className="text-black/40 hover:text-black/70 transition-colors"
+                        >
+                          {copiedLotId === loc.id ? (
+                            <svg className="w-2.5 h-2.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : (
+                            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                            </svg>
+                          )}
+                        </button>
                       </div>
                     )}
                   </div>
