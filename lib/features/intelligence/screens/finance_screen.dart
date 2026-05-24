@@ -67,17 +67,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
       if (!mounted) return;
       setState(() {
         _ownerLedger = owners;
-        for (final o in owners) {
-          final id = o['owner_id'] as String;
-          if (!_ownerAmountControllers.containsKey(id)) {
-            _ownerAmountControllers[id] = TextEditingController(
-              text: ((o['owner_reserved_cents'] as int? ?? 0) / 100).toStringAsFixed(2),
-            );
-            _payparqAmountControllers[id] = TextEditingController(
-              text: ((o['payparq_reserved_cents'] as int? ?? 0) / 100).toStringAsFixed(2),
-            );
-          }
-        }
+        _ledgerError = null;
       });
     } catch (e) {
       if (mounted) setState(() => _ledgerError = e.toString());
