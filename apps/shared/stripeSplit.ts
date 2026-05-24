@@ -6,7 +6,8 @@ export type StripeSplitRule =
   | "park_taxi_50pct_base"
   | "case_fixed_owner_fee"
   | "regular_10pct"
-  | "regular_daily_min_099";
+  | "regular_daily_min_099"
+  | "regular_0pct";
 
 export type LotPayoutMode = "hub" | "regular";
 
@@ -204,19 +205,9 @@ export function buildStripeSplitPlan(params: {
     fixedExpenseCents: params.fixedExpenseCents,
   });
   if (payoutMode === "regular") {
-    const tenPercentFee = Math.round(
-      distributionAmounts.distributableCents * 0.1,
-    );
-    const dailyMinimumFee = params.pricingType === "daily"
-      ? sessionQuantity * regularDailyMinimumPlatformFeeCents
-      : 0;
-    const platformSplitCents = Math.max(
-      0,
-      Math.min(
-        distributionAmounts.distributableCents,
-        Math.max(tenPercentFee, dailyMinimumFee),
-      ),
-    );
+    const zeroPercentFee = 0;
+    const dailyMinimumFee = 0;
+    const platformSplitCents = 0;
     const ownerPayoutCents = Math.max(
       0,
       distributionAmounts.distributableCents - platformSplitCents,
@@ -225,9 +216,7 @@ export function buildStripeSplitPlan(params: {
     const ownerShareRate = distributionAmounts.distributableCents > 0
       ? ownerPayoutCents / distributionAmounts.distributableCents
       : 0;
-    const platformShareRate = distributionAmounts.distributableCents > 0
-      ? platformSplitCents / distributionAmounts.distributableCents
-      : 0;
+    const platformShareRate = 0;
     return {
       destinationAccountId: params.destinationAccountId,
       applicationFeeAmount,
@@ -238,11 +227,7 @@ export function buildStripeSplitPlan(params: {
       distributableCents: distributionAmounts.distributableCents,
       ownerShareRate,
       platformShareRate,
-      splitRule:
-        dailyMinimumFee > 0 && platformSplitCents === dailyMinimumFee &&
-          dailyMinimumFee > tenPercentFee
-          ? "regular_daily_min_099"
-          : "regular_10pct",
+      splitRule: "regular_0pct",
     };
   }
   if (isCaseFlow) {
