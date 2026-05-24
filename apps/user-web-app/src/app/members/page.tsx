@@ -1748,34 +1748,6 @@ export default function MembersPage() {
           })()}
 
           <div className="flex gap-3 overflow-x-auto pb-1">
-            <div className="min-w-[210px] rounded-xl border border-black/10 bg-white p-3 space-y-2">
-              <p className="text-sm font-semibold text-black">Produženje boravka</p>
-              <div className="flex items-center gap-2">
-                <select
-                  value={extendMinutes}
-                  onChange={(event) => setExtendMinutes(event.target.value)}
-                  className="rounded-lg border border-black/10 px-2 py-1.5 text-xs text-black bg-white outline-none focus:border-black/40"
-                >
-                  <option value="60">+1h</option>
-                  <option value="120">+2h</option>
-                  <option value="1440">+1d</option>
-                  <option value="2880">+2d</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={handleExtendAction}
-                  disabled={actionProcessing === "extend"}
-                  className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
-                >
-                  {actionProcessing === "extend" ? "Obrada..." : "Produži"}
-                </button>
-              </div>
-              {homeFeedback.extend && (
-                <p className={`text-[11px] ${homeFeedback.extend.type === "error" ? "text-red-600" : "text-black/70"}`}>
-                  {homeFeedback.extend.text}
-                </p>
-              )}
-            </div>
             {homeContext?.parkTaxiIncluded ? (
               <div className="min-w-[210px] rounded-xl border border-black/10 bg-white p-3 space-y-2">
                 <p className="text-sm font-semibold text-black">Park&Taxi</p>
