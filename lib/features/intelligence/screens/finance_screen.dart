@@ -19,10 +19,7 @@ class FinanceScreen extends ConsumerStatefulWidget {
 
 class _FinanceScreenState extends ConsumerState<FinanceScreen>
     with WidgetsBindingObserver {
-  bool _isConnecting = false;
-  bool _isLoadingDashboard = false;
   bool _isSubmittingManualPayout = false;
-  String? _selectedCountryCode;
   String _manualPayoutRole = 'officer';
   bool _refreshProfileOnResume = false;
   String? _manualPayoutError;
@@ -72,138 +69,6 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
       _refreshProfileOnResume = false;
       ref.invalidate(userProfileProvider);
     }
-  }
-
-  String? _normalizeCountryCode(dynamic raw) {
-    if (raw == null) return null;
-    final value = raw.toString().trim().toUpperCase();
-    if (RegExp(r'^[A-Z]{2}$').hasMatch(value)) {
-      return value;
-    }
-    return null;
-  }
-
-  String _resolveConnectCountry(Map<String, dynamic>? profile) {
-    final fromProfile = _normalizeCountryCode(profile?['stripe_country']) ??
-        _normalizeCountryCode(profile?['country_code']) ??
-        _normalizeCountryCode(profile?['country']) ??
-        _normalizeCountryCode(profile?['billing_country']) ??
-        _normalizeCountryCode(profile?['legal_country']);
-    if (fromProfile != null) return fromProfile;
-    final localeCountry =
-        _normalizeCountryCode(Localizations.localeOf(context).countryCode);
-    if (localeCountry != null) return localeCountry;
-    return 'HR';
-  }
-
-  String _effectiveConnectCountry(Map<String, dynamic>? profile) {
-    return _normalizeCountryCode(_selectedCountryCode) ??
-        _resolveConnectCountry(profile);
-  }
-
-  Future<void> _pickStripeCountry(Map<String, dynamic>? profile) async {
-    final isHr = ref.read(localeIsCroatianProvider);
-    final controller = TextEditingController(
-      text: _effectiveConnectCountry(profile),
-    );
-    final selected = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          Lang.sel(isHr, 'Stripe Country', 'Stripe država'),
-        ),
-        content: TextField(
-          controller: controller,
-          textCapitalization: TextCapitalization.characters,
-          maxLength: 2,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: Lang.sel(isHr, 'Country Code', 'Kod države'),
-            hintText: 'US',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(Lang.sel(isHr, 'Cancel', 'Odustani')),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final code = _normalizeCountryCode(controller.text);
-              if (code == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      Lang.sel(
-                        isHr,
-                        'Use a valid 2-letter country code.',
-                        'Unesite ispravan dvoslovni kod države.',
-                      ),
-                    ),
-                  ),
-                );
-                return;
-              }
-              Navigator.of(context).pop(code);
-            },
-            child: Text(Lang.sel(isHr, 'Save', 'Spremi')),
-          ),
-        ],
-      ),
-    );
-    if (!mounted || selected == null) return;
-    setState(() => _selectedCountryCode = selected);
-  }
-
-  Future<void> _handleStripeConnect() async {
-    setState(() => _isConnecting = true);
-    final profile = ref.read(userProfileProvider).value;
-    final country = _effectiveConnectCountry(profile);
-
-    await AsyncActionHandler.run<void>(
-      context: context,
-      action: () async {
-        final url = await ref
-            .read(financeControllerProvider)
-            .createConnectAccount(country: country);
-        if (await canLaunchUrl(Uri.parse(url))) {
-          _refreshProfileOnResume = true;
-          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-        } else {
-          throw Exception('Could not launch onboarding URL');
-        }
-      },
-      errorBuilder: ErrorMapper.message,
-      onError: (_) {
-        if (mounted) setState(() => _isConnecting = false);
-      },
-    );
-    ref.invalidate(userProfileProvider);
-    if (mounted) setState(() => _isConnecting = false);
-  }
-
-  Future<void> _handleOpenDashboard() async {
-    setState(() => _isLoadingDashboard = true);
-
-    await AsyncActionHandler.run<void>(
-      context: context,
-      action: () async {
-        final url =
-            await ref.read(financeControllerProvider).getDashboardLink();
-        if (await canLaunchUrl(Uri.parse(url))) {
-          _refreshProfileOnResume = true;
-          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-        } else {
-          throw Exception('Could not launch dashboard URL');
-        }
-      },
-      errorBuilder: ErrorMapper.message,
-      onError: (_) {
-        if (mounted) setState(() => _isLoadingDashboard = false);
-      },
-    );
-    ref.invalidate(userProfileProvider);
-    if (mounted) setState(() => _isLoadingDashboard = false);
   }
 
   Future<void> _loadOwnerLedger() async {
@@ -360,16 +225,6 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
           ? const Center(child: CircularProgressIndicator())
           : Builder(
               builder: (_) {
-                final String accountId =
-                    (resolvedProfile?['stripe_account_id'] ?? '')
-                        .toString()
-                        .trim();
-                final bool hasStripeAccount = accountId.isNotEmpty;
-                final bool onboardingComplete =
-                    resolvedProfile?['stripe_onboarding_complete'] == true;
-                final bool isConnected = hasStripeAccount || onboardingComplete;
-                final bool needsOnboarding =
-                    hasStripeAccount && !onboardingComplete;
                 final bool canSendRolePayouts = userRole == 'super_admin';
                 final availableLocations =
                     availableLocationsAsync.value ?? const [];
@@ -411,13 +266,8 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
                         ),
                       ),
                       const SizedBox(height: 32),
-                      _buildStripeStatusCard(
-                        isConnected: isConnected,
-                        onboardingComplete: onboardingComplete,
-                        needsOnboarding: needsOnboarding,
-                        accountId: hasStripeAccount ? accountId : null,
-                        profile: resolvedProfile,
-                      ),
+                      if (userRole != 'super_admin')
+                        _buildOwnerEarningsCard(),
                       if (canSendRolePayouts) ...[
                         const SizedBox(height: 20),
                         _buildOwnerPayoutsCard(),
@@ -426,7 +276,6 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
                       ],
                       const SizedBox(height: 20),
                       _buildSplitPolicyCard(
-                        onboardingComplete: onboardingComplete,
                         activeLocation:
                             activeLocation.isEmpty ? null : activeLocation,
                       ),
@@ -438,15 +287,8 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
     );
   }
 
-  Widget _buildStripeStatusCard({
-    required bool isConnected,
-    required bool onboardingComplete,
-    required bool needsOnboarding,
-    required String? accountId,
-    required Map<String, dynamic>? profile,
-  }) {
+  Widget _buildOwnerEarningsCard() {
     final isHr = ref.watch(localeIsCroatianProvider);
-    final selectedCountry = _effectiveConnectCountry(profile);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(40),
@@ -461,183 +303,102 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: isConnected ? Colors.green : Colors.orange,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        onboardingComplete
-                            ? Lang.sel(isHr, 'CONNECTED', 'POVEZANO')
-                            : isConnected
-                                ? Lang.sel(isHr, 'SETUP IN PROGRESS',
-                                    'POSTAVLJANJE U TIJEKU')
-                                : Lang.sel(
-                                    isHr, 'ACTION REQUIRED', 'POTREBNA AKCIJA'),
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    if (accountId != null)
-                      Text(
-                        'ID: $accountId',
-                        style: GoogleFonts.inter(
-                          color: Colors.white.withValues(alpha: 0.5),
-                          fontSize: 12,
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  onboardingComplete
-                      ? Lang.sel(
-                          isHr,
-                          'Your account is ready to receive payouts.',
-                          'Vaš račun je spreman za primanje isplata.')
-                      : (needsOnboarding
-                          ? Lang.sel(
-                              isHr,
-                              'Finish Stripe onboarding to enable payouts and full account access.',
-                              'Dovršite Stripe uključivanje za isplate i puni pristup računu.')
-                          : Lang.sel(
-                              isHr,
-                              'Connect your Stripe Express account to start receiving automated payouts.',
-                              'Povežite svoj Stripe Express račun za automatske isplate.')),
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  onboardingComplete
-                      ? Lang.sel(
-                          isHr,
-                          'All parking revenue (minus commissions) is automatically transferred to your IBAN.',
-                          'Sav prihod od parkiranja (minus provizije) automatski se prenosi na vaš IBAN.')
-                      : (needsOnboarding
-                          ? Lang.sel(
-                              isHr,
-                              'You can reopen onboarding at any time to complete pending Stripe requirements.',
-                              'Uključivanje možete ponovno otvoriti u bilo kojem trenutku za dovršavanje Stripe zahtjeva.')
-                          : Lang.sel(
-                              isHr,
-                              'Onboarding takes less than 2 minutes via Stripe\'s secure platform.',
-                              'Uključivanje traje manje od 2 minute putem sigurnog Stripe sustava.')),
-                  style: GoogleFonts.inter(
-                    color: Colors.white.withValues(alpha: 0.6),
-                    fontSize: 14,
-                  ),
-                ),
-                if (!onboardingComplete) ...[
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Text(
-                        '${Lang.sel(isHr, 'Country', 'Država')}: $selectedCountry',
-                        style: GoogleFonts.inter(
-                          color: Colors.white.withValues(alpha: 0.75),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      TextButton(
-                        onPressed: () => _pickStripeCountry(profile),
-                        child: Text(
-                          Lang.sel(isHr, 'Change', 'Promijeni'),
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
+          Text(
+            Lang.sel(isHr, 'Your Earnings', 'Vaša zarada'),
+            style: GoogleFonts.inter(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(width: 48),
-          Column(
+          const SizedBox(height: 6),
+          Text(
+            Lang.sel(isHr,
+              'Manage your bank account and view payout history in Members.',
+              'Upravljajte svojom bankovnom računom i pogledajte historiju isplata u Članovima.'),
+            style: GoogleFonts.inter(
+              color: Colors.white.withValues(alpha: 0.6),
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
             children: [
-              ElevatedButton(
-                onPressed: (_isConnecting || _isLoadingDashboard)
-                    ? null
-                    : (onboardingComplete
-                        ? _handleOpenDashboard
-                        : _handleStripeConnect),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: (_isConnecting || _isLoadingDashboard)
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.black),
-                      )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(isConnected ? Icons.dashboard : Icons.add_link),
-                          const SizedBox(width: 12),
-                          Text(
-                            onboardingComplete
-                                ? Lang.sel(isHr, 'OPEN DASHBOARD',
-                                    'OTVORI NADZORNU PLOČU')
-                                : (needsOnboarding
-                                    ? Lang.sel(isHr, 'COMPLETE ONBOARDING',
-                                        'DOVRŠI UKLJUČIVANJE')
-                                    : Lang.sel(isHr, 'CONNECT STRIPE',
-                                        'POVEŽI STRIPE')),
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
-              if (isConnected)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: TextButton(
-                    onPressed: () {}, // Future: Update IBAN/Identity
-                    child: Text(
-                      Lang.sel(isHr, 'Update Details', 'Ažuriraj podatke'),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      Lang.sel(isHr, 'Pending', 'U tijeku'),
                       style: GoogleFonts.inter(
                         color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '€0.00',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      Lang.sel(isHr, 'Total Earned', 'Ukupno zaradio'),
+                      style: GoogleFonts.inter(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '€0.00',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
+            child: Text(
+              Lang.sel(isHr, 'Go to Members → Payouts', 'Idi na Članove → Isplate'),
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
           ),
         ],
       ),
@@ -674,8 +435,8 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
                     const SizedBox(height: 4),
                     Text(
                       Lang.sel(isHr,
-                        'Reserved owner earnings. Enter amounts and pay instantly.',
-                        'Rezervirana zarada vlasnika. Unesite iznose i isplatite odmah.'),
+                        'Send payouts to owners instantly.',
+                        'Isplatite vlasnike odmah.'),
                       style: GoogleFonts.inter(fontSize: 13, color: Colors.black54),
                     ),
                   ],
@@ -706,7 +467,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
           if (_ownerLedger.isEmpty && !_isLoadingLedger) ...[
             const SizedBox(height: 16),
             Text(
-              Lang.sel(isHr, 'No pending reserved amounts. Press Load to refresh.', 'Nema rezerviranih iznosa. Pritisnite Učitaj.'),
+              Lang.sel(isHr, 'No pending payouts. Press Load to refresh.', 'Nema pending isplata. Pritisnite Učitaj.'),
               style: GoogleFonts.inter(fontSize: 13, color: Colors.black45),
             ),
           ],
@@ -758,10 +519,10 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text('€${ownerReserved.toStringAsFixed(2)} owner',
+                          Text('€${ownerReserved.toStringAsFixed(2)}',
                               style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.green.shade700)),
-                          Text('€${payparqReserved.toStringAsFixed(2)} PayParq',
-                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.blue.shade700)),
+                          Text('PayParq: €${payparqReserved.toStringAsFixed(2)}',
+                              style: GoogleFonts.inter(fontSize: 11, color: Colors.black45)),
                           Text('$bookingCount bookings',
                               style: GoogleFonts.inter(fontSize: 11, color: Colors.black45)),
                         ],
@@ -774,24 +535,24 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
                     runSpacing: 8,
                     children: [
                       SizedBox(
-                        width: 200,
+                        width: 180,
                         child: TextField(
                           controller: _ownerAmountControllers[id],
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           decoration: InputDecoration(
-                            labelText: Lang.sel(isHr, 'To owner (€)', 'Vlasniku (€)'),
+                            labelText: Lang.sel(isHr, 'Owner (€)', 'Vlasnik (€)'),
                             border: const OutlineInputBorder(),
                             isDense: true,
                           ),
                         ),
                       ),
                       SizedBox(
-                        width: 200,
+                        width: 180,
                         child: TextField(
                           controller: _payparqAmountControllers[id],
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           decoration: InputDecoration(
-                            labelText: Lang.sel(isHr, 'To PayParq (€)', 'PayParq-u (€)'),
+                            labelText: Lang.sel(isHr, 'PayParq (€)', 'PayParq (€)'),
                             border: const OutlineInputBorder(),
                             isDense: true,
                           ),
@@ -824,7 +585,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
                               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
                           : Text(
                               bankConfigured
-                                  ? Lang.sel(isHr, 'Pay Now', 'Isplati odmah')
+                                  ? Lang.sel(isHr, 'Send Payout', 'Pošalji isplatu')
                                   : Lang.sel(isHr, 'Bank details missing', 'Nedostaju bankovni podaci'),
                               style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
                             ),
@@ -840,7 +601,6 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
   }
 
   Widget _buildSplitPolicyCard({
-    required bool onboardingComplete,
     required Map<String, dynamic>? activeLocation,
   }) {
     final isHr = ref.watch(localeIsCroatianProvider);
@@ -990,17 +750,11 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
           ),
           const SizedBox(height: 12),
           Text(
-            onboardingComplete
-                ? Lang.sel(
-                    isHr,
-                    'Active for Stripe-connected lots. Non-onboarded lots fall back to platform-only collection.',
-                    'Aktivno za lotove povezane na Stripe. Lotovi bez dovršenog uključivanja koriste naplatu samo na platformu.',
-                  )
-                : Lang.sel(
-                    isHr,
-                    'Connect Stripe to activate automated owner/platform split payouts.',
-                    'Povežite Stripe za aktivaciju automatske podjele isplata između vlasnika i platforme.',
-                  ),
+            Lang.sel(
+              isHr,
+              'Active split payout policy for all lots. Payouts processed via owner bank details.',
+              'Aktivna pravila za podjelu isplata za sve lotove. Isplate se obrađuju preko podataka банke vlasnika.',
+            ),
             style: GoogleFonts.inter(
               fontSize: 13,
               color: AppTheme.textSecondary,
