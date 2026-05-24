@@ -73,7 +73,18 @@ function SummaryPanel({
   const discountEur = promoDiscountCents / 100;
   const isFree = amountEur <= 0;
 
-  const durationHours = checkIn && checkOut ? Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60)) : 1;
+  const durationHours = (() => {
+    if (!checkIn?.trim() || !checkOut?.trim()) return 1;
+    try {
+      const start = new Date(checkIn);
+      const end = new Date(checkOut);
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) return 1;
+      const diff = end.getTime() - start.getTime();
+      return Math.max(1, Math.round(diff / (1000 * 60 * 60)));
+    } catch {
+      return 1;
+    }
+  })();
   const [showPromoDropdown, setShowPromoDropdown] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempCheckIn, setTempCheckIn] = useState(checkIn);
@@ -92,7 +103,10 @@ function SummaryPanel({
     for (let i = 0; i < 30; i++) {
       const date = new Date(today);
       date.setDate(date.getDate() + i);
-      const formatted = date.toISOString().slice(0, 10);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const formatted = `${year}-${month}-${day}`;
       const label = date.toLocaleString('en-US', { month: 'short', day: 'numeric' });
       dates.push({ value: formatted, label });
     }
@@ -126,10 +140,8 @@ function SummaryPanel({
     if (!dateStr || !timeStr) return '';
     const [year, month, day] = dateStr.split('-').map(Number);
     const [hours, minutes] = timeStr.split(':').map(Number);
-    const d = new Date();
-    d.setFullYear(year, month - 1, day);
-    d.setHours(hours, minutes, 0, 0);
-    return d.toISOString();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00`;
   }
 
   function handleApplyDateChanges() {
@@ -147,7 +159,7 @@ function SummaryPanel({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 md:sticky md:top-8 p-4 md:p-6 space-y-4 md:space-y-6 overflow-hidden">
+    <div className="bg-white rounded-none md:rounded-lg border-0 md:border md:border-gray-200 md:sticky md:top-8 p-2 md:p-6 space-y-4 md:space-y-6 overflow-hidden">
       <div className="hidden lg:block">
         <p className="text-sm font-semibold text-gray-900 mb-1">{locationName}</p>
         <p className="text-xs text-gray-600 mb-2">{address || locationId}</p>
@@ -156,11 +168,14 @@ function SummaryPanel({
 
       <div className="lg:hidden">
         <p className="text-xs font-semibold text-gray-600 text-center">Sesija parkiranja ({durationHours} {durationHours === 1 ? 'sat' : durationHours < 5 ? 'sata' : 'sati'})</p>
-        <p className="font-bold text-gray-900 text-3xl mt-1 text-center">€{amountEur.toFixed(2)}</p>
+        <p className="font-bold text-gray-900 text-3xl mt-2 text-center">€{amountEur.toFixed(2)}</p>
+        <div className="mt-3 text-center">
+          <p className="text-xs text-gray-600">{locationName} {displayId && <span className="text-gray-700">ID: <span className="font-mono font-medium">{displayId}</span></span>}</p>
+        </div>
       </div>
 
-      <div className="border-t border-gray-100 pt-4 md:pt-6">
-        <div className="mb-4">
+      <div className="border-t border-gray-100 pt-2 md:pt-6">
+        <div>
           <p className="text-xs font-semibold text-gray-400 mb-2.5">Check-in → Check-out</p>
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <span className="text-sm font-medium text-gray-900 leading-tight truncate">
@@ -246,13 +261,13 @@ function SummaryPanel({
                 onClick={handleApplyDateChanges}
                 className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors"
               >
-                Apliciraj
+                Promijeni
               </button>
               <button
                 onClick={() => setShowDatePicker(false)}
                 className="w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors"
               >
-                Otkazati
+                Odustani
               </button>
             </div>
           </div>
@@ -260,7 +275,7 @@ function SummaryPanel({
         document.body
       )}
 
-      <div className="border-t border-gray-100 pt-6 space-y-4">
+      <div className="-mt-4 md:-mt-6 border-t border-gray-100 pt-3 md:pt-4 space-y-4">
         <div className="grid grid-cols-3 gap-2">
           {[{ h: 1, cents: add1hCents }, { h: 2, cents: add2hCents }, { h: 3, cents: add3hCents }].map(({ h, cents }) => {
             const isSelected = selectedAddOn === h;
@@ -310,13 +325,13 @@ function SummaryPanel({
         </div>
 
         <div className="flex flex-col gap-1 mb-4">
-          <div className="flex items-center gap-2 text-xs text-gray-700">
+          <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
             <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
               <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
             </span>
-            <span>Cancel free until start time</span>
+            <span>Otkaži besplatno do vremena početka</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-700">
+          <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
             <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
               <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
             </span>
@@ -330,8 +345,8 @@ function SummaryPanel({
             <div className="text-2xl font-bold text-green-600">CHECKOUT FREE</div>
           </div>
         ) : (
-          <div className="border-t border-gray-100 pt-4">
-            <p className="text-xs font-semibold text-gray-600 mb-3">Price Breakdown</p>
+          <div className="border-t border-gray-100 pt-4 hidden lg:block">
+            <p className="text-xs font-bold text-gray-900 mb-3">Raščlamba cijena</p>
             <div className="space-y-2 text-xs">
               <div className="flex justify-between text-gray-700">
                 <span>Subtotal</span>
@@ -402,6 +417,7 @@ function Field({ label, note, ...props }: { label: string; note?: string } & Rea
 function PaidCheckoutForm({
   amountEur, locationName, checkIn: initialCheckIn, checkOut: initialCheckOut,
   locationId, displayId, originalAmountCents, onAmountChange, isFree, address, clientSecret,
+  phCents = 0, pdCents = 0, pmCents = 0,
 }: {
   amountEur: number;
   locationName: string;
@@ -414,6 +430,9 @@ function PaidCheckoutForm({
   isFree?: boolean;
   address?: string;
   clientSecret?: string | null;
+  phCents?: number;
+  pdCents?: number;
+  pmCents?: number;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -433,18 +452,30 @@ function PaidCheckoutForm({
   const serviceFeeEurCents = Math.round((99 + (displayAmountCents * 0.05)));
   const totalWithFeeEurCents = displayAmountCents + serviceFeeEurCents;
 
-  // Hourly rate derived from original booking — used to reprice on duration change
-  const originalDurationHours = Math.max(
-    0.5,
-    (new Date(initialCheckOut).getTime() - new Date(initialCheckIn).getTime()) / (1000 * 60 * 60)
-  );
-  const hourlyRateCents = originalAmountCents / originalDurationHours;
+  function calcAmountCents(durationHours: number): number {
+    const ph = phCents || (originalAmountCents / Math.max(0.5, (new Date(initialCheckOut).getTime() - new Date(initialCheckIn).getTime()) / (1000 * 60 * 60)));
+    const hourly = durationHours * ph;
+    const daily = pdCents ? Math.ceil(durationHours / 24) * pdCents : Infinity;
+    const monthly = pmCents || Infinity;
+    return Math.max(100, Math.round(Math.min(hourly, daily, monthly)));
+  }
 
   const [promoStatus, setPromoStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle');
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoDiscountCents, setPromoDiscountCents] = useState(0);
   const [promoDiscountPercent, setPromoDiscountPercent] = useState(0);
+
+  // Mobile payment options toggle
+  const [showPaymentOptions, setShowPaymentOptions] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Update payment intent with email, plate, phone when they change
   useEffect(() => {
@@ -481,18 +512,18 @@ function PaidCheckoutForm({
   const handleCheckInChange = useCallback((newCheckIn: string) => {
     setCheckIn(newCheckIn);
     const newDurationHours = Math.max(0.5, (new Date(checkOut).getTime() - new Date(newCheckIn).getTime()) / (1000 * 60 * 60));
-    const newAmountCents = Math.max(100, Math.round(newDurationHours * hourlyRateCents));
+    const newAmountCents = calcAmountCents(newDurationHours);
     setDisplayAmountCents(newAmountCents);
     updatePIAmount(newAmountCents);
-  }, [checkOut, hourlyRateCents, clientSecret]);
+  }, [checkOut, clientSecret, phCents, pdCents, pmCents]);
 
   const handleCheckOutChange = useCallback((newCheckOut: string) => {
     setCheckOut(newCheckOut);
     const newDurationHours = Math.max(0.5, (new Date(newCheckOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60));
-    const newAmountCents = Math.max(100, Math.round(newDurationHours * hourlyRateCents));
+    const newAmountCents = calcAmountCents(newDurationHours);
     setDisplayAmountCents(newAmountCents);
     updatePIAmount(newAmountCents);
-  }, [checkIn, hourlyRateCents, clientSecret]);
+  }, [checkIn, clientSecret, phCents, pdCents, pmCents]);
 
   const handleAddHours = useCallback((hours: number, addCents: number) => {
     const newCheckOut = new Date(checkOut);
@@ -628,10 +659,10 @@ function PaidCheckoutForm({
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#020617] to-[#020617] flex items-center justify-center border border-white/40">
-                <span className="text-sm font-black tracking-tight leading-none text-white">P</span>
+                <span className="text-sm md:text-base font-semibold tracking-tight leading-none text-white">P</span>
               </div>
             </div>
             <span className="text-base font-black tracking-tight text-black">payparq</span>
@@ -644,8 +675,8 @@ function PaidCheckoutForm({
       </header>
 
       {/* Body */}
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8 items-start">
+      <div className="max-w-4xl mx-auto px-2 md:px-6 py-0 md:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-0 md:gap-8 items-start">
 
           {/* ── Left: summary ── */}
           <SummaryPanel
@@ -669,18 +700,18 @@ function PaidCheckoutForm({
             onCheckOutChange={handleCheckOutChange}
             onDatePickerToggle={setDatePickerOpen}
             onAddHours={handleAddHours}
-            hourlyRateCents={hourlyRateCents}
+            hourlyRateCents={phCents || undefined}
           />
 
           {/* ── Right: form ── */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-0 md:space-y-4 px-0 md:px-0">
 
             {/* Contact Info Display Widget */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-5">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Contact Info</p>
+            <div className="bg-white rounded-none md:rounded-lg border-0 md:border md:border-gray-200 p-2 md:p-6 space-y-2 md:space-y-5">
+              <p className="text-xs font-black text-gray-900 uppercase tracking-widest">Contact Info</p>
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs font-black text-gray-600 mb-1.5 block leading-none">Email Address</label>
+                  <label className="hidden md:block text-xs font-black text-gray-600 mb-1.5 block leading-none">Email Address</label>
                   <input
                     type="email"
                     placeholder="you@example.com"
@@ -691,7 +722,7 @@ function PaidCheckoutForm({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-black text-gray-600 mb-1.5 block leading-none">Telefon</label>
+                  <label className="hidden md:block text-xs font-black text-gray-600 mb-1.5 block leading-none">Telefon</label>
                   <input
                     type="tel"
                     placeholder="+385 91 234 5678"
@@ -701,10 +732,10 @@ function PaidCheckoutForm({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-black text-gray-600 mb-1.5 block leading-none">Registarska pločica</label>
+                  <label className="text-xs font-black text-gray-900 mb-1.5 block leading-none uppercase tracking-widest">Registarska pločica</label>
                   <input
                     type="text"
-                    placeholder="ZG-1234-AB"
+                    placeholder="MA679XX"
                     value={plate}
                     onChange={(e) => setPlate(e.target.value.toUpperCase())}
                     className="w-full border border-gray-300 rounded-md px-3.5 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-colors uppercase"
@@ -713,7 +744,15 @@ function PaidCheckoutForm({
               </div>
             </div>
 
-            {/* Payment Method */}
+
+            {/* Error */}
+            {submitError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                <p className="text-sm text-red-600 font-medium">{submitError}</p>
+              </div>
+            )}
+
+            {/* Payment Method Section */}
             <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6 space-y-4 overflow-hidden">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Način plaćanja</p>
               <ExpressCheckoutElement
@@ -747,28 +786,27 @@ function PaidCheckoutForm({
                 <div className="flex-1 h-px bg-gray-200" />
               </div>
               <PaymentElement
-                options={{
+                key={isMobile ? 'mobile' : 'desktop'}
+                options={isMobile ? {
+                  layout: { type: 'tabs' },
+                  paymentMethodOrder: ['card'],
+                  wallets: { googlePay: 'never', applePay: 'never' },
+                  fields: { billingDetails: { email: 'never', phone: 'never' } },
+                } : {
                   layout: { type: 'accordion' },
-                  paymentMethodOrder: ['card', 'google_pay', 'apple_pay', 'paypal'],
+                  paymentMethodOrder: ['google_pay', 'apple_pay', 'card', 'paypal'],
                   wallets: { googlePay: 'auto', applePay: 'auto' },
                   fields: { billingDetails: { email: 'never', phone: 'never' } },
                 }}
               />
             </div>
 
-            {/* Error */}
-            {submitError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-                <p className="text-sm text-red-600 font-medium">{submitError}</p>
-              </div>
-            )}
-
-            <p className="text-center text-xs text-gray-400 pb-4">
-              By completing your purchase you agree to our{' '}
-              <a href="/terms" className="underline hover:text-gray-600">Terms of Service</a>
+            <p className="text-center text-xs text-gray-400 mb-1 mt-1">
+              Završetkom kupnje pristajete na naše{' '}
+              <a href="/terms" className="underline hover:text-gray-600">uvjete</a>
             </p>
 
-            {/* CTA */}
+            {/* CTA Button */}
             <button
               type="submit"
               disabled={!stripe || submitting}
@@ -777,7 +815,8 @@ function PaidCheckoutForm({
               {submitting ? 'Obrada...' : isFree ? 'Potvrdi - Besplatno' : 'Plaćajte'}
             </button>
 
-            <p className="text-center text-xs text-gray-500 pb-4">
+
+            <p className="hidden md:block text-center text-xs text-gray-500 pb-1 mt-1">
               Potvrđivanjem plaćanja dopuštate tvrtki INDIREKTNO da vas se tereti za ovo plaćanje i buduća plaćanja u skladu s njenim uvjetima.
             </p>
           </form>
@@ -785,7 +824,7 @@ function PaidCheckoutForm({
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-100 mt-6">
+      <footer className="bg-white border-t border-gray-100 mt-0">
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between text-xs text-gray-400">
           <div className="flex items-center gap-3">
             <span>© 2026 PayParq</span>
@@ -817,6 +856,9 @@ function CheckoutInner() {
   const locationName = searchParams.get('name') || 'Parking';
   const address = searchParams.get('address') || '';
   const displayId = searchParams.get('display_id') || '';
+  const phCents = parseInt(searchParams.get('ph') || '0', 10);
+  const pdCents = parseInt(searchParams.get('pd') || '0', 10);
+  const pmCents = parseInt(searchParams.get('pm') || '0', 10);
 
   const [amountCents, setAmountCents] = useState(initialAmountCents);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -942,6 +984,7 @@ function CheckoutInner() {
         isFree={clientSecret === 'free'}
         address={address}
         clientSecret={clientSecret}
+        phCents={phCents} pdCents={pdCents} pmCents={pmCents}
       />
     </Elements>
   );

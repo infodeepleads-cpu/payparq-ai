@@ -610,14 +610,6 @@ export default function HostPage() {
   const [activeSpotTypes, setActiveSpotTypes] = useState<string[]>([]);
   const toggleSpotType = (k: string) => setActiveSpotTypes((prev) => prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]);
 
-  const CAPACITY_TYPES = [
-    { key: 'compact', label: 'Kompaktna mjesta', mult: '0.75×' },
-    { key: 'standard', label: 'Standardna mjesta', mult: '1×' },
-    { key: 'large', label: 'Velika mjesta', mult: '1.25×' },
-    { key: 'disabled', label: 'Mjesta za osobe s invaliditetom', mult: '1.5×' },
-  ];
-  const [activeCapacityTypes, setActiveCapacityTypes] = useState<string[]>([]);
-  const toggleCapacityType = (k: string) => setActiveCapacityTypes((prev) => prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]);
 
   // Section 3 — Cijena / H-D-M
   // Pricing — Standard
@@ -796,18 +788,15 @@ export default function HostPage() {
     <div className="min-h-screen bg-white overflow-x-hidden" translate="no" data-no-translate="true">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center">
           <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-white/95 shadow-sm flex items-center justify-center">
               <div className="w-8 h-8 rounded-full bg-[#020617] flex items-center justify-center border border-white/40">
-                <span className="text-sm font-black tracking-tight leading-none text-white">P</span>
+                <span className="text-sm font-black text-white">P</span>
               </div>
             </div>
             <span className="text-base font-black tracking-tight text-black">payparq</span>
           </Link>
-          <div className="flex items-center gap-1.5 text-xs text-gray-600">
-            <Lock className="w-3 h-3" /><span className="font-medium">Oglasi lot</span>
-          </div>
         </div>
       </header>
 
@@ -1025,23 +1014,6 @@ export default function HostPage() {
                 </div>
               </CollapsibleSection>
 
-              {/* 3.5b Vrste kapaciteta */}
-              <CollapsibleSection title="Vrste kapaciteta" defaultOpen={false}>
-                <p className="text-xs text-gray-600 mb-3 leading-relaxed">Odaberite koje ćete kategorije smjestiti uz množitelj standardne cijene</p>
-                <div className="space-y-2">
-                  {CAPACITY_TYPES.map((ct) => (
-                    <div key={ct.key}
-                      onClick={() => toggleCapacityType(ct.key)}
-                      className={`flex items-center justify-between px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${activeCapacityTypes.includes(ct.key) ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                      <div>
-                        <p className="text-xs font-semibold text-gray-900">{ct.label}</p>
-                      </div>
-                      <span className={`text-xs font-bold ml-3 flex-shrink-0 ${activeCapacityTypes.includes(ct.key) ? 'text-gray-900' : 'text-gray-400'}`}>{ct.mult}</span>
-                    </div>
-                  ))}
-                </div>
-              </CollapsibleSection>
-
               {/* 3.6 Cijena */}
               <CollapsibleSection title="Cijena" defaultOpen={false}>
                 {/* Info box */}
@@ -1152,9 +1124,8 @@ export default function HostPage() {
 
             {/* ── Toggles ── */}
             <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Besplatni dodaci</p>
-              <div className="flex items-start justify-between gap-4 pb-3 border-b border-gray-100">
-                <p className="text-xs font-black text-gray-900 leading-relaxed">Da, želim se pridružiti PayParq Partnership programu</p>
+              <div className="flex items-center justify-between gap-4 pb-3 border-b border-gray-100">
+                <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Payparq Business</p>
                 <Toggle checked={wantPartnership} onChange={(v) => {
                   setWantPartnership(v);
                   if (!v) { setWantQR(false); setWantLPR(false); setWantDashboard(false); setWantMarketing(false); }
@@ -1163,7 +1134,6 @@ export default function HostPage() {
               </div>
               {[
                 { state: wantQR, setter: setWantQR, label: 'Da, želim besplatni PayParq QR Pay za plaćanje na licu mjesta' },
-                { state: wantDashboard, setter: setWantDashboard, label: 'Da, želim potpuno besplatno PayParq Business upravljačku ploču i LPR mobile sustav' },
                 { state: wantMarketing, setter: setWantMarketing, label: 'Da, želim besplatnu digitalnu marketinšku optimizaciju i vlastitu Safe Parking web stranicu' },
               ].map(({ state, setter, label }) => (
                 <div key={label} className="flex items-start justify-between gap-4">

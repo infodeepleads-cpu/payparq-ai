@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { PayparqPageHeader } from '@/components/PayparqPageHeader';
 
@@ -17,34 +17,40 @@ interface Listing {
 export default function ListingPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = params.id as string;
 
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showArrivalPicker, setShowArrivalPicker] = useState(false);
+  const [showDeparturePicker, setShowDeparturePicker] = useState(false);
+  const [arrivalDateTime, setArrivalDateTime] = useState('');
+  const [departureDateTime, setDepartureDateTime] = useState('');
 
   useEffect(() => {
     loadListing();
   }, [id]);
 
+  useEffect(() => {
+    const hasDateParams = searchParams.has('in') && searchParams.has('out');
+    if (!hasDateParams) {
+      setShowArrivalPicker(true);
+    }
+  }, [searchParams]);
+
   const loadListing = async () => {
     try {
-      if (!supabase) {
+      const res = await fetch(`/api/listings/${id}`);
+      if (!res.ok) {
         setLoading(false);
         return;
       }
-
-      const { data, error } = await supabase
-        .from('locations')
-        .select('id, name, address, capacity, verification_status, display_id')
-        .eq('id', id)
-        .single();
-
-      if (error || !data) {
+      const { location } = await res.json();
+      if (!location) {
         setLoading(false);
         return;
       }
-
-      setListing(data);
+      setListing(location);
     } catch (err) {
       console.error('Error loading listing:', err);
     } finally {
@@ -145,6 +151,85 @@ export default function ListingPage() {
           </div>
         </div>
       </div>
+
+      {/* Arrival Date/Time Picker */}
+      {showArrivalPicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-4">
+          <div className="bg-white w-full md:w-96 rounded-2xl p-6 space-y-4 relative z-50">
+            <h2 className="text-xl font-bold text-black">Select Arrival</h2>
+            <div>
+              <label className="block text-sm font-semibold text-black mb-2">Date & Time</label>
+              <input
+                type="datetime-local"
+                value={arrivalDateTime}
+                onChange={(e) => setArrivalDateTime(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black text-base focus:outline-none focus:border-black"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setShowArrivalPicker(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-black font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (arrivalDateTime) {
+                    setShowArrivalPicker(false);
+                    setShowDeparturePicker(true);
+                  }
+                }}
+                disabled={!arrivalDateTime}
+                className="flex-1 px-4 py-2 bg-black text-white rounded-lg font-semibold disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Departure Date/Time Picker */}
+      {showDeparturePicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-4">
+          <div className="bg-white w-full md:w-96 rounded-2xl p-6 space-y-4 relative z-50">
+            <h2 className="text-xl font-bold text-black">Select Departure</h2>
+            <div>
+              <label className="block text-sm font-semibold text-black mb-2">Date & Time</label>
+              <input
+                type="datetime-local"
+                value={departureDateTime}
+                onChange={(e) => setDepartureDateTime(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black text-base focus:outline-none focus:border-black"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => {
+                  setShowDeparturePicker(false);
+                  setShowArrivalPicker(true);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-black font-semibold"
+              >
+                Back
+              </button>
+              <button
+                onClick={() => {
+                  if (departureDateTime) {
+                    router.push(`?in=${encodeURIComponent(arrivalDateTime)}&out=${encodeURIComponent(departureDateTime)}`);
+                    setShowDeparturePicker(false);
+                  }
+                }}
+                disabled={!departureDateTime}
+                className="flex-1 px-4 py-2 bg-black text-white rounded-lg font-semibold disabled:opacity-50"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

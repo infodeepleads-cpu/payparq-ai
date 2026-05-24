@@ -8,14 +8,14 @@ export interface Amenity {
 
 export const AMENITIES_LIST: Amenity[] = [
   { id: 'valet', label: 'Valet', icon: Users },
-  { id: 'shuttle', label: 'Shuttle', icon: Bus },
-  { id: 'ev-charging', label: 'EV Charging', icon: Zap },
-  { id: 'wheelchair-accessible', label: 'Wheelchair Access', icon: Accessibility },
+  { id: 'shuttle', label: 'Prijevoz', icon: Bus },
+  { id: 'ev-charging', label: 'EV Punjenje', icon: Zap },
+  { id: 'wheelchair-accessible', label: 'Pristup invalidskim kolicima', icon: Accessibility },
   { id: 'rampa', label: 'Rampa', icon: Lock },
-  { id: 'in-out-allowed', label: 'In/Out Allowed', icon: Repeat2 },
-  { id: 'tank-refill', label: 'Tank Refill', icon: Fuel },
+  { id: 'in-out-allowed', label: 'Ulazak/Izlazak', icon: Repeat2 },
+  { id: 'tank-refill', label: 'Punjenje goriva', icon: Fuel },
   { id: 'garage', label: 'Garaža', icon: Lock },
-  { id: 'self-park', label: 'Self Park', icon: ParkingCircle },
+  { id: 'self-park', label: 'Samoparkirani', icon: ParkingCircle },
 ];
 
 export const getAmenityLabel = (id: string): string => {

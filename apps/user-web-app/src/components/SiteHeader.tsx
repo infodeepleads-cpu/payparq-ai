@@ -136,7 +136,7 @@ export function SiteHeader({ hideAnnouncementBar = false }: { hideAnnouncementBa
 
             <div className="flex items-center justify-center">
               <Link href="/" className="relative flex items-center justify-center">
-                <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
+                <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-white flex items-center justify-center shadow-sm">
                   <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-[#020617] to-[#020617] flex items-center justify-center border border-white/40">
                     <span className="text-sm md:text-base font-semibold tracking-tight leading-none text-white">
                       P
@@ -154,7 +154,7 @@ export function SiteHeader({ hideAnnouncementBar = false }: { hideAnnouncementBa
                 Get in Touch
               </Link>
               <Link
-                href="/pay"
+                href="/search"
                 className="px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
               >
                 Pay Now
@@ -164,6 +164,13 @@ export function SiteHeader({ hideAnnouncementBar = false }: { hideAnnouncementBa
           {mobileOpen && (
             <div className="md:hidden border-t border-black/5 bg-white px-0 pb-3">
               <div className="flex flex-col gap-2 pt-2 text-[12px] font-medium text-black w-full max-w-xs mx-auto">
+                <Link
+                  href="/main"
+                  className="w-full block py-3 text-center hover:bg-gray-100 transition-colors text-[12px] font-medium text-black"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Početna
+                </Link>
                 <Link href="/vision" className="w-full py-3 text-center hover:bg-gray-100 transition-colors">
                   Experience
                 </Link>

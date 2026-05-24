@@ -29,6 +29,8 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
   const [calendarDate, setCalendarDate] = useState(() => new Date(2026, 4, 1));
   const [dateConfigs, setDateConfigs] = useState<Record<string, DateConfig>>({});
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [rangeStartDate, setRangeStartDate] = useState<string | null>(null);
+  const [rangeEndDate, setRangeEndDate] = useState<string | null>(null);
 
   // Load existing data
   useEffect(() => {
@@ -79,20 +81,55 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
     };
   };
 
-  const handleDateClick = (day: number) => {
-    const dateStr = getDateString(day);
-    setSelectedDate(dateStr);
+  const isDateInRange = (dateStr: string): boolean => {
+    if (!rangeStartDate || !rangeEndDate) return false;
+    return dateStr >= rangeStartDate && dateStr <= rangeEndDate;
   };
 
-  const handleSaveDate = async (config: DateConfig) => {
-    setDateConfigs((prev) => ({
-      ...prev,
-      [config.date]: config,
-    }));
+  const isRangeStart = (dateStr: string): boolean => dateStr === rangeStartDate;
+  const isRangeEnd = (dateStr: string): boolean => dateStr === rangeEndDate;
 
+  const handleDateClick = (day: number) => {
+    const dateStr = getDateString(day);
+
+    if (!rangeStartDate) {
+      setRangeStartDate(dateStr);
+      setRangeEndDate(null);
+    } else if (!rangeEndDate) {
+      if (dateStr < rangeStartDate) {
+        setRangeStartDate(dateStr);
+        setRangeEndDate(rangeStartDate);
+      } else {
+        setRangeEndDate(dateStr);
+      }
+      setSelectedDate(null);
+    } else {
+      setRangeStartDate(dateStr);
+      setRangeEndDate(null);
+    }
+  };
+
+  const handleApplyRangeConfig = (config: Omit<DateConfig, 'date'>) => {
+    if (!rangeStartDate || !rangeEndDate) return;
+
+    const start = new Date(rangeStartDate);
+    const end = new Date(rangeEndDate);
+    const newConfigs = { ...dateConfigs };
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      newConfigs[dateStr] = { date: dateStr, ...config };
+    }
+
+    handleSaveBatch(newConfigs);
+  };
+
+  const handleSaveBatch = async (newConfigs: Record<string, DateConfig>) => {
+    setDateConfigs(newConfigs);
     try {
       if (!supabase) {
-        setSelectedDate(null);
+        setRangeStartDate(null);
+        setRangeEndDate(null);
         return;
       }
       const { data: existing } = await supabase
@@ -102,8 +139,6 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
         .single();
 
       const meta = existing?.verification_metadata || {};
-      const newConfigs = { ...dateConfigs, [config.date]: config };
-
       await supabase
         .from('locations')
         .update({
@@ -114,11 +149,17 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
         })
         .eq('id', lotId);
 
-      setSelectedDate(null);
+      setRangeStartDate(null);
+      setRangeEndDate(null);
     } catch (err: any) {
       console.error('Failed to save date config:', err.message);
-      setSelectedDate(null);
     }
+  };
+
+  const handleSaveDate = async (config: DateConfig) => {
+    const newConfigs = { ...dateConfigs, [config.date]: config };
+    await handleSaveBatch(newConfigs);
+    setSelectedDate(null);
   };
 
   const handleCloseDate = async (dateStr: string) => {
@@ -155,7 +196,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5F3DFC] mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-4"></div>
           <p className="text-sm text-gray-600">Učitavanje...</p>
         </div>
       </div>
@@ -183,12 +224,12 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
         <div className="flex items-center justify-between mb-3 md:mb-6">
           <button
             onClick={() => setCalendarDate(new Date(year, month - 1, 1))}
-            className="text-[#5F3DFC] hover:text-[#4330c4] font-medium text-sm md:text-base"
+            className="text-black hover:text-gray-700 font-medium text-sm md:text-base"
           >← Prethodna</button>
           <h3 className="text-lg md:text-xl font-semibold text-gray-900">{croatianMonths[month]} {year}</h3>
           <button
             onClick={() => setCalendarDate(new Date(year, month + 1, 1))}
-            className="text-[#5F3DFC] hover:text-[#4330c4] font-medium text-sm md:text-base"
+            className="text-black hover:text-gray-700 font-medium text-sm md:text-base"
           >Dalje →</button>
         </div>
 
@@ -208,6 +249,9 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
               const dateStr = getDateString(date);
               const config = dateConfigs[dateStr];
               const isSelected = selectedDate === dateStr;
+              const isInRange = isDateInRange(dateStr);
+              const isStart = isRangeStart(dateStr);
+              const isEnd = isRangeEnd(dateStr);
               const isClosed = config && !config.isOpen;
 
               return (
@@ -217,11 +261,15 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
                   className={`aspect-square border-2 rounded-lg p-1 md:p-3 flex flex-col items-center justify-center text-center transition-all cursor-pointer text-[10px] md:text-sm font-medium ${
                     isClosed
                       ? 'border-black bg-gradient-to-br from-black to-black/80 hover:from-black/90 hover:to-black/70 text-white shadow-lg'
+                      : isStart || isEnd
+                      ? 'border-black bg-black/20 hover:bg-black/30 text-gray-900 font-bold'
+                      : isInRange
+                      ? 'border-black/40 bg-black/5 hover:bg-black/10 text-gray-900'
                       : isSelected
-                      ? 'border-[#5F3DFC] bg-[#5F3DFC]/10 hover:bg-[#5F3DFC]/20 text-gray-900'
+                      ? 'border-black bg-black/10 hover:bg-black/20 text-gray-900'
                       : config
-                      ? 'border-[#5F3DFC] bg-[#5F3DFC]/5 hover:bg-[#5F3DFC]/10 text-gray-900'
-                      : 'border-[#5F3DFC] bg-[#5F3DFC]/5 hover:bg-[#5F3DFC]/10 text-gray-900'
+                      ? 'border-black bg-black/5 hover:bg-black/10 text-gray-900'
+                      : 'border-black bg-black/5 hover:bg-black/10 text-gray-900'
                   }`}
                 >
                   <p className={`font-bold ${isClosed ? 'text-white' : 'text-gray-900'}`}>{date}</p>
@@ -262,8 +310,44 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
               config={selectedDateConfig}
               lotCapacity={parseInt(lotCapacity)}
               onSave={(config) => handleSaveDate(config)}
-              onDelete={() => handleCloseDate(selectedDate!)}
               onCancel={() => setSelectedDate(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Range Selection Modal */}
+      {rangeStartDate && rangeEndDate && (
+        <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-0">
+          <div className="bg-white rounded-t-3xl md:rounded-xl p-5 md:p-8 w-full md:w-96 md:max-h-[90vh] overflow-auto shadow-2xl max-h-[90vh]">
+            <div className="flex items-center justify-between mb-4 md:mb-6">
+              <h3 className="text-base md:text-lg font-bold text-gray-900">
+                Postavke za periode
+              </h3>
+              <button
+                onClick={() => {
+                  setRangeStartDate(null);
+                  setRangeEndDate(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">
+                {rangeStartDate.split('-')[2]}. - {rangeEndDate.split('-')[2]}. {croatianMonths[month]}
+              </p>
+            </div>
+
+            <RangeConfigWidget
+              lotCapacity={parseInt(lotCapacity)}
+              onApply={(config) => handleApplyRangeConfig(config)}
+              onCancel={() => {
+                setRangeStartDate(null);
+                setRangeEndDate(null);
+              }}
             />
           </div>
         </div>
@@ -276,11 +360,10 @@ interface DateConfigWidgetProps {
   config: DateConfig;
   lotCapacity: number;
   onSave: (config: DateConfig) => void;
-  onDelete: () => void;
   onCancel: () => void;
 }
 
-function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: DateConfigWidgetProps) {
+function DateConfigWidget({ config, lotCapacity, onSave, onCancel }: DateConfigWidgetProps) {
   const [capacity, setCapacity] = useState(config.capacity ? String(config.capacity) : '');
   const [isOpen, setIsOpen] = useState(config.isOpen);
   const [openTime, setOpenTime] = useState(config.openTime);
@@ -305,9 +388,9 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
               onClick={() => setIsOpen(id === 'open')}
               className="flex-1 px-3 md:px-4 py-3 md:py-2.5 rounded-lg border-2 text-sm md:text-base font-medium transition-colors min-h-[44px] md:min-h-auto"
               style={{
-                borderColor: (isOpen && id === 'open') || (!isOpen && id === 'close') ? '#5F3DFC' : '#D1D5DB',
-                backgroundColor: (isOpen && id === 'open') || (!isOpen && id === 'close') ? 'rgba(95, 61, 252, 0.05)' : 'white',
-                color: (isOpen && id === 'open') || (!isOpen && id === 'close') ? '#5F3DFC' : '#6B7280',
+                borderColor: (isOpen && id === 'open') || (!isOpen && id === 'close') ? '#000000' : '#D1D5DB',
+                backgroundColor: (isOpen && id === 'open') || (!isOpen && id === 'close') ? 'rgba(0, 0, 0, 0.05)' : 'white',
+                color: (isOpen && id === 'open') || (!isOpen && id === 'close') ? '#000000' : '#6B7280',
               }}
             >
               {label}
@@ -331,7 +414,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
             const num = parseInt(stripped);
             if (!isNaN(num) && num >= 1 && num <= lotCapacity) setCapacity(String(num));
           }}
-          className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 min-h-[44px] md:min-h-auto [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 min-h-[44px] md:min-h-auto [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
         />
       </div>
@@ -345,7 +428,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
               type="time"
               value={openTime}
               onChange={(e) => setOpenTime(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 min-h-[44px] md:min-h-auto"
+              className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 min-h-[44px] md:min-h-auto"
             />
           </div>
           <div className="space-y-2">
@@ -354,7 +437,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
               type="time"
               value={closeTime}
               onChange={(e) => setCloseTime(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 min-h-[44px] md:min-h-auto"
+              className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 min-h-[44px] md:min-h-auto"
             />
           </div>
         </div>
@@ -366,12 +449,12 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
           <div className="flex items-center justify-between">
             <label className="block text-sm md:text-base font-semibold text-gray-900">Cijene</label>
             <div className="flex items-center gap-2 md:gap-3">
-              <span className={`text-sm md:text-base font-medium ${priceMode === 'auto' ? 'text-[#5F3DFC]' : 'text-gray-500'}`}>Auto</span>
+              <span className={`text-sm md:text-base font-medium ${priceMode === 'auto' ? 'text-black' : 'text-gray-500'}`}>Auto</span>
               <button
                 onClick={() => setPriceMode(priceMode === 'auto' ? 'manual' : 'auto')}
                 className="relative inline-flex h-6 md:h-7 w-12 md:w-14 items-center rounded-full transition-colors"
                 style={{
-                  backgroundColor: priceMode === 'manual' ? '#5F3DFC' : '#D1D5DB',
+                  backgroundColor: priceMode === 'manual' ? '#000000' : '#D1D5DB',
                 }}
               >
                 <span
@@ -381,7 +464,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
                   }}
                 />
               </button>
-              <span className={`text-sm md:text-base font-medium ${priceMode === 'manual' ? 'text-[#5F3DFC]' : 'text-gray-500'}`}>Ručno</span>
+              <span className={`text-sm md:text-base font-medium ${priceMode === 'manual' ? 'text-black' : 'text-gray-500'}`}>Ručno</span>
             </div>
           </div>
 
@@ -400,7 +483,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
                     const num = parseFloat(stripped);
                     if (!isNaN(num) && num >= 0) setPriceHourly(stripped);
                   }}
-                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                 />
               </div>
@@ -417,7 +500,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
                     const num = parseFloat(stripped);
                     if (!isNaN(num) && num >= 0) setPriceDaily(stripped);
                   }}
-                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                 />
               </div>
@@ -434,7 +517,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
                     const num = parseFloat(stripped);
                     if (!isNaN(num) && num >= 0) setPriceMonthly(stripped);
                   }}
-                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                 />
               </div>
@@ -452,12 +535,6 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
           Odustani
         </button>
         <button
-          onClick={() => onDelete()}
-          className="px-3 md:px-4 py-2.5 md:py-3 border border-red-300 text-red-600 rounded-lg text-xs md:text-sm font-medium hover:bg-red-50 transition-colors"
-        >
-          Obriši
-        </button>
-        <button
           onClick={() => onSave({
             date: config.date,
             capacity: capacity === '' ? null : parseInt(capacity),
@@ -469,9 +546,206 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
             priceDaily: priceDaily === '' ? null : parseFloat(priceDaily),
             priceMonthly: priceMonthly === '' ? null : parseFloat(priceMonthly),
           })}
-          className="flex-1 px-3 md:px-4 py-2.5 md:py-3 bg-[#5F3DFC] text-white rounded-lg text-xs md:text-sm font-medium hover:bg-[#4330c4] transition-colors"
+          className="flex-1 px-3 md:px-4 py-2.5 md:py-3 bg-black text-white rounded-lg text-xs md:text-sm font-medium hover:bg-gray-800 transition-colors"
         >
           Spremi
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface RangeConfigWidgetProps {
+  lotCapacity: number;
+  onApply: (config: Omit<DateConfig, 'date'>) => void;
+  onCancel: () => void;
+}
+
+function RangeConfigWidget({ lotCapacity, onApply, onCancel }: RangeConfigWidgetProps) {
+  const [capacity, setCapacity] = useState(String(lotCapacity));
+  const [isOpen, setIsOpen] = useState(true);
+  const [openTime, setOpenTime] = useState('00:00');
+  const [closeTime, setCloseTime] = useState('23:59');
+  const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto');
+  const [priceHourly, setPriceHourly] = useState('');
+  const [priceDaily, setPriceDaily] = useState('');
+  const [priceMonthly, setPriceMonthly] = useState('');
+
+  return (
+    <div className="space-y-4 md:space-y-5">
+      {/* Open/Close Toggle */}
+      <div className="space-y-2">
+        <label className="block text-sm md:text-base font-semibold text-gray-900">Dostupnost</label>
+        <div className="flex gap-2 md:gap-3">
+          {[
+            { id: 'open', label: 'Otvoreno' },
+            { id: 'close', label: 'Zatvoreno' },
+          ].map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => setIsOpen(id === 'open')}
+              className="flex-1 px-3 md:px-4 py-3 md:py-2.5 rounded-lg border-2 text-sm md:text-base font-medium transition-colors min-h-[44px] md:min-h-auto"
+              style={{
+                borderColor: (isOpen && id === 'open') || (!isOpen && id === 'close') ? '#000000' : '#D1D5DB',
+                backgroundColor: (isOpen && id === 'open') || (!isOpen && id === 'close') ? 'rgba(0, 0, 0, 0.05)' : 'white',
+                color: (isOpen && id === 'open') || (!isOpen && id === 'close') ? '#000000' : '#6B7280',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Capacity */}
+      <div className="space-y-2">
+        <label className="block text-sm md:text-base font-semibold text-gray-900">Kapacitet (mjesta)</label>
+        <input
+          type="number"
+          min="1"
+          max={lotCapacity}
+          value={capacity}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === '') { setCapacity(''); return; }
+            const stripped = val.replace(/^0+/, '') || '0';
+            const num = parseInt(stripped);
+            if (!isNaN(num) && num >= 1 && num <= lotCapacity) setCapacity(String(num));
+          }}
+          className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 min-h-[44px] md:min-h-auto [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+        />
+      </div>
+
+      {/* Time Range */}
+      {isOpen && (
+        <div className="space-y-3 md:space-y-4">
+          <div className="space-y-2">
+            <label className="block text-sm md:text-base font-semibold text-gray-900">Od</label>
+            <input
+              type="time"
+              value={openTime}
+              onChange={(e) => setOpenTime(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 min-h-[44px] md:min-h-auto"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm md:text-base font-semibold text-gray-900">Do</label>
+            <input
+              type="time"
+              value={closeTime}
+              onChange={(e) => setCloseTime(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 min-h-[44px] md:min-h-auto"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Price */}
+      {isOpen && (
+        <div className="space-y-3 md:space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="block text-sm md:text-base font-semibold text-gray-900">Cijene</label>
+            <div className="flex items-center gap-2 md:gap-3">
+              <span className={`text-sm md:text-base font-medium ${priceMode === 'auto' ? 'text-black' : 'text-gray-500'}`}>Auto</span>
+              <button
+                onClick={() => setPriceMode(priceMode === 'auto' ? 'manual' : 'auto')}
+                className="relative inline-flex h-6 md:h-7 w-12 md:w-14 items-center rounded-full transition-colors"
+                style={{
+                  backgroundColor: priceMode === 'manual' ? '#000000' : '#D1D5DB',
+                }}
+              >
+                <span
+                  className="inline-block h-4 md:h-5 w-4 md:w-5 transform rounded-full bg-white transition-transform duration-300"
+                  style={{
+                    transform: priceMode === 'manual' ? 'translateX(28px)' : 'translateX(4px)',
+                  }}
+                />
+              </button>
+              <span className={`text-sm md:text-base font-medium ${priceMode === 'manual' ? 'text-black' : 'text-gray-500'}`}>Ručno</span>
+            </div>
+          </div>
+
+          {priceMode === 'manual' && (
+            <div className="grid grid-cols-3 gap-2 md:gap-3">
+              <div className="space-y-2">
+                <label className="block text-xs md:text-sm font-medium text-gray-700">Sat (€)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={priceHourly}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') { setPriceHourly(''); return; }
+                    const stripped = val.replace(/^0+/, '') || '0';
+                    const num = parseFloat(stripped);
+                    if (!isNaN(num) && num >= 0) setPriceHourly(stripped);
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-xs md:text-sm font-medium text-gray-700">Dan (€)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={priceDaily}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') { setPriceDaily(''); return; }
+                    const stripped = val.replace(/^0+/, '') || '0';
+                    const num = parseFloat(stripped);
+                    if (!isNaN(num) && num >= 0) setPriceDaily(stripped);
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-xs md:text-sm font-medium text-gray-700">Mjesec (€)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={priceMonthly}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') { setPriceMonthly(''); return; }
+                    const stripped = val.replace(/^0+/, '') || '0';
+                    const num = parseFloat(stripped);
+                    if (!isNaN(num) && num >= 0) setPriceMonthly(stripped);
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Buttons */}
+      <div className="flex gap-2 pt-3 md:pt-4 border-t border-gray-200">
+        <button
+          onClick={onCancel}
+          className="flex-1 px-3 md:px-4 py-2.5 md:py-3 border border-gray-300 text-gray-700 rounded-lg text-xs md:text-sm font-medium hover:bg-gray-50 transition-colors"
+        >
+          Odustani
+        </button>
+        <button
+          onClick={() => onApply({
+            capacity: capacity === '' ? null : parseInt(capacity),
+            isOpen,
+            openTime,
+            closeTime,
+            priceMode,
+            priceHourly: priceHourly === '' ? null : parseFloat(priceHourly),
+            priceDaily: priceDaily === '' ? null : parseFloat(priceDaily),
+            priceMonthly: priceMonthly === '' ? null : parseFloat(priceMonthly),
+          })}
+          className="flex-1 px-3 md:px-4 py-2.5 md:py-3 bg-black text-white rounded-lg text-xs md:text-sm font-medium hover:bg-gray-800 transition-colors"
+        >
+          Primijeni
         </button>
       </div>
     </div>

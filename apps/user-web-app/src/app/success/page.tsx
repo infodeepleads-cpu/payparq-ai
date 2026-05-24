@@ -709,18 +709,51 @@ function SuccessContent() {
   };
 
   const handleDownloadPass = () => {
+    console.log('[Download] Button clicked');
     const passCard = document.querySelector('[data-pass-card]') as HTMLElement;
-    if (!passCard) return;
-    const element = passCard.cloneNode(true) as HTMLElement;
-    element.style.margin = '0';
-    const opt = {
-      margin: 10,
-      filename: `payparq-parking-pass-${resCode || 'pass'}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
-    } as const;
-    html2pdf().set(opt).from(element).save();
+    console.log('[Download] passCard element:', passCard);
+    if (!passCard) {
+      console.log('[Download] No pass card found');
+      return;
+    }
+    try {
+      const element = passCard.cloneNode(true) as HTMLElement;
+      element.style.margin = '0';
+
+      // Remove unsupported oklab colors from all elements
+      const removeOklabColors = (el: Element) => {
+        const style = window.getComputedStyle(el);
+        if (el instanceof HTMLElement) {
+          const bgColor = style.backgroundColor;
+          if (bgColor && bgColor.includes('oklab')) {
+            el.style.backgroundColor = '#ffffff';
+          }
+          const textColor = style.color;
+          if (textColor && textColor.includes('oklab')) {
+            el.style.color = '#000000';
+          }
+          const borderColor = style.borderColor;
+          if (borderColor && borderColor.includes('oklab')) {
+            el.style.borderColor = '#cccccc';
+          }
+        }
+        Array.from(el.children).forEach(child => removeOklabColors(child));
+      };
+      removeOklabColors(element);
+
+      const opt = {
+        margin: 10,
+        filename: `payparq-parking-pass-${resCode || 'pass'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, allowTaint: true, useCORS: true },
+        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+      } as const;
+      console.log('[Download] Starting PDF generation');
+      html2pdf().set(opt).from(element).save();
+      console.log('[Download] PDF generation complete');
+    } catch (err) {
+      console.error('[Download] Error:', err);
+    }
   };
 
   const SUPPORT_WHATSAPP = '385915963139';
@@ -1207,7 +1240,7 @@ function SuccessContent() {
           {/* Members zona — slim single link + download */}
           {summary?.email && (
             <div className="flex items-center justify-center gap-4 py-3">
-              <button onClick={handleDownloadPass} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
+              <button type="button" onClick={handleDownloadPass} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
                 ⬇ Preuzmi Pass
               </button>
               <span style={{ color: '#94a3b8' }}>·</span>

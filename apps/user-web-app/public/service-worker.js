@@ -45,9 +45,15 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          // Keep only current version caches
-          if (cacheName.startsWith('payparq-v') && !cacheName.startsWith(CACHE_VERSION.split('-').slice(0, 2).join('-'))) {
+          // Delete caches that don't match current version
+          const isCurrentVersion = CACHE_VERSION.split('-').slice(0, 2).join('-');
+          if (cacheName.startsWith('payparq-') && !cacheName.startsWith(isCurrentVersion)) {
             console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+          // Also delete daily caches from previous days
+          if (cacheName.startsWith(isCurrentVersion) && !cacheName.includes(CACHE_VERSION.split('-')[2])) {
+            console.log('Deleting old daily cache:', cacheName);
             return caches.delete(cacheName);
           }
         })

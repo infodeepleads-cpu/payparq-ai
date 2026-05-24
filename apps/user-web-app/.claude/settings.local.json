@@ -3,7 +3,10 @@
     "allow": [
       "Bash(curl -s http://localhost:3000/locations/parking-trogir-40058)",
       "Bash(python3 -c ':*)",
-      "Bash(curl -s http://localhost:3000/locations/parking-izmi-baka-voda-23025)"
+      "Bash(curl -s http://localhost:3000/locations/parking-izmi-baka-voda-23025)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'fix: bold and darken all checkout text like Total *)",
+      "Bash(git push *)"
     ]
   }
 }

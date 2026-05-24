@@ -65,3 +65,37 @@ body {
 .animate-slideIn {
   animation: slideIn 0.4s ease-out;
 }
+
+/* Core Web Vitals Optimizations */
+
+/* LCP optimization - preload critical images */
+img.photo-carousel {
+  content-visibility: auto;
+  contain-intrinsic-size: 400px 300px;
+}
+
+/* FID improvement - reduce layout shift */
+.payment-element,
+.stripe-element {
+  contain: layout style paint;
+}
+
+/* CLS reduction - define aspect ratios for images */
+img {
+  aspect-ratio: attr(width) / attr(height);
+}
+
+/* Preload critical fonts */
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: local("Plus Jakarta Sans"), local("PlusJakartaSans");
+  font-display: swap;
+}
+
+/* Optimize interactive elements for FID */
+button,
+a,
+[role="button"],
+[role="link"] {
+  contain: layout style paint;
+}

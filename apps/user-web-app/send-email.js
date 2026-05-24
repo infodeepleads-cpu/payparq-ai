@@ -6,13 +6,18 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function sendEmail() {
   try {
-    const htmlPath = path.join(__dirname, 'email-template-outreach.html');
+    const templateFile = process.argv[2] || 'email-template-outreach.html';
+    const htmlPath = path.join(__dirname, templateFile);
     const html = fs.readFileSync(htmlPath, 'utf-8');
+
+    const subject = templateFile.includes('hr')
+      ? 'Payparq - Više od parkiranja. Više mogućnosti.'
+      : 'Payparq - More than parking. More possibilities.';
 
     const response = await resend.emails.send({
       from: 'Payparq <onboarding@resend.dev>',
       to: 'kzamic@gmail.com',
-      subject: 'Payparq - More than parking. More possibilities.',
+      subject: subject,
       html: html,
     });
 

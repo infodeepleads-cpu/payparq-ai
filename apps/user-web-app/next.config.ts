@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import path from "path";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const supabaseUrlEnv = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 let supabaseHost: string | undefined;
@@ -77,4 +78,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: "payparq",
+  project: "javascript-nextjs",
+  silent: true,
+});

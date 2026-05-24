@@ -13,7 +13,7 @@ export async function GET() {
       .from('locations')
       .select('*')
       .eq('verification_status', 'verified')
-      .limit(50);
+      .limit(100);
 
     if (error) {
       console.error('Listings API error:', error);

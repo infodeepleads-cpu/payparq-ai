@@ -6,6 +6,33 @@ export function useServiceWorkerRegistration(scope: string) {
       return;
     }
 
+    const notifyUpdate = () => {
+      const updateNotification = document.createElement('div');
+      updateNotification.id = 'sw-update-notification';
+      updateNotification.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #5F3DFC;
+        color: white;
+        padding: 16px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 9999;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      `;
+      updateNotification.innerHTML = `
+        <span>New version available</span>
+        <button onclick="window.location.reload()" style="background: white; color: #5F3DFC; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 500;">
+          Refresh
+        </button>
+      `;
+      document.body.appendChild(updateNotification);
+    };
+
     const registerServiceWorker = async () => {
       try {
         // Register immediately — do not wait for load event so SW is ready before beforeinstallprompt fires
@@ -21,6 +48,7 @@ export function useServiceWorkerRegistration(scope: string) {
                 if (r.installing) {
                   r.installing.addEventListener('statechange', () => {
                     if (r.installing?.state === 'installed' && navigator.serviceWorker.controller) {
+                      notifyUpdate();
                     }
                   });
                 }
@@ -39,6 +67,7 @@ export function useServiceWorkerRegistration(scope: string) {
           if (registration.installing) {
             registration.installing.addEventListener('statechange', () => {
               if (registration.installing?.state === 'installed' && navigator.serviceWorker.controller) {
+                notifyUpdate();
               }
             });
           }

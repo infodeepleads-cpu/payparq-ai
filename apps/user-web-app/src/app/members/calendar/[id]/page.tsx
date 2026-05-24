@@ -1,7 +1,6 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
 import { PayparqPageHeader } from '@/components/PayparqPageHeader';
 import { LotCalendarPricing } from '@/components/LotCalendarPricing';
@@ -27,23 +26,17 @@ export default function CalendarPage() {
 
   const loadListing = async () => {
     try {
-      if (!supabase) {
+      const res = await fetch(`/api/listings/${id}`);
+      if (!res.ok) {
         setLoading(false);
         return;
       }
-
-      const { data, error } = await supabase
-        .from('locations')
-        .select('id, name, address, capacity')
-        .eq('id', id)
-        .single();
-
-      if (error || !data) {
+      const { location } = await res.json();
+      if (!location) {
         setLoading(false);
         return;
       }
-
-      setListing(data);
+      setListing(location);
     } catch (err) {
       console.error('Error loading listing:', err);
     } finally {
@@ -82,6 +75,7 @@ export default function CalendarPage() {
       <PayparqPageHeader
         title="Upravljaj kalendarom i cijenama"
         onBack={() => router.back()}
+        lineColor="black"
       />
 
       <div className="max-w-4xl mx-auto p-4 sm:p-6">
