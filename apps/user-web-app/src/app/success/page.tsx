@@ -708,50 +708,31 @@ function SuccessContent() {
     }
   };
 
-  const handleDownloadPass = async () => {
+  const handleDownloadPass = () => {
     console.log('[Download] Button clicked');
     const passCard = document.querySelector('[data-pass-card]') as HTMLElement;
-    console.log('[Download] passCard element:', passCard);
     if (!passCard) {
       console.log('[Download] No pass card found');
       alert('Could not find pass card to download');
       return;
     }
     try {
-      const element = passCard.cloneNode(true) as HTMLElement;
-      element.style.margin = '0';
-
-      // Remove unsupported oklab colors from all elements
-      const removeOklabColors = (el: Element) => {
-        const style = window.getComputedStyle(el);
-        if (el instanceof HTMLElement) {
-          const bgColor = style.backgroundColor;
-          if (bgColor && bgColor.includes('oklab')) {
-            el.style.backgroundColor = '#ffffff';
-          }
-          const textColor = style.color;
-          if (textColor && textColor.includes('oklab')) {
-            el.style.color = '#000000';
-          }
-          const borderColor = style.borderColor;
-          if (borderColor && borderColor.includes('oklab')) {
-            el.style.borderColor = '#cccccc';
-          }
-        }
-        Array.from(el.children).forEach(child => removeOklabColors(child));
-      };
-      removeOklabColors(element);
-
       const opt = {
-        margin: 10,
+        margin: 5,
         filename: `payparq-parking-pass-${resCode || 'pass'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, allowTaint: true, useCORS: true },
+        html2canvas: { scale: 2, allowTaint: true, useCORS: true, logging: false },
         jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
-      } as const;
-      console.log('[Download] Starting PDF generation');
-      await html2pdf().set(opt).from(element).save();
-      console.log('[Download] PDF generation complete');
+      };
+      console.log('[Download] Starting PDF generation...');
+      html2pdf()
+        .set(opt)
+        .from(passCard)
+        .save()
+        .catch((err: any) => {
+          console.error('[Download] PDF generation error:', err);
+          alert('Failed to download. Please try again.');
+        });
     } catch (err) {
       console.error('[Download] Error:', err);
       alert('Failed to download pass. Please try again or contact support.');
