@@ -313,19 +313,19 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
               {/* Date and time pickers */}
               <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-3">
                 <p className="text-xs font-semibold text-gray-700">When do you need parking?</p>
-                <div className="grid grid-cols-2 gap-2 w-full">
-                  <select value={startDate.toISOString().slice(0, 10)} onChange={(e) => handleStartDateChange(e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black overflow-hidden">
+                <div className="grid grid-cols-2 gap-2 w-full min-w-0">
+                  <select value={startDate.toISOString().slice(0, 10)} onChange={(e) => handleStartDateChange(e.target.value)} className="w-full min-w-0 px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black">
                     {generateDateOptions().map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
-                  <select value={getLocalTimeString(startDate)} onChange={(e) => handleStartTimeChange(e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black overflow-hidden">
+                  <select value={getLocalTimeString(startDate)} onChange={(e) => handleStartTimeChange(e.target.value)} className="w-full min-w-0 px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black">
                     {generateTimeOptions().map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-2 w-full">
-                  <select value={endDate.toISOString().slice(0, 10)} onChange={(e) => handleEndDateChange(e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black overflow-hidden">
+                <div className="grid grid-cols-2 gap-2 w-full min-w-0">
+                  <select value={endDate.toISOString().slice(0, 10)} onChange={(e) => handleEndDateChange(e.target.value)} className="w-full min-w-0 px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black">
                     {generateDateOptions().map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
-                  <select value={getLocalTimeString(endDate)} onChange={(e) => handleEndTimeChange(e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black overflow-hidden">
+                  <select value={getLocalTimeString(endDate)} onChange={(e) => handleEndTimeChange(e.target.value)} className="w-full min-w-0 px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black">
                     {generateTimeOptions().map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
                 </div>
