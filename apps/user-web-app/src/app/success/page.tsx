@@ -1241,7 +1241,7 @@ function SuccessContent() {
           {summary?.email && (
             <div className="flex items-center justify-center gap-4 py-3">
               <button type="button" onClick={handleDownloadPass} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
-                ⬇ Preuzmi Pass
+                Samo Preuzmi
               </button>
               <span style={{ color: '#94a3b8' }}>·</span>
               <Link href={membersHref} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
