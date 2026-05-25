@@ -22,7 +22,7 @@ class AppConfig {
   static const _webSignOutStartupFlag =
       String.fromEnvironment('FORCE_WEB_SIGNOUT_ON_STARTUP', defaultValue: '0');
   static const _rawWebAppBaseUrl =
-      String.fromEnvironment('WEB_APP_BASE_URL', defaultValue: 'https://payparq.com');
+      String.fromEnvironment('WEB_APP_BASE_URL', defaultValue: 'https://www.payparq.com');
   static const _rawApkDownloadUrl = String.fromEnvironment('APK_DOWNLOAD_URL',
       defaultValue:
           'https://github.com/kzamic-prog/payparq.ai/releases/download/apk-latest/app-release.apk');
