@@ -66,11 +66,10 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
     if (type === 'Mjesečna') {
       return list.pricePerMonth || list.pricePerHour;
     }
-    if (duration < 8) {
-      return list.pricePerHour;
-    }
     const hourlyTotal = list.pricePerHour * duration;
-    const dailyTotal = list.pricePerDay || list.pricePerHour;
+    if (!list.pricePerDay) return hourlyTotal;
+    const numberOfDays = Math.ceil(duration / 24);
+    const dailyTotal = list.pricePerDay * numberOfDays;
     return Math.min(hourlyTotal, dailyTotal);
   };
 
