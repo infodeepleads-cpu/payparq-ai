@@ -9,6 +9,7 @@ import { SearchFilters } from './SearchFilters';
 import { BookingModal } from './BookingModal';
 import { DateTimePickerDropdown } from './DateTimePickerDropdown';
 import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
+import { ReservationTypeDropdown } from './ReservationTypeDropdown';
 import { DestinationPickerWidget } from './DestinationPickerWidget';
 import { ScrollableDateTimePicker } from './ScrollableDateTimePicker';
 import { useLocale } from './LocaleProvider';
@@ -146,6 +147,7 @@ export function SearchPage() {
   const [allParkingDropdownOpen, setAllParkingDropdownOpen] = useState(false);
   const [showMobileSearchEdit, setShowMobileSearchEdit] = useState(false);
   const [showMobileDetails, setShowMobileDetails] = useState(false);
+  const locationInputRef = useRef<HTMLInputElement>(null);
   const allParkingDropdownRef = useRef<HTMLDivElement>(null);
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [quickFilters, setQuickFilters] = useState<string[]>([]);
@@ -184,6 +186,21 @@ export function SearchPage() {
   useEffect(() => {
     console.log('=== sortBy changed to:', sortBy);
   }, [sortBy]);
+
+  // Focus location input and show predictions when mobile search edit modal opens
+  useEffect(() => {
+    if (showMobileSearchEdit) {
+      setSearchLocation('');
+      setTimeout(() => {
+        locationInputRef.current?.focus();
+        setShowPredictions(true);
+        if (nearbyPlaces.length === 0) {
+          fetchNearbyPlaces();
+        }
+      }, 100);
+    }
+  }, [showMobileSearchEdit]);
+
   const [recentSearches, setRecentSearches] = useState<{ name: string; lat: number; lng: number }[]>([]);
   const [nearbyPlaces, setNearbyPlaces] = useState<{ name: string; lat: number; lng: number; type: string }[]>([]);
   const [showDetailsView, setShowDetailsView] = useState(false);
@@ -596,7 +613,7 @@ export function SearchPage() {
   useEffect(() => {
     if (!isLoaded || !showPredictions) return;
 
-    if (searchLocation.length > 2) {
+    if (searchLocation.length > 0) {
       const sessionToken = new google.maps.places.AutocompleteSessionToken();
       const service = new google.maps.places.AutocompleteService();
 
@@ -610,7 +627,24 @@ export function SearchPage() {
           }
         }
       ).then((response) => {
-        setPredictions(response.predictions || []);
+        const sortedPredictions = (response.predictions || []).sort((a, b) => {
+          const aTypes = a.types || [];
+          const bTypes = b.types || [];
+
+          // Priority: city > airport > other venues
+          const getCityPriority = (types: string[]) => {
+            if (types.includes('locality') || types.includes('administrative_area_level_1')) return 0; // City
+            if (types.includes('airport')) return 1; // Airport
+            if (types.includes('stadium') || types.includes('point_of_interest') || types.includes('establishment')) return 2; // Venues
+            return 3; // Other
+          };
+
+          const aPriority = getCityPriority(aTypes);
+          const bPriority = getCityPriority(bTypes);
+          return aPriority - bPriority;
+        });
+
+        setPredictions(sortedPredictions);
       }).catch((error) => {
         console.error('Autocomplete error:', error);
         setPredictions([]);
@@ -623,28 +657,28 @@ export function SearchPage() {
   const handleSelectPrediction = (placeId: string, mainText: string) => {
     setSearchLocation(mainText || '');
     setShowPredictions(false);
+    setShowMobileSearchEdit(false);
 
     // Blur the input to prevent dropdown from reopening
     const input = document.querySelector('input[placeholder="Search location..."]') as HTMLInputElement;
     if (input) input.blur();
 
-    // Get place details to get coordinates using new Place API
-    const place = new google.maps.places.Place({ id: placeId });
-    place.fetchFields({
-      fields: ['location']
-    }).then(() => {
-      if (place.location) {
-        const lat = place.location.lat();
-        const lng = place.location.lng();
+    // Get coordinates using Geocoding API
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ address: mainText }, (results, status) => {
+      if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+        const location = results[0].geometry.location;
+        const lat = location.lat();
+        const lng = location.lng();
         setMapCenter({
           lat,
           lng,
         });
         setSearchLocationPin({ lat, lng });
         addToRecentSearches(mainText || '', lat, lng);
+      } else {
+        console.error('Geocoding error:', status);
       }
-    }).catch((error) => {
-      console.error('Place details error:', error);
     });
   };
 
@@ -1155,14 +1189,9 @@ export function SearchPage() {
             {/* Reservation Type */}
             <div>
               <label className="text-xs font-semibold text-gray-400 mb-2 block uppercase">Vrsta rezervacije</label>
-              <select
-                value={reservationType}
-                onChange={(e) => setReservationType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="Satna/dnevna">Satna/dnevna</option>
-                <option value="Mjesečna">Mjesečna</option>
-              </select>
+              <div className="border border-gray-300 rounded-lg bg-white px-3 py-2">
+                <ReservationTypeDropdown value={reservationType} onChange={setReservationType} />
+              </div>
             </div>
 
             {/* Location Search */}
@@ -1171,6 +1200,7 @@ export function SearchPage() {
               <div className="border border-gray-300 rounded-lg bg-white px-3 py-2 flex items-center gap-2 focus-within:border-[#000000] focus-within:ring-2 focus-within:ring-blue-500">
                 <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />
                 <input
+                  ref={locationInputRef}
                   type="text"
                   placeholder="Search location..."
                   value={searchLocation}
@@ -1184,9 +1214,10 @@ export function SearchPage() {
                   className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none flex-1"
                 />
               </div>
-              {/* Predictions */}
+              {/* Predictions - Uber style */}
               {showPredictions && (
                 <div className="mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {/* Current Location Button */}
                   <button
                     onClick={handleCurrentLocation}
                     className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-900"
@@ -1196,7 +1227,7 @@ export function SearchPage() {
                   </button>
 
                   {/* Recent Searches */}
-                  {recentSearches.length > 0 && (
+                  {!searchLocation && recentSearches.length > 0 && (
                     <>
                       {recentSearches.map((search, idx) => (
                         <button
@@ -1211,27 +1242,26 @@ export function SearchPage() {
                     </>
                   )}
 
-                  {/* Nearby Locations Header */}
-                  {nearbyPlaces.length > 0 && (
-                    <div className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-500 border-t border-gray-200">
-                      Nearby Locations
-                    </div>
+                  {/* Google Places Predictions */}
+                  {searchLocation && predictions.length > 0 && (
+                    <>
+                      {predictions.map((pred) => (
+                        <button
+                          key={pred.place_id}
+                          onClick={() => handleSelectPrediction(pred.place_id, pred.main_text || pred.description?.split(',')[0] || '')}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-start gap-2 text-sm border-t border-gray-200"
+                        >
+                          <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <div className="text-gray-900 font-medium">{pred.main_text || pred.description?.split(',')[0] || 'Location'}</div>
+                            {(pred.secondary_text || pred.description?.split(',').slice(1).join(',')) && (
+                              <div className="text-xs text-gray-500">{pred.secondary_text || pred.description?.split(',').slice(1).join(',')}</div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </>
                   )}
-
-                  {/* Nearby Places of Interest */}
-                  {nearbyPlaces.map((place, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleRecentSearch(place.name, place.lat, place.lng)}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-start gap-2 text-sm border-t border-gray-200"
-                    >
-                      <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <div className="text-gray-900 font-medium">{place.name}</div>
-                        <div className="text-xs text-gray-500 capitalize">{place.type}</div>
-                      </div>
-                    </button>
-                  ))}
                 </div>
               )}
             </div>
@@ -1244,7 +1274,7 @@ export function SearchPage() {
                 </svg>
                 Vrijeme
               </label>
-              <div className="border border-gray-300 rounded-lg bg-white px-3 py-2 focus-within:border-[#000000] focus-within:ring-2 focus-within:ring-blue-500">
+              <div className="border border-gray-300 rounded-lg bg-white px-3 py-2">
                 {reservationType === 'Mjesečna' ? (
                   <MonthlyDatePickerDropdown
                     startDate={monthlyStartDate}

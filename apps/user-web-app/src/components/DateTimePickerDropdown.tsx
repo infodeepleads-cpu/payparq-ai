@@ -126,7 +126,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full mt-2 left-1/2 bg-white border border-gray-300 rounded-lg shadow-xl z-50 p-3 space-y-3" style={{ width: '400px', transform: 'translateX(-50%)' }}>
+        <div className="absolute top-full mt-2 left-1/2 bg-white border border-gray-300 rounded-lg shadow-xl z-50 p-3 space-y-3" style={{ width: 'min(400px, calc(100vw - 32px))', transform: 'translateX(-50%)' }}>
           {/* Start Date and Time */}
           <div className="grid grid-cols-2 gap-2">
             <div>
