@@ -43,6 +43,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadOwnerLedger());
   }
 
   @override
