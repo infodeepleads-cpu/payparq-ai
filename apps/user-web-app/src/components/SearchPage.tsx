@@ -771,7 +771,7 @@ export function SearchPage() {
         setSearchLocationPin({ lat, lng });
         setSearchLocation('Current Location');
         setShowPredictions(false);
-        addToRecentSearches('Current Location', lat, lng);
+        // Don't save current location to history - it should always be a fresh option
       });
     }
   };
