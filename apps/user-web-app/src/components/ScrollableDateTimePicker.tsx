@@ -82,7 +82,7 @@ export function ScrollableDateTimePicker({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-0 md:p-3">
-      <div className="bg-white w-full md:w-96 rounded-t-3xl md:rounded-3xl p-4 md:p-6 space-y-4 md:space-y-5">
+      <div className="bg-white w-10/12 md:w-96 rounded-t-3xl md:rounded-3xl p-4 md:p-6 space-y-4 md:space-y-5">
         {/* Header */}
         <div className="text-center space-y-1">
           <div className="text-xs font-semibold text-black/50 uppercase tracking-wide">{step}</div>
