@@ -92,7 +92,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
       );
       if (!mounted) return;
       await _loadOwnerLedger();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Payout sent ✓')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Marked as paid ✓')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
     } finally {
@@ -569,28 +569,36 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
   void _showPayoutDialog(Map<String, dynamic> owner) {
     final id = owner['owner_id'] as String;
     final name = (owner['bank_account_holder'] as String? ?? owner['email'] as String? ?? id);
+    final iban = (owner['bank_iban'] as String?) ?? '';
     final ownerReserved = (owner['owner_reserved_cents'] as int? ?? 0) / 100;
-    final payparqReserved = (owner['payparq_reserved_cents'] as int? ?? 0) / 100;
     final payoutAmount = _calculatePayoutAmount(id, ownerReserved);
-    final payparqKeeps = ownerReserved + payparqReserved - payoutAmount;
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Pay $name'),
+        title: Text('Mark as Paid'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Total revenue: €${(ownerReserved + payparqReserved).toStringAsFixed(2)}',
-                style: GoogleFonts.inter(fontSize: 12)),
-            Text('PayParq commission: €${payparqReserved.toStringAsFixed(2)}',
-                style: GoogleFonts.inter(fontSize: 12, color: Colors.orange)),
-            const Divider(),
-            Text('Pay to owner: €${payoutAmount.toStringAsFixed(2)}',
-                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.green)),
-            Text('PayParq keeps: €${payparqKeeps.toStringAsFixed(2)}',
-                style: GoogleFonts.inter(fontSize: 12, color: Colors.black45)),
+            Text('$name', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+            Text('IBAN: $iban', style: GoogleFonts.inter(fontSize: 11, color: Colors.black45)),
+            const SizedBox(height: 12),
+            Text('Transfer amount:', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
+            Text('€${payoutAmount.toStringAsFixed(2)}',
+                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.green.shade700)),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Transfer €${payoutAmount.toStringAsFixed(2)} from PayParq bank account to this IBAN, then confirm below.',
+                style: GoogleFonts.inter(fontSize: 11, color: Colors.blue.shade900),
+              ),
+            ),
           ],
         ),
         actions: [
@@ -600,7 +608,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
               Navigator.pop(ctx);
               _handleAllocatePayout(id, payoutAmount);
             },
-            child: const Text('Confirm'),
+            child: const Text('Mark as Paid'),
           ),
         ],
       ),
