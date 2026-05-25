@@ -708,12 +708,13 @@ function SuccessContent() {
     }
   };
 
-  const handleDownloadPass = () => {
+  const handleDownloadPass = async () => {
     console.log('[Download] Button clicked');
     const passCard = document.querySelector('[data-pass-card]') as HTMLElement;
     console.log('[Download] passCard element:', passCard);
     if (!passCard) {
       console.log('[Download] No pass card found');
+      alert('Could not find pass card to download');
       return;
     }
     try {
@@ -749,10 +750,11 @@ function SuccessContent() {
         jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
       } as const;
       console.log('[Download] Starting PDF generation');
-      html2pdf().set(opt).from(element).save();
+      await html2pdf().set(opt).from(element).save();
       console.log('[Download] PDF generation complete');
     } catch (err) {
       console.error('[Download] Error:', err);
+      alert('Failed to download pass. Please try again or contact support.');
     }
   };
 
