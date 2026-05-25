@@ -119,6 +119,8 @@ export function SearchPage() {
   const [predictions, setPredictions] = useState<any[]>([]);
   const [showPredictions, setShowPredictions] = useState(false);
   const [searchLocationPin, setSearchLocationPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [noResultsForLocation, setNoResultsForLocation] = useState<string | null>(null);
+  const [nearbyCitiesWithParking, setNearbyCitiesWithParking] = useState<{ name: string; lat: number; lng: number; count: number; distanceKm: number }[]>([]);
   const [startTime, setStartTime] = useState<string>(() => {
     const now = new Date();
     now.setMinutes(now.getMinutes() >= 30 ? 30 : 0, 0, 0);
@@ -670,12 +672,53 @@ export function SearchPage() {
         const location = results[0].geometry.location;
         const lat = location.lat();
         const lng = location.lng();
-        setMapCenter({
-          lat,
-          lng,
-        });
+        setMapCenter({ lat, lng });
         setSearchLocationPin({ lat, lng });
         addToRecentSearches(mainText || '', lat, lng);
+
+        // Check if any parking lots are within 30km of selected location
+        setListings(prev => {
+          const RADIUS_KM = 30;
+          const nearby = prev.filter(l => haversineKm(lat, lng, l.lat, l.lng) <= RADIUS_KM);
+
+          if (nearby.length === 0 && prev.length > 0) {
+            setNoResultsForLocation(mainText);
+
+            // Find unique city clusters from available lots (group by ~20km proximity)
+            const cityMap: Map<string, { lat: number; lng: number; count: number }> = new Map();
+            prev.forEach(lot => {
+              let assigned = false;
+              cityMap.forEach((city, key) => {
+                if (haversineKm(lot.lat, lot.lng, city.lat, city.lng) < 20) {
+                  cityMap.set(key, { ...city, count: city.count + 1 });
+                  assigned = true;
+                }
+              });
+              if (!assigned) {
+                const cityName = lot.address.split(',').slice(-2, -1)[0]?.trim() || lot.name;
+                cityMap.set(cityName, { lat: lot.lat, lng: lot.lng, count: 1 });
+              }
+            });
+
+            const suggestions = Array.from(cityMap.entries())
+              .map(([name, data]) => ({
+                name,
+                lat: data.lat,
+                lng: data.lng,
+                count: data.count,
+                distanceKm: Math.round(haversineKm(lat, lng, data.lat, data.lng)),
+              }))
+              .sort((a, b) => a.distanceKm - b.distanceKm)
+              .slice(0, 4);
+
+            setNearbyCitiesWithParking(suggestions);
+          } else {
+            setNoResultsForLocation(null);
+            setNearbyCitiesWithParking([]);
+          }
+
+          return prev;
+        });
       } else {
         console.error('Geocoding error:', status);
       }
@@ -1607,10 +1650,45 @@ export function SearchPage() {
                 </div>
               </div>
             ) : filteredListings.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-center">
-                <div>
-                  <p className="text-gray-600 font-medium">Nema pronađenih parkirnih mjesta</p>
-                  <p className="text-sm text-gray-500 mt-1">Pokušajte prilagoditi svoje filtre</p>
+              <div className="flex items-center justify-center h-full text-center px-4">
+                <div className="w-full max-w-sm">
+                  {noResultsForLocation ? (
+                    <>
+                      <p className="text-gray-900 font-bold text-lg">Nema parkinga u {noResultsForLocation}</p>
+                      <p className="text-sm text-gray-500 mt-1 mb-4">Još ne pokrivamo ovu lokaciju</p>
+                      {nearbyCitiesWithParking.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Dostupno parkiranje u blizini</p>
+                          <div className="space-y-2">
+                            {nearbyCitiesWithParking.map((city) => (
+                              <button
+                                key={city.name}
+                                onClick={() => {
+                                  setMapCenter({ lat: city.lat, lng: city.lng });
+                                  setSearchLocationPin({ lat: city.lat, lng: city.lng });
+                                  setSearchLocation(city.name);
+                                  setNoResultsForLocation(null);
+                                  setNearbyCitiesWithParking([]);
+                                }}
+                                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 transition-colors"
+                              >
+                                <div className="text-left">
+                                  <div className="text-sm font-semibold text-gray-900">{city.name}</div>
+                                  <div className="text-xs text-gray-500">{city.count} {city.count === 1 ? 'lokacija' : 'lokacije'}</div>
+                                </div>
+                                <div className="text-xs text-gray-400">{city.distanceKm} km</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-gray-600 font-medium">Nema pronađenih parkirnih mjesta</p>
+                      <p className="text-sm text-gray-500 mt-1">Pokušajte prilagoditi svoje filtre</p>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
@@ -2420,10 +2498,43 @@ export function SearchPage() {
           <div className="flex-1 overflow-y-auto w-full h-full">
             <div className="p-4 space-y-3">
             {filteredListings.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-center">
-                <div>
-                  <p className="text-gray-600 font-medium">Nema pronađenih parkirnih mjesta</p>
-                  <p className="text-sm text-gray-500 mt-1">Pokušajte prilagoditi svoje filtre</p>
+              <div className="flex items-center justify-center h-32 text-center px-4">
+                <div className="w-full">
+                  {noResultsForLocation ? (
+                    <>
+                      <p className="text-gray-900 font-bold">Nema parkinga u {noResultsForLocation}</p>
+                      <p className="text-sm text-gray-500 mt-1 mb-3">Još ne pokrivamo ovu lokaciju</p>
+                      {nearbyCitiesWithParking.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold text-gray-400 uppercase">Dostupno u blizini</p>
+                          {nearbyCitiesWithParking.map((city) => (
+                            <button
+                              key={city.name}
+                              onClick={() => {
+                                setMapCenter({ lat: city.lat, lng: city.lng });
+                                setSearchLocationPin({ lat: city.lat, lng: city.lng });
+                                setSearchLocation(city.name);
+                                setNoResultsForLocation(null);
+                                setNearbyCitiesWithParking([]);
+                              }}
+                              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 transition-colors"
+                            >
+                              <div className="text-left">
+                                <div className="text-sm font-semibold text-gray-900">{city.name}</div>
+                                <div className="text-xs text-gray-500">{city.count} {city.count === 1 ? 'lokacija' : 'lokacije'}</div>
+                              </div>
+                              <div className="text-xs text-gray-400">{city.distanceKm} km</div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-gray-600 font-medium">Nema pronađenih parkirnih mjesta</p>
+                      <p className="text-sm text-gray-500 mt-1">Pokušajte prilagoditi svoje filtre</p>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
