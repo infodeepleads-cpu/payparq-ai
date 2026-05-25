@@ -157,7 +157,7 @@ export function SearchPage() {
   const [sortModalOpen, setSortModalOpen] = useState(false);
   const [error, setError] = useState<string>('');
   const filterModalRef = useRef<HTMLDivElement>(null);
-  const [sortBy, setSortBy] = useState<'relevance' | 'distance' | 'price' | 'rating' | 'walk' | 'value'>('distance');
+  const [sortBy, setSortBy] = useState<'relevance' | 'distance' | 'price' | 'price-low' | 'price-high' | 'rating' | 'walk' | 'value'>('distance');
   const [pwaPrompt, setPwaPrompt] = useState<any>(null);
 
   // PWA install prompt
@@ -865,7 +865,8 @@ export function SearchPage() {
         });
         break;
       case 'price':
-      case 'cijena': // fallback for Croatian locale
+      case 'price-low':
+      case 'cijena':
         sorted.sort((a, b) => {
           const aPricePerUnit = getDisplayPrice(a, durationHours, reservationType);
           const bPricePerUnit = getDisplayPrice(b, durationHours, reservationType);
@@ -874,6 +875,17 @@ export function SearchPage() {
           const aTotal = aCalc + 0.99 + (aCalc * 0.05);
           const bTotal = bCalc + 0.99 + (bCalc * 0.05);
           return aTotal - bTotal;
+        });
+        break;
+      case 'price-high':
+        sorted.sort((a, b) => {
+          const aPricePerUnit = getDisplayPrice(a, durationHours, reservationType);
+          const bPricePerUnit = getDisplayPrice(b, durationHours, reservationType);
+          const aCalc = reservationType === 'Mjesečna' ? aPricePerUnit : aPricePerUnit * durationHours;
+          const bCalc = reservationType === 'Mjesečna' ? bPricePerUnit : bPricePerUnit * durationHours;
+          const aTotal = aCalc + 0.99 + (aCalc * 0.05);
+          const bTotal = bCalc + 0.99 + (bCalc * 0.05);
+          return bTotal - aTotal;
         });
         break;
       case 'rating':
