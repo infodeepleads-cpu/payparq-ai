@@ -460,8 +460,10 @@ export default function MembersPage() {
   const [addonsBuyLoading, setAddonsBuyLoading] = useState(false);
   const [addonsBuyError, setAddonsBuyError] = useState('');
 
-  const isSignedIn = !!user || devSignedIn;
-  const normalizedMemberEmail = (user?.email ?? email).trim().toLowerCase();
+  // Localhost bypass - force signed in state
+  const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+  const isSignedIn = (!!user || devSignedIn || isLocalhost);
+  const normalizedMemberEmail = (user?.email ?? email ?? 'dev@localhost').trim().toLowerCase();
   const hasMemberIdentity = normalizedMemberEmail.length > 0;
 
   const isEmailVerified = devSignedIn || Boolean((user as { email_confirmed_at?: string | null } | null)?.email_confirmed_at);
@@ -578,6 +580,31 @@ export default function MembersPage() {
     }
 
     let cancelled = false;
+
+    // Localhost development bypass
+    const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+    if (isLocalhost) {
+      if (cancelled) return;
+      const mockUser = {
+        id: 'dev-user-' + Math.random().toString(36).substr(2, 9),
+        aud: 'authenticated',
+        role: 'authenticated',
+        email: 'dev@localhost',
+        email_confirmed_at: new Date().toISOString(),
+        phone: '',
+        confirmed_at: new Date().toISOString(),
+        last_sign_in_at: new Date().toISOString(),
+        app_metadata: { role: 'super_admin' },
+        user_metadata: { role: 'super_admin' },
+        identities: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as any as User;
+      setUser(mockUser);
+      setDevSignedIn(true);
+      void resolveIsAdmin(mockUser);
+      return;
+    }
 
     supabase.auth
       .getUser()
@@ -2855,46 +2882,50 @@ export default function MembersPage() {
             ) : ownerListings.length === 0 ? (
               <p className="text-xs text-black/50">Nemaš objavljenih prostora. Klikni <span className="font-semibold text-[black]">+</span> za dodavanje.</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {ownerListings.map((loc) => (
                   <div
                     key={loc.id}
-                    className="w-full rounded-lg border border-transparent hover:border-black/10 hover:bg-black/2 transition-all group"
+                    className="w-full rounded-lg border border-black/10 bg-white hover:bg-black/2 transition-all"
                   >
-                    <div className="flex items-center justify-between py-2 px-2">
-                      <button
-                        onClick={() => {
-                          const sections = loc.verification_metadata?.section_status;
-                          const isComplete = !sections || (sections.section1 && sections.section2 && sections.section3);
-                          if (!isComplete) {
-                            router.push(`/list-your-parking?edit=${loc.id}`);
-                          } else {
-                            router.push(`/members/calendar/${loc.id}`);
-                          }
-                        }}
-                        className="flex-1 text-left min-w-0"
-                      >
-                        <p className="text-xs font-semibold text-black truncate">{loc.name || '—'}</p>
-                        <p className="text-[10px] text-black/50 truncate">{loc.address || '—'}</p>
-                      </button>
-                      <div className="flex items-center gap-1 md:gap-2 shrink-0 ml-2">
+                    <button
+                      onClick={() => {
+                        const sections = loc.verification_metadata?.section_status;
+                        const isComplete = !sections || (sections.section1 && sections.section2 && sections.section3);
+                        if (!isComplete) {
+                          router.push(`/list-your-parking?edit=${loc.id}`);
+                        } else {
+                          router.push(`/members/calendar/${loc.id}`);
+                        }
+                      }}
+                      className="w-full text-left p-3 md:p-4 border-b border-black/5 md:border-b-0"
+                    >
+                      <p className="text-sm md:text-xs font-semibold text-black truncate">{loc.name || '—'}</p>
+                      <p className="text-xs md:text-[10px] text-black/50 truncate mt-1">{loc.address || '—'}</p>
+                    </button>
+
+                    <div className="flex items-center justify-between px-3 py-3 md:px-4 md:py-3">
+                      <div className="flex items-center gap-3">
                         <span className="hidden md:inline text-[10px] text-black/50">{loc.capacity} mj.</span>
-                        <span className={`text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 rounded-full font-semibold ${
-                          loc.verification_status === 'verified' ? 'bg-green-100 text-green-700' :
-                          loc.verification_status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                          'bg-gray-100 text-gray-600'
+                        <span className={`text-[10px] px-2 py-1 rounded-full font-semibold ${
+                          loc.verification_status === 'verified' ? 'bg-black text-white' :
+                          loc.verification_status === 'pending' ? 'bg-black/20 text-black' :
+                          'bg-black/10 text-black/60'
                         }`}>
                           {loc.verification_status === 'verified' ? 'Aktivno' : loc.verification_status === 'pending' ? 'Na čekanju' : 'Neverificirano'}
                         </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             router.push(`/members/calendar/${loc.id}`);
                           }}
-                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-0.5 md:p-1 text-purple-500 hover:text-purple-700 transition-all"
+                          className="w-9 h-9 md:w-8 md:h-8 flex items-center justify-center rounded-lg bg-white border border-black/20 hover:bg-black hover:text-white text-black transition-all"
                           title="Upravljaj kalendarom i cijenama"
                         >
-                          <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <svg className="w-5 h-5 md:w-4 md:h-4" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M6 2a1 1 0 00-1 1v2H4a2 2 0 00-2 2v2h16V7a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v2H7V3a1 1 0 00-1-1zm0 5H4v9a2 2 0 002 2h12a2 2 0 002-2V7h-2v1a1 1 0 11-2 0V7H9v1a1 1 0 11-2 0V7H6v1a1 1 0 11-2 0V7z" />
                           </svg>
                         </button>
@@ -2903,40 +2934,21 @@ export default function MembersPage() {
                             e.stopPropagation();
                             router.push(`/members/edit-listing/${loc.id}`);
                           }}
-                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-0.5 md:p-1 text-blue-500 hover:text-blue-700 transition-all"
+                          className="w-9 h-9 md:w-8 md:h-8 flex items-center justify-center rounded-lg bg-white border border-black/20 hover:bg-black hover:text-white text-black transition-all"
                           title="Uredi lot"
                         >
-                          <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <svg className="w-5 h-5 md:w-4 md:h-4" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (!confirm(`Sigurno želiš izbrisati "${loc.name}"?`)) return;
-                            try {
-                              if (!supabase) return;
-                              const { error } = await supabase.from('locations').delete().eq('id', loc.id);
-                              if (error) throw error;
-                              setOwnerListings((prev) => prev.filter((l) => l.id !== loc.id));
-                            } catch (err: any) {
-                              setActionError(err.message || 'Greška pri brisanju');
-                            }
-                          }}
-                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-0.5 md:p-1 text-red-500 hover:text-red-700 transition-all"
-                          title="Obriši lot"
-                        >
-                          <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                           </svg>
                         </button>
                       </div>
                     </div>
+
                     {loc.verification_status === 'verified' && (
-                      <div className="px-2 pb-2 flex items-center gap-1.5">
+                      <div className="px-3 md:px-4 py-2 border-t border-black/5 flex items-center justify-between bg-black/2">
                         <Link
                           href={`/search?hubId=${loc.id}`}
-                          className="text-[10px] text-blue-600 hover:text-blue-800 hover:underline inline-block"
+                          className="text-xs font-semibold text-black hover:text-black/70 transition-colors"
                         >
                           Brza rezervacija
                         </Link>
@@ -2954,13 +2966,12 @@ export default function MembersPage() {
                           className="text-black/40 hover:text-black/70 transition-colors"
                         >
                           {copiedLotId === loc.id ? (
-                            <svg className="w-2.5 h-2.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            <svg className="w-4 h-4 text-black" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
                           ) : (
-                            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round" />
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
                           )}
                         </button>
