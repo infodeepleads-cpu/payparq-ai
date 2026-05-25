@@ -424,7 +424,10 @@ export function SearchPage() {
     const stored = localStorage.getItem('recentSearches');
     if (stored) {
       try {
-        setRecentSearches(JSON.parse(stored).slice(0, 5));
+        const parsed = JSON.parse(stored);
+        // Filter out current location variants
+        const filtered = parsed.filter((s: any) => s.name !== 'Current Location' && s.name !== 'Trenutna lokacija').slice(0, 5);
+        setRecentSearches(filtered);
       } catch {
         setRecentSearches([]);
       }
@@ -754,6 +757,8 @@ export function SearchPage() {
   };
 
   const addToRecentSearches = (name: string, lat: number, lng: number) => {
+    // Don't save current location to history
+    if (name === 'Current Location' || name === 'Trenutna lokacija' || !name.trim()) return;
     const updated = [{ name, lat, lng }, ...recentSearches.filter(s => s.name !== name)].slice(0, 5);
     setRecentSearches(updated);
     localStorage.setItem('recentSearches', JSON.stringify(updated));
