@@ -75,6 +75,11 @@ export default function EditListingPage() {
     base_price_daily: '',
     base_price_monthly: '',
     photos: [] as { id: number; name: string; url: string }[],
+    checkoutSlots: [
+      { type: 'hour', value: 1 },
+      { type: 'hour', value: 2 },
+      { type: 'hour', value: 3 },
+    ] as { type: 'hour' | 'vrsta'; value: number | string }[],
   });
 
   const handleSave = async () => {
@@ -148,6 +153,7 @@ export default function EditListingPage() {
             permits: formData.permits,
             postBookingInstructions: formData.postBookingInstructions,
             additionalDescription: formData.description,
+            checkoutSlots: formData.checkoutSlots,
           },
         })
         .eq('id', id);
@@ -267,6 +273,11 @@ export default function EditListingPage() {
         permits: data.verification_metadata?.permits || '',
         postBookingInstructions: data.verification_metadata?.postBookingInstructions || '',
         addPostBookingInfo: !!data.verification_metadata?.postBookingInstructions,
+        checkoutSlots: data.verification_metadata?.checkoutSlots || [
+          { type: 'hour', value: 1 },
+          { type: 'hour', value: 2 },
+          { type: 'hour', value: 3 },
+        ],
         base_price_hourly: data.base_price_hourly != null ? String(data.base_price_hourly) : '',
         base_price_daily: data.base_price_daily != null ? String(data.base_price_daily) : '',
         base_price_monthly: data.base_price_monthly != null ? String(data.base_price_monthly) : '',
@@ -855,6 +866,54 @@ export default function EditListingPage() {
                 </div>
               )}
               <p className="text-xs text-black/50 mt-2">📍 Koordinate: {formData.latitude}, {formData.longitude}</p>
+            </div>
+
+            {/* SECTION 9: CHECKOUT SLOTS */}
+            <div id="checkout-slots" className="scroll-mt-24 pt-6 border-t border-black/10 pb-8">
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="hidden md:block text-2xl font-bold text-black">Checkout Dodaci</h2>
+              </div>
+              <p className="text-xs text-black/50 mb-4">Odaberite što svaki od 3 gumba na checkout stranici nudi kupcu.</p>
+              <div className="grid grid-cols-3 gap-3">
+                {([0, 1, 2] as const).map((idx) => {
+                  const slot = formData.checkoutSlots?.[idx] || { type: 'hour', value: idx + 1 };
+                  const hoursOpts = [
+                    { value: 'hour:1', label: '+1h' },
+                    { value: 'hour:2', label: '+2h' },
+                    { value: 'hour:3', label: '+3h' },
+                  ];
+                  const vrstaOpts = [
+                    { value: 'vrsta:oversized', label: 'Oversized 1.25×' },
+                    { value: 'vrsta:premium', label: 'Premium 1.5×' },
+                    { value: 'vrsta:kamper', label: 'Kamper 2×' },
+                    { value: 'vrsta:bus', label: 'Bus 5×' },
+                    { value: 'vrsta:valet', label: 'Valet 2×' },
+                    { value: 'vrsta:vip_valet', label: 'VIP Valet 3×' },
+                    { value: 'vrsta:late_checkout', label: 'Late Checkout ½d' },
+                  ];
+                  const allOpts = [...hoursOpts, ...vrstaOpts];
+                  const currentVal = `${slot.type}:${slot.value}`;
+                  return (
+                    <div key={idx}>
+                      <label className="block text-xs font-semibold text-black/60 mb-1">Slot {idx + 1}</label>
+                      <select
+                        value={currentVal}
+                        onChange={(e) => {
+                          const [type, value] = e.target.value.split(':');
+                          const updated = [...(formData.checkoutSlots || [{ type: 'hour', value: 1 }, { type: 'hour', value: 2 }, { type: 'hour', value: 3 }])];
+                          updated[idx] = { type: type as 'hour' | 'vrsta', value: type === 'hour' ? Number(value) : value };
+                          setFormData({ ...formData, checkoutSlots: updated });
+                        }}
+                        className="w-full px-2 py-2 border border-black/20 rounded-lg text-xs text-black focus:outline-none focus:ring-1 focus:ring-black"
+                      >
+                        {allOpts.map((o) => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Mobile Save Button */}

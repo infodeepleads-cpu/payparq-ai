@@ -7,6 +7,34 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, ExpressCheckoutElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import Link from 'next/link';
 import { Star, CheckCircle, X, Phone, Lock } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseCheckout = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+);
+
+type CheckoutSlot = { type: 'hour' | 'vrsta'; value: number | string };
+
+const VRSTA_MULTIPLIERS: Record<string, number> = {
+  oversized: 1.25,
+  premium: 1.5,
+  kamper: 2,
+  bus: 5,
+  valet: 2,
+  vip_valet: 3,
+  late_checkout: 1.5,
+};
+
+const VRSTA_LABELS: Record<string, string> = {
+  oversized: 'Oversized',
+  premium: 'Premium',
+  kamper: 'Kamper',
+  bus: 'Bus',
+  valet: 'Valet',
+  vip_valet: 'VIP Valet',
+  late_checkout: 'Late Checkout',
+};
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -45,6 +73,7 @@ function SummaryPanel({
   promoStatus, promoInput, promoError, promoDiscountCents, promoDiscountPercent,
   onApplyPromo, onRemovePromo, onInputChange,
   onCheckInChange, onCheckOutChange, onDatePickerToggle, onAddHours, hourlyRateCents,
+  checkoutSlots,
 }: {
   locationName: string;
   locationId: string;
@@ -67,6 +96,7 @@ function SummaryPanel({
   onDatePickerToggle?: (open: boolean) => void;
   onAddHours?: (hours: number, addCents: number) => void;
   hourlyRateCents?: number;
+  checkoutSlots?: CheckoutSlot[];
 }) {
   const subtotalEur = originalAmountCents / 100;
   const serviceFeeEur = promoDiscountPercent === 100 ? 0 : 0.99 + (subtotalEur * 0.05);
@@ -89,12 +119,38 @@ function SummaryPanel({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempCheckIn, setTempCheckIn] = useState(checkIn);
   const [tempCheckOut, setTempCheckOut] = useState(checkOut);
-  const [selectedAddOn, setSelectedAddOn] = useState<number | null>(null);
+  const [selectedAddOn, setSelectedAddOn] = useState<string | null>(null);
 
   const hr = hourlyRateCents ?? 0;
   const add1hCents = Math.round(hr);
   const add2hCents = Math.round(2 * hr * 0.90);
   const add3hCents = Math.round(3 * hr * 0.85);
+
+  const defaultSlots: CheckoutSlot[] = [
+    { type: 'hour', value: 1 },
+    { type: 'hour', value: 2 },
+    { type: 'hour', value: 3 },
+  ];
+  const resolvedSlots = checkoutSlots && checkoutSlots.length === 3 ? checkoutSlots : defaultSlots;
+
+  const getSlotDisplay = (slot: CheckoutSlot): { label: string; sublabel: string; key: string; hours: number; cents: number } => {
+    if (slot.type === 'hour') {
+      const h = Number(slot.value);
+      const cents = h === 1 ? add1hCents : h === 2 ? add2hCents : add3hCents;
+      return { label: `+${h}h`, sublabel: `+€${(cents / 100).toFixed(2)}`, key: `h:${h}`, hours: h, cents };
+    } else {
+      const key = String(slot.value);
+      const mult = VRSTA_MULTIPLIERS[key] ?? 1;
+      const addCents = Math.round((mult - 1) * originalAmountCents);
+      return {
+        label: VRSTA_LABELS[key] ?? key,
+        sublabel: `+€${(addCents / 100).toFixed(2)}`,
+        key: `v:${key}`,
+        hours: 0,
+        cents: addCents,
+      };
+    }
+  };
 
   // Generate date options (next 30 days)
   const generateDateOptions = () => {
@@ -277,18 +333,22 @@ function SummaryPanel({
 
       <div className="-mt-4 md:-mt-6 border-t border-gray-100 pt-3 md:pt-4 space-y-4">
         <div className="grid grid-cols-3 gap-2">
-          {[{ h: 1, cents: add1hCents }, { h: 2, cents: add2hCents }, { h: 3, cents: add3hCents }].map(({ h, cents }) => {
-            const isSelected = selectedAddOn === h;
+          {resolvedSlots.map((slot) => {
+            const { label, sublabel, key, hours, cents } = getSlotDisplay(slot);
+            const isSelected = selectedAddOn === key;
             const isDisabled = selectedAddOn !== null && !isSelected;
             return (
               <button
-                key={h}
+                key={key}
                 disabled={isDisabled}
-                onClick={() => { onAddHours?.(isSelected ? -h : h, isSelected ? -cents : cents); setSelectedAddOn(isSelected ? null : h); }}
+                onClick={() => {
+                  onAddHours?.(isSelected ? -hours : hours, isSelected ? -cents : cents);
+                  setSelectedAddOn(isSelected ? null : key);
+                }}
                 className={`px-2 py-2 text-xs font-medium border border-gray-300 rounded transition-colors text-center text-gray-900 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white`}
               >
-                <div className="font-semibold">+{h}h</div>
-                <div className="text-xs mt-0.5 text-gray-600">+€{(cents / 100).toFixed(2)}</div>
+                <div className="font-semibold">{label}</div>
+                <div className="text-xs mt-0.5 text-gray-600">{sublabel}</div>
               </button>
             );
           })}
@@ -417,7 +477,7 @@ function Field({ label, note, ...props }: { label: string; note?: string } & Rea
 function PaidCheckoutForm({
   amountEur, locationName, checkIn: initialCheckIn, checkOut: initialCheckOut,
   locationId, displayId, originalAmountCents, onAmountChange, isFree, address, clientSecret,
-  phCents = 0, pdCents = 0, pmCents = 0,
+  phCents = 0, pdCents = 0, pmCents = 0, checkoutSlots,
 }: {
   amountEur: number;
   locationName: string;
@@ -433,6 +493,7 @@ function PaidCheckoutForm({
   phCents?: number;
   pdCents?: number;
   pmCents?: number;
+  checkoutSlots?: CheckoutSlot[];
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -701,6 +762,7 @@ function PaidCheckoutForm({
             onDatePickerToggle={setDatePickerOpen}
             onAddHours={handleAddHours}
             hourlyRateCents={phCents || undefined}
+            checkoutSlots={checkoutSlots}
           />
 
           {/* ── Right: form ── */}
@@ -863,6 +925,21 @@ function CheckoutInner() {
   const [amountCents, setAmountCents] = useState(initialAmountCents);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [checkoutSlots, setCheckoutSlots] = useState<CheckoutSlot[] | undefined>(undefined);
+
+  useEffect(() => {
+    if (!locId) return;
+    supabaseCheckout
+      .from('locations')
+      .select('verification_metadata')
+      .eq('id', locId)
+      .single()
+      .then(({ data }) => {
+        if (data?.verification_metadata?.checkoutSlots) {
+          setCheckoutSlots(data.verification_metadata.checkoutSlots);
+        }
+      });
+  }, [locId]);
 
   // Store booking details in sessionStorage immediately so success page can display them
   // even if Stripe's redirect drops the URL query params.
@@ -985,6 +1062,7 @@ function CheckoutInner() {
         address={address}
         clientSecret={clientSecret}
         phCents={phCents} pdCents={pdCents} pmCents={pmCents}
+        checkoutSlots={checkoutSlots}
       />
     </Elements>
   );
