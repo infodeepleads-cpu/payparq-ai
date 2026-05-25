@@ -223,7 +223,15 @@ function SummaryPanel({
       </div>
 
       <div className="lg:hidden">
-        <p className="text-xs font-semibold text-gray-600 text-center">Sesija parkiranja ({durationHours} {durationHours === 1 ? 'sat' : durationHours < 5 ? 'sata' : 'sati'})</p>
+        <p className="text-xs font-semibold text-gray-600 text-center">Sesija parkiranja ({durationHours} {(() => {
+          const h = durationHours;
+          const lastDigit = h % 10;
+          const lastTwoDigits = h % 100;
+          if (lastTwoDigits >= 11 && lastTwoDigits <= 14) return 'sati';
+          if (h === 1) return 'sat';
+          if (lastDigit >= 2 && lastDigit <= 4) return 'sata';
+          return 'sati';
+        })()})</p>
         <p className="font-bold text-gray-900 text-3xl mt-2 text-center">€{amountEur.toFixed(2)}</p>
         <div className="mt-3 text-center">
           <p className="text-xs text-gray-600">{locationName} {displayId && <span className="text-gray-700">ID: <span className="font-mono font-medium">{displayId}</span></span>}</p>

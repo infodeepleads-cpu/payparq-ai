@@ -116,6 +116,7 @@ export function SearchPage() {
   const [loading, setLoading] = useState(true);
   const [reservationType, setReservationType] = useState('Satna/dnevna');
   const [searchLocation, setSearchLocationState] = useState<string>('');
+  const [usingCurrentLocation, setUsingCurrentLocation] = useState(false);
   const [predictions, setPredictions] = useState<any[]>([]);
   const [showPredictions, setShowPredictions] = useState(false);
   const [searchLocationPin, setSearchLocationPin] = useState<{ lat: number; lng: number } | null>(null);
@@ -399,6 +400,9 @@ export function SearchPage() {
 
   const setSearchLocation = (value: string | undefined) => {
     setSearchLocationState(value || '');
+    if (value && value !== 'Current Location' && value !== 'Trenutna lokacija') {
+      setUsingCurrentLocation(false);
+    }
   };
 
   // Filter state
@@ -415,7 +419,8 @@ export function SearchPage() {
       const lng = position.coords.longitude;
       setMapCenter({ lat, lng });
       setSearchLocationPin({ lat, lng });
-      setSearchLocation('Current Location');
+      setSearchLocationState('');
+      setUsingCurrentLocation(true);
     });
   }, []);
 
@@ -425,10 +430,13 @@ export function SearchPage() {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        // Filter out current location variants
-        const filtered = parsed.filter((s: any) => s.name !== 'Current Location' && s.name !== 'Trenutna lokacija').slice(0, 5);
+        const CURRENT_LOCATION_NAMES = ['Current Location', 'Trenutna lokacija', 'current location', 'trenutna lokacija'];
+        const filtered = parsed.filter((s: any) => !CURRENT_LOCATION_NAMES.includes(s.name)).slice(0, 5);
         setRecentSearches(filtered);
+        // Write cleaned list back to localStorage to permanently remove stale entries
+        localStorage.setItem('recentSearches', JSON.stringify(filtered));
       } catch {
+        localStorage.removeItem('recentSearches');
         setRecentSearches([]);
       }
     }
@@ -774,9 +782,9 @@ export function SearchPage() {
           lng,
         });
         setSearchLocationPin({ lat, lng });
-        setSearchLocation('Current Location');
+        setSearchLocationState('');
+        setUsingCurrentLocation(true);
         setShowPredictions(false);
-        // Don't save current location to history - it should always be a fresh option
       });
     }
   };
@@ -1072,12 +1080,12 @@ export function SearchPage() {
             <div className="flex-1 flex flex-col justify-center relative">
               <label className="text-xs font-semibold text-gray-400 mb-0.5 leading-none">Kamo ideš?</label>
               <div className="flex items-center gap-2">
-                <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                {usingCurrentLocation ? <MapPin className="w-4 h-4 text-blue-500 flex-shrink-0" /> : <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />}
                 <input
                   type="text"
-                  placeholder="Search location..."
+                  placeholder={usingCurrentLocation ? 'Trenutna lokacija' : 'Search location...'}
                   value={searchLocation}
-                  onChange={(e) => setSearchLocation(e.target.value)}
+                  onChange={(e) => { setUsingCurrentLocation(false); setSearchLocation(e.target.value); }}
                   onFocus={() => {
                     setShowPredictions(true);
                     if (nearbyPlaces.length === 0) {
@@ -1290,12 +1298,15 @@ export function SearchPage() {
               <label className="text-xs font-semibold text-gray-400 mb-2 block uppercase">Kamo ideš?</label>
               <div className="border border-gray-300 rounded-lg bg-white px-3 py-2 flex items-center gap-2 focus-within:border-[#000000] focus-within:ring-2 focus-within:ring-blue-500">
                 <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                {usingCurrentLocation && (
+                  <MapPin className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                )}
                 <input
                   ref={locationInputRef}
                   type="text"
-                  placeholder="Search location..."
+                  placeholder={usingCurrentLocation ? 'Trenutna lokacija' : 'Search location...'}
                   value={searchLocation}
-                  onChange={(e) => setSearchLocation(e.target.value)}
+                  onChange={(e) => { setUsingCurrentLocation(false); setSearchLocation(e.target.value); }}
                   onFocus={() => {
                     setShowPredictions(true);
                     if (nearbyPlaces.length === 0) {
