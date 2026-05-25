@@ -343,8 +343,7 @@ export function SearchPage() {
     const checkoutListing = { ...listing, pricePerHour: rates.hourly, pricePerDay: rates.daily };
     const totalPrice = getDisplayPrice(checkoutListing, durationHours, reservationType);
     const sub = parseFloat(totalPrice.toFixed(2));
-    const fee = parseFloat((0.99 + sub * 0.05).toFixed(2));
-    const total = parseFloat((showTotalPrice ? sub + fee : sub).toFixed(2));
+    const total = sub; // Always pass base price; checkout adds fee itself
 
     // Convert naive local datetimes to UTC ISO so the server doesn't misread them as UTC
     let checkoutStartTime = parseLocalDateTime(startTime).toISOString();
