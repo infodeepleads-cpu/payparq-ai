@@ -157,13 +157,13 @@ function AddressMapField({ address, onAddressChange, pin, onPinChange, onRegionD
 
 const ADDONS = ['Valet', 'EV punjenje', 'Pretakanje', 'Pranje', 'Natkriveno', 'Rampa/Brana', 'CCTV', 'Pristup invalidima', 'Osoblje', 'Garaža', 'Shuttle'];
 const SPOT_TYPES = [
-  { key: 'standard_xxl', label: 'Oversized Vehicle (XXL)', mult: '1.25×' },
+  { key: 'standard_xxl', label: 'Preveliko vozilo (XXL)', mult: '1.25×' },
   { key: 'premium', label: 'Premium (Sjena, Ulaz, Garaža)', mult: '1.5×' },
   { key: 'kamper', label: 'Kamper', mult: '2×' },
   { key: 'bus', label: 'Bus', mult: '5×' },
   { key: 'valet', label: 'Valet', mult: '2×' },
-  { key: 'vip_valet', label: 'VIP Valet (All-inclusive)', mult: '2.5–5×', desc: 'Unlimited punjenje/pranje, Red Carpet' },
-  { key: 'late_checkout', label: 'Late Checkout', mult: '½ dana' },
+  { key: 'vip_valet', label: 'VIP Valet (Sve uključeno)', mult: '2.5–5×', desc: 'Neograničeno punjenje/pranje, Crveni tepih' },
+  { key: 'late_checkout', label: 'Kasni odlazak', mult: '½ dana' },
 ];
 
 // ─── Main form ────────────────────────────────────────────────────────────────
@@ -440,7 +440,7 @@ export default function EditListingPage() {
 
           {/* ── Section 2: Lot Specifics ── */}
           <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-5">
-            <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Specifičnosti lota</p>
+            <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Specifičnosti parkinga</p>
 
             <CollapsibleSection title="Stvari koje biste trebali znati" defaultOpen={false}>
               <div>
@@ -508,7 +508,7 @@ export default function EditListingPage() {
               </div>
             </CollapsibleSection>
 
-            <CollapsibleSection title="Dodaci (10)" defaultOpen={false}>
+            <CollapsibleSection title="Dodaci" defaultOpen={false}>
               <div className="flex flex-wrap gap-2">
                 {ADDONS.map((a) => (
                   <button key={a} type="button" onClick={() => toggleAddon(a)}
@@ -619,7 +619,7 @@ export default function EditListingPage() {
                 </div>
                 <div className="flex items-center justify-between pt-4">
                   <div>
-                    <p className="text-xs font-semibold text-gray-800">AI Dynamic Pricing</p>
+                    <p className="text-xs font-semibold text-gray-800">AI Dinamično određivanje cijena</p>
                     <p className="text-xs text-gray-400">Kalkulacija cijene za maksimalnu zaradu</p>
                   </div>
                   <Toggle checked={useAIDynamicPricing} onChange={setUseAIDynamicPricing} />
@@ -627,7 +627,7 @@ export default function EditListingPage() {
               </div>
             </CollapsibleSection>
 
-            <CollapsibleSection title="Blagajna Dodaci (Checkout Widgets)" defaultOpen={false}>
+            <CollapsibleSection title="Blagajna Dodaci" defaultOpen={false}>
               <p className="text-xs text-gray-600 mb-4">Odaberite što svaki od 3 gumba na checkout stranici nudi kupcu.</p>
               <div className="grid grid-cols-3 gap-3">
                 {([0, 1, 2] as const).map((idx) => {
