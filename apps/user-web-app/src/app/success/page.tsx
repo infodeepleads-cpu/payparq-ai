@@ -1066,7 +1066,7 @@ function SuccessContent() {
 
                 {/* Location */}
                 <div>
-                  <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Lokacija / Location</p>
+                  <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Lokacija</p>
                   <p className="text-[17px] font-black text-black leading-tight">
                     {checkoutLocationName || checkoutLocationIdLabel || 'Parking'}
                   </p>
@@ -1078,7 +1078,7 @@ function SuccessContent() {
                 {/* Plate */}
                 {plate && (
                   <div>
-                    <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Tablica / Plate</p>
+                    <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Tablica</p>
                     <p className="text-[15px] font-black text-black font-mono tracking-widest">{plate}</p>
                   </div>
                 )}
