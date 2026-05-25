@@ -121,6 +121,7 @@ export function SearchPage() {
   const [predictions, setPredictions] = useState<any[]>([]);
   const [showPredictions, setShowPredictions] = useState(false);
   const [searchLocationPin, setSearchLocationPin] = useState<{ lat: number; lng: number } | null>(null);
+  const userGpsRef = useRef<{ lat: number; lng: number } | null>(null);
   const [noResultsForLocation, setNoResultsForLocation] = useState<string | null>(null);
   const [nearbyCitiesWithParking, setNearbyCitiesWithParking] = useState<{ name: string; lat: number; lng: number; count: number; distanceKm: number }[]>([]);
   const [startTime, setStartTime] = useState<string>(() => {
@@ -418,6 +419,7 @@ export function SearchPage() {
     navigator.geolocation.getCurrentPosition((position) => {
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
+      userGpsRef.current = { lat, lng };
       setMapCenter({ lat, lng });
       setSearchLocationPin({ lat, lng });
       setSearchLocationState('');
@@ -774,8 +776,10 @@ export function SearchPage() {
   };
 
   const handleCurrentLocation = () => {
-    if (searchLocationPin) {
-      setMapCenter(searchLocationPin);
+    const gps = userGpsRef.current;
+    if (gps) {
+      setMapCenter(gps);
+      setSearchLocationPin(gps);
       setSearchLocationState('');
       setUsingCurrentLocation(true);
       setShowPredictions(false);
@@ -784,6 +788,7 @@ export function SearchPage() {
       navigator.geolocation.getCurrentPosition((position) => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
+        userGpsRef.current = { lat, lng };
         setMapCenter({ lat, lng });
         setSearchLocationPin({ lat, lng });
         setSearchLocationState('');
@@ -802,6 +807,7 @@ export function SearchPage() {
       navigator.geolocation.getCurrentPosition((position) => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
+        userGpsRef.current = { lat, lng };
         setMapCenter({ lat, lng });
         setSearchLocationPin({ lat, lng });
         setSearchLocationState('');
@@ -1119,40 +1125,31 @@ export function SearchPage() {
                   }}
                   className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none cursor-pointer flex-1 leading-none"
                 />
-                {usingCurrentLocation && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleRefreshLocation(); }}
-                    disabled={geoLoading}
-                    className="flex-shrink-0 text-gray-600 hover:text-gray-900 disabled:opacity-50"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 4v6h6" />
-                      <path d="M23 20v-6h-6" />
-                      <path d="M20.49 9A9 9 0 0 0 5.64 5.64" />
-                      <path d="M3.51 15A9 9 0 0 0 18.36 18.36" />
-                    </svg>
-                  </button>
-                )}
               </div>
               {/* Predictions dropdown */}
               {showPredictions && (
                 <div className="absolute top-full mt-1 left-1/2 bg-white border border-gray-300 rounded-md shadow-xl z-50 max-h-80 overflow-y-auto" style={{ width: 'calc(100% + 1rem)', transform: 'translateX(-50%)' }}>
-                  {/* Current Location */}
-                  <button
-                    onClick={handleCurrentLocation}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-900"
-                  >
-                    <MapPin className="w-4 h-4 text-gray-600" />
-                    Use current location
-                  </button>
+                  {/* Current Location - only when not typing */}
+                  {!searchLocation && (
+                    <button
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleCurrentLocation();
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-900"
+                    >
+                      <MapPin className="w-4 h-4 text-gray-600" />
+                      Use current location
+                    </button>
+                  )}
 
-                  {/* Recent Searches */}
-                  {recentSearches.length > 0 && (
+                  {/* Recent Searches - only when not typing */}
+                  {!searchLocation && recentSearches.length > 0 && (
                     <>
                       {recentSearches.map((search, idx) => (
                         <button
                           key={idx}
-                          onClick={() => handleRecentSearch(search.name, search.lat, search.lng)}
+                          onMouseDown={(e) => { e.preventDefault(); handleRecentSearch(search.name, search.lat, search.lng); }}
                           className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-900 border-t border-gray-200"
                         >
                           <MapPin className="w-4 h-4 text-gray-600" />
@@ -1162,18 +1159,45 @@ export function SearchPage() {
                     </>
                   )}
 
+                  {/* Google Places Predictions - only when typing */}
+                  {searchLocation && predictions.length > 0 && (
+                    <>
+                      {predictions.map((pred) => (
+                        <button
+                          key={pred.place_id}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSelectPrediction(pred.place_id, pred.main_text || pred.description?.split(',')[0] || '');
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-start gap-2 text-sm border-t border-gray-200"
+                        >
+                          <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <div className="text-gray-900 font-medium">{pred.main_text || pred.description?.split(',')[0] || 'Location'}</div>
+                            {(pred.secondary_text || pred.description?.split(',').slice(1).join(',')) && (
+                              <div className="text-xs text-gray-500">{pred.secondary_text || pred.description?.split(',').slice(1).join(',')}</div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </>
+                  )}
+
                   {/* Nearby Locations Header */}
-                  {nearbyPlaces.length > 0 && (
+                  {!searchLocation && nearbyPlaces.length > 0 && (
                     <div className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-500 border-t border-gray-200">
                       Nearby Locations
                     </div>
                   )}
 
                   {/* Nearby Places of Interest */}
-                  {nearbyPlaces.map((place, idx) => (
+                  {!searchLocation && nearbyPlaces.map((place, idx) => (
                     <button
                       key={idx}
-                      onClick={() => handleRecentSearch(place.name, place.lat, place.lng)}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleRecentSearch(place.name, place.lat, place.lng);
+                      }}
                       className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-start gap-2 text-sm border-t border-gray-200"
                     >
                       <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />
@@ -1336,10 +1360,7 @@ export function SearchPage() {
             <div>
               <label className="text-xs font-semibold text-gray-400 mb-2 block uppercase">Kamo ideš?</label>
               <div className="border border-gray-300 rounded-lg bg-white px-3 py-2 flex items-center gap-2 focus-within:border-[#000000] focus-within:ring-2 focus-within:ring-blue-500">
-                <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                {usingCurrentLocation && (
-                  <MapPin className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                )}
+                {usingCurrentLocation ? <MapPin className="w-4 h-4 text-blue-500 flex-shrink-0" /> : <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />}
                 <input
                   ref={locationInputRef}
                   type="text"
@@ -1354,34 +1375,25 @@ export function SearchPage() {
                   }}
                   className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none flex-1"
                 />
-                {usingCurrentLocation && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleRefreshLocation(); }}
-                    disabled={geoLoading}
-                    className="flex-shrink-0 text-gray-600 hover:text-gray-900 disabled:opacity-50"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 4v6h6" />
-                      <path d="M23 20v-6h-6" />
-                      <path d="M20.49 9A9 9 0 0 0 5.64 5.64" />
-                      <path d="M3.51 15A9 9 0 0 0 18.36 18.36" />
-                    </svg>
-                  </button>
-                )}
               </div>
               {/* Predictions - Uber style */}
               {showPredictions && (
                 <div className="mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
-                  {/* Current Location Button */}
-                  <button
-                    onClick={handleCurrentLocation}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-900"
-                  >
-                    <MapPin className="w-4 h-4 text-gray-600" />
-                    Use current location
-                  </button>
+                  {/* Current Location Button - only when not typing */}
+                  {!searchLocation && (
+                    <button
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleCurrentLocation();
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-900"
+                    >
+                      <MapPin className="w-4 h-4 text-gray-600" />
+                      Use current location
+                    </button>
+                  )}
 
-                  {/* Recent Searches */}
+                  {/* Recent Searches - only when not typing */}
                   {!searchLocation && recentSearches.length > 0 && (
                     <>
                       {recentSearches.map((search, idx) => (
@@ -2381,7 +2393,7 @@ export function SearchPage() {
           ) : (
           <GoogleMap
             zoom={16}
-            center={mapCenter}
+            center={searchLocationPin || mapCenter}
             mapContainerStyle={{ width: '100%', height: '100%' }}
             onLoad={(map) => {
               mapRef.current = map;

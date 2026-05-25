@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+html {
+  scrollbar-gutter: stable;
+}
+
 :root {
   /* PayParq Tactical Theme - User Facing */
   --color-primary: #6D28D9;
