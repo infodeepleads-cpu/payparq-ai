@@ -301,7 +301,20 @@ export function SearchPage() {
 
   const formatDuration = () => {
     const h = durationHours;
-    if (h < 24) return `${h} ${h === 1 ? 'sat' : h < 5 ? 'sata' : 'sati'}`;
+    if (h < 24) {
+      // Croatian grammar: 1=sat, 2-4=sata, 5+=sati (but 11-14=sati, 22-24=sata, 32-34=sata, etc.)
+      const lastDigit = h % 10;
+      const lastTwoDigits = h % 100;
+      let form = 'sati';
+      if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
+        form = 'sati'; // 11-14 always use 'sati'
+      } else if (h === 1) {
+        form = 'sat';
+      } else if (lastDigit >= 2 && lastDigit <= 4) {
+        form = 'sata'; // 2-4, 22-24, 32-34, etc.
+      }
+      return `${h} ${form}`;
+    }
     const days = Math.floor(h / 24), rem = h % 24;
     return rem > 0 ? `${days}d ${rem}h` : `${days} ${days === 1 ? 'dan' : 'dana'}`;
   };
