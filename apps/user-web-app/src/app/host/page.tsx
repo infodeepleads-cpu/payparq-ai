@@ -1018,7 +1018,7 @@ export default function HostPage() {
               <CollapsibleSection title="Cijena" defaultOpen={false}>
                 {/* Info box */}
                 <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
-                  <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> Obavijest!</p>
+                  <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> Obavijest</p>
                   <p className="text-xs text-black leading-relaxed space-y-2" translate="no">
                     <span className="block">PayParq na Vašu cijenu dodaje marginalnu naknadu za uslugu koju plaća kupac koja uključuje: Zajamčeno mjesto, Prioritetnu podršku, SOS poziv za zamjenu mjesta.</span>
                     <span className="block">Za udaljene lotove — prazne parcele bez nadzora uz zračne luke, događaje i plaže — dodaje se dodatna naknada.</span>
