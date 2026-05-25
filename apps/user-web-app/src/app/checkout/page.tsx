@@ -485,7 +485,7 @@ function Field({ label, note, ...props }: { label: string; note?: string } & Rea
 function PaidCheckoutForm({
   amountEur, locationName, checkIn: initialCheckIn, checkOut: initialCheckOut,
   locationId, displayId, originalAmountCents, onAmountChange, isFree, address, clientSecret,
-  phCents = 0, pdCents = 0, pmCents = 0, checkoutSlots,
+  phCents = 0, pdCents = 0, pmCents = 0, checkoutSlots, onPaymentReady,
 }: {
   amountEur: number;
   locationName: string;
@@ -502,6 +502,7 @@ function PaidCheckoutForm({
   pdCents?: number;
   pmCents?: number;
   checkoutSlots?: CheckoutSlot[];
+  onPaymentReady?: () => void;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -516,6 +517,12 @@ function PaidCheckoutForm({
   const [checkOut, setCheckOut] = useState(initialCheckOut);
   const [displayAmountCents, setDisplayAmountCents] = useState(originalAmountCents);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+
+  // For free bookings, no PaymentElement loads — signal ready immediately
+  useEffect(() => {
+    if (isFree) onPaymentReady?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFree]);
 
   // Service fee: 0.99€ + 5% of parking price
   const serviceFeeEurCents = Math.round((99 + (displayAmountCents * 0.05)));
@@ -857,6 +864,7 @@ function PaidCheckoutForm({
               </div>
               <PaymentElement
                 key={isMobile ? 'mobile' : 'desktop'}
+                onReady={() => onPaymentReady?.()}
                 options={isMobile ? {
                   layout: { type: 'tabs' },
                   paymentMethodOrder: ['card'],
@@ -934,6 +942,7 @@ function CheckoutInner() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [checkoutSlots, setCheckoutSlots] = useState<CheckoutSlot[] | undefined>(undefined);
+  const [paymentReady, setPaymentReady] = useState(false);
 
   useEffect(() => {
     if (!locId) return;
@@ -1003,13 +1012,13 @@ function CheckoutInner() {
 
   const amountEur = amountCents / 100;
 
+  const showSpinner = !clientSecret || !paymentReady;
+
   if (!clientSecret && !fetchError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="space-y-3 w-full max-w-md px-6">
-          <div className="h-4 bg-gray-200 rounded animate-pulse w-24" />
-          <div className="h-48 bg-gray-200 rounded-2xl animate-pulse" />
-          <div className="h-12 bg-gray-200 rounded-xl animate-pulse" />
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="relative w-16 h-16">
+          <div className="absolute inset-0 rounded-full border-4 border-gray-100 border-t-white animate-spin" style={{ animationDuration: '1s' }} />
         </div>
       </div>
     );
@@ -1028,6 +1037,15 @@ function CheckoutInner() {
     : { clientSecret: clientSecret! };
 
   return (
+    <>
+      {!paymentReady && (
+        <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
+          <div className="relative w-16 h-16">
+            <div className="absolute inset-0 rounded-full border-4 border-gray-100 border-t-white animate-spin" style={{ animationDuration: '1s' }} />
+          </div>
+        </div>
+      )}
+      <div className={`transition-opacity duration-300 ${paymentReady ? 'opacity-100' : 'opacity-0'}`}>
     <Elements
       stripe={stripePromise}
       key={clientSecret!}
@@ -1071,8 +1089,11 @@ function CheckoutInner() {
         clientSecret={clientSecret}
         phCents={phCents} pdCents={pdCents} pmCents={pmCents}
         checkoutSlots={checkoutSlots}
+        onPaymentReady={() => setPaymentReady(true)}
       />
     </Elements>
+      </div>
+    </>
   );
 }
 
