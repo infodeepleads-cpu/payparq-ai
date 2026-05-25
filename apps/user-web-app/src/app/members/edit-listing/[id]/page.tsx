@@ -1,16 +1,19 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useJsApiLoader } from '@react-google-maps/api';
+import { useJsApiLoader, GoogleMap, Marker } from '@react-google-maps/api';
 import { supabase } from '@/lib/supabase';
-import { MapPin, Camera, Clock, AlertCircle, Menu, X, Square, Calendar, FileText, Map, Euro, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapPin, Navigation, ChevronDown, ChevronUp, Clock, X, Info } from 'lucide-react';
 import { PayparqPageHeader } from '@/components/PayparqPageHeader';
 import { AmenitiesChips } from '@/components/AmenitiesChips';
+
+const GMAPS_LIBS: ('places')[] = ['places'];
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
 const inputClass = "w-full border border-gray-300 rounded-md px-3.5 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-colors";
 const labelClass = "text-xs font-black text-gray-600 mb-1.5 block leading-none";
+const subLabelClass = "text-xs font-semibold text-gray-500 mb-1 block";
 
 // ─── Toggle component ─────────────────────────────────────────────────────────
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -39,16 +42,131 @@ function CollapsibleSection({ title, children, defaultOpen = true }: { title: st
   );
 }
 
-const SECTIONS = [
-  { id: 'location', label: 'Lokacijski detalji', icon: MapPin },
-  { id: 'space', label: 'Detalji prostora', icon: Square },
-  { id: 'availability', label: 'Dostupnost i radnog vremena', icon: Clock },
-  { id: 'pricing', label: 'Cijene', icon: Euro },
-  { id: 'description', label: 'Opis', icon: FileText },
-  { id: 'additional', label: 'Dodatne informacije', icon: AlertCircle },
-  { id: 'photos', label: 'Fotografije', icon: Camera },
-  { id: 'streetview', label: 'Pogled s ceste', icon: Map },
+// ─── Helper: Extract country code from geocoding results ───────────────────
+function extractCountryCode(results: google.maps.GeocoderResult[]): string | null {
+  if (!results?.[0]) return null;
+  const countryComponent = results[0].address_components?.find((c) => c.types.includes('country'));
+  return countryComponent?.short_name ?? null;
+}
+
+// ─── Address field with mini map ──────────────────────────────────────────────
+function AddressMapField({ address, onAddressChange, pin, onPinChange, onRegionDetect, isLoaded }: {
+  address: string; onAddressChange: (v: string) => void;
+  pin: { lat: number; lng: number } | null; onPinChange: (p: { lat: number; lng: number }) => void;
+  onRegionDetect?: (region: string | null) => void;
+  isLoaded: boolean;
+}) {
+  const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
+  const [showPredictions, setShowPredictions] = useState(false);
+  const mapCenter = pin || { lat: 45.815, lng: 15.982 };
+
+  useEffect(() => {
+    if (!isLoaded || !address || address.length < 3) { setPredictions([]); return; }
+    const svc = new google.maps.places.AutocompleteService();
+    svc.getPlacePredictions({ input: address }, (results, status) => {
+      setPredictions(status === google.maps.places.PlacesServiceStatus.OK && results ? results : []);
+    });
+  }, [address, isLoaded]);
+
+  const selectPrediction = (pred: google.maps.places.AutocompletePrediction) => {
+    setShowPredictions(false); setPredictions([]);
+    onAddressChange(pred.description);
+    if (!isLoaded) return;
+    new google.maps.places.PlacesService(document.createElement('div')).getDetails({ placeId: pred.place_id }, (place, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+        onPinChange({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng() });
+        if (place.address_components && onRegionDetect) {
+          const countryCode = extractCountryCode([{ address_components: place.address_components } as google.maps.GeocoderResult]);
+          onRegionDetect(countryCode);
+        }
+      }
+    });
+  };
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const lat = pos.coords.latitude; const lng = pos.coords.longitude;
+      onPinChange({ lat, lng });
+      if (!isLoaded) return;
+      new google.maps.Geocoder().geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === 'OK' && results?.[0]) {
+          onAddressChange(results[0].formatted_address);
+          if (onRegionDetect) {
+            const countryCode = extractCountryCode(results);
+            onRegionDetect(countryCode);
+          }
+        }
+      });
+    });
+  };
+
+  const onMapClick = useCallback((e: google.maps.MapMouseEvent) => {
+    if (!e.latLng) return;
+    const lat = e.latLng.lat(); const lng = e.latLng.lng();
+    onPinChange({ lat, lng });
+    if (!isLoaded) return;
+    new google.maps.Geocoder().geocode({ location: { lat, lng } }, (results, status) => {
+      if (status === 'OK' && results?.[0]) {
+        onAddressChange(results[0].formatted_address);
+        if (onRegionDetect) {
+          const countryCode = extractCountryCode(results);
+          onRegionDetect(countryCode);
+        }
+      }
+    });
+  }, [isLoaded, onAddressChange, onPinChange, onRegionDetect]);
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <input type="text" placeholder="Ilica 1, Zagreb" value={address}
+          onChange={(e) => { onAddressChange(e.target.value); setShowPredictions(true); }}
+          onFocus={() => setShowPredictions(true)} onBlur={() => setTimeout(() => setShowPredictions(false), 150)}
+          className={inputClass} required />
+        {showPredictions && predictions.length > 0 && (
+          <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+            {predictions.slice(0, 4).map((pred) => (
+              <button key={pred.place_id} type="button" onMouseDown={() => selectPrediction(pred)}
+                className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-100 last:border-0">
+                <MapPin className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                <span className="text-xs text-gray-700 truncate">{pred.description}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="rounded-lg overflow-hidden border border-gray-200" style={{ height: 180 }}>
+        {isLoaded ? (
+          <GoogleMap mapContainerStyle={{ width: '100%', height: '100%' }} center={mapCenter} zoom={pin ? 15 : 12}
+            onClick={onMapClick} options={{ disableDefaultUI: true, zoomControl: true, clickableIcons: false }}>
+            {pin && <Marker position={pin} />}
+          </GoogleMap>
+        ) : (
+          <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+            <span className="text-xs text-gray-400">Učitavanje karte...</span>
+          </div>
+        )}
+      </div>
+      <button type="button" onClick={useCurrentLocation} className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 transition-colors">
+        <Navigation className="w-3 h-3" />Koristi trenutnu lokaciju
+      </button>
+    </div>
+  );
+}
+
+const ADDONS = ['Valet', 'EV punjenje', 'Pretakanje', 'Pranje', 'Natkriveno', 'Rampa/Brana', 'CCTV', 'Pristup invalidima', 'Osoblje', 'Garaža', 'Shuttle'];
+const SPOT_TYPES = [
+  { key: 'standard_xxl', label: 'Oversized Vehicle (XXL)', mult: '1.25×' },
+  { key: 'premium', label: 'Premium (Sjena, Ulaz, Garaža)', mult: '1.5×' },
+  { key: 'kamper', label: 'Kamper', mult: '2×' },
+  { key: 'bus', label: 'Bus', mult: '5×' },
+  { key: 'valet', label: 'Valet', mult: '2×' },
+  { key: 'vip_valet', label: 'VIP Valet (All-inclusive)', mult: '2.5–5×', desc: 'Unlimited punjenje/pranje, Red Carpet' },
+  { key: 'late_checkout', label: 'Late Checkout', mult: '½ dana' },
 ];
+
+// ─── Main form ────────────────────────────────────────────────────────────────
 
 export default function EditListingPage() {
   const params = useParams();
@@ -57,192 +175,55 @@ export default function EditListingPage() {
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-    libraries: ['places'],
+    libraries: GMAPS_LIBS,
   });
 
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState('location');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const streetViewRef = useRef<HTMLDivElement>(null);
-  const streetViewInstanceRef = useRef<any>(null);
 
-  const [formData, setFormData] = useState({
-    name: '',
-    region: 'HR',
-    address: '',
-    addressLine2: '',
-    town: '',
-    postalCode: '',
-    latitude: '',
-    longitude: '',
-    type: '',
-    description: '',
-    spaceType: '',
-    vehicleSize: '',
-    hasAccessControl: false,
-    accessControlType: '',
-    hasHeightRestrictions: false,
-    maxHeight: '',
-    requiresPermit: false,
-    spaceAllocated: '',
-    features: [] as string[],
-    available24_7: false,
-    schedule: {
-      Ponedjeljak: { enabled: true, openTime: '00:00', closeTime: '23:59' },
-      Utorak:      { enabled: true, openTime: '00:00', closeTime: '23:59' },
-      Srijeda:     { enabled: true, openTime: '00:00', closeTime: '23:59' },
-      Četvrtak:    { enabled: true, openTime: '00:00', closeTime: '23:59' },
-      Petak:       { enabled: true, openTime: '00:00', closeTime: '23:59' },
-      Subota:      { enabled: true, openTime: '00:00', closeTime: '23:59' },
-      Nedjelja:    { enabled: true, openTime: '00:00', closeTime: '23:59' },
-    } as Record<string, { enabled: boolean; openTime: string; closeTime: string }>,
-    smartPricing: false,
-    permits: '',
-    postBookingInstructions: '',
-    addPostBookingInfo: false,
-    base_price_hourly: '',
-    base_price_daily: '',
-    base_price_monthly: '',
-    photos: [] as { id: number; name: string; url: string }[],
-    checkoutSlots: [
-      { type: 'hour', value: 1 },
-      { type: 'hour', value: 2 },
-      { type: 'hour', value: 3 },
-    ] as { type: 'hour' | 'vrsta'; value: number | string }[],
-  });
+  // ─── Form data using host form schema ────
+  const [lotName, setLotName] = useState('');
+  const [address, setAddress] = useState('');
+  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [parkingType, setParkingType] = useState('');
+  const [region, setRegion] = useState('HR');
 
-  const handleSave = async () => {
-    if (!supabase) return;
-    setSaving(true);
-    try {
-      const { data: existing } = await supabase
-        .from('locations')
-        .select('verification_photos, verification_metadata')
-        .eq('id', id)
-        .single();
+  const [accessType, setAccessType] = useState('');
+  const [gatedPhone, setGatedPhone] = useState('');
+  const [heightLimit, setHeightLimit] = useState('');
+  const [widthLimit, setWidthLimit] = useState('');
+  const [exoticVehicles, setExoticVehicles] = useState('');
+  const [ownerComment, setOwnerComment] = useState('');
+  const [accessInstructions, setAccessInstructions] = useState('');
 
-      const meta = existing?.verification_metadata || {};
-      const photoUrls: string[] = [];
+  const [addons, setAddons] = useState<string[]>([]);
+  const toggleAddon = (a: string) => setAddons((prev) => prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]);
 
-      for (const photo of formData.photos) {
-        if (photo.url.startsWith('blob:')) {
-          const response = await fetch(photo.url);
-          const blob = await response.blob();
-          const fileName = `${id}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
+  const [is247, setIs247] = useState(true);
+  const [hoursFrom, setHoursFrom] = useState('');
+  const [hoursTo, setHoursTo] = useState('');
+  const [openDays, setOpenDays] = useState<string[]>(['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned']);
+  const toggleDay = (d: string) => setOpenDays((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]);
 
-          const { error: uploadError } = await supabase.storage
-            .from('locations')
-            .upload(fileName, blob);
+  const [baseSpots, setBaseSpots] = useState('');
+  const [activeSpotTypes, setActiveSpotTypes] = useState<string[]>([]);
+  const toggleSpotType = (k: string) => setActiveSpotTypes((prev) => prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]);
 
-          if (uploadError) {
-            console.error('Upload error:', uploadError);
-            continue;
-          }
+  const [standardHourlyPrice, setStandardHourlyPrice] = useState('');
+  const [standardDailyPrice, setStandardDailyPrice] = useState('');
+  const [standardMonthlyPrice, setStandardMonthlyPrice] = useState('');
 
-          const { data: { publicUrl } } = supabase.storage
-            .from('locations')
-            .getPublicUrl(fileName);
+  const [useDynamicPrice, setUseDynamicPrice] = useState(true);
+  const [minPriceHourly, setMinPriceHourly] = useState('');
+  const [minPriceDaily, setMinPriceDaily] = useState('');
+  const [minPriceMonthly, setMinPriceMonthly] = useState('');
+  const [useAIDynamicPricing, setUseAIDynamicPricing] = useState(true);
 
-          photoUrls.push(publicUrl);
-        } else {
-          photoUrls.push(photo.url);
-        }
-      }
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
 
-      const { error } = await supabase
-        .from('locations')
-        .update({
-          name: formData.name,
-          address: formData.address,
-          latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-          longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-          base_price_hourly: formData.base_price_hourly ? parseFloat(formData.base_price_hourly) : null,
-          base_price_daily: formData.base_price_daily ? parseFloat(formData.base_price_daily) : null,
-          base_price_monthly: formData.base_price_monthly ? parseFloat(formData.base_price_monthly) : null,
-          verification_photos: photoUrls.length > 0 ? photoUrls : null,
-          verification_metadata: {
-            ...meta,
-            region: formData.region,
-            addressLine2: formData.addressLine2,
-            town: formData.town,
-            postalCode: formData.postalCode,
-            type: formData.type,
-            spaceType: formData.spaceType,
-            vehicleSize: formData.vehicleSize,
-            hasAccessControl: formData.hasAccessControl,
-            accessControlType: formData.accessControlType,
-            hasHeightRestrictions: formData.hasHeightRestrictions,
-            maxHeight: formData.maxHeight,
-            requiresPermit: formData.requiresPermit,
-            spaceAllocated: formData.spaceAllocated,
-            features: formData.features,
-            available24_7: formData.available24_7,
-            schedule: formData.schedule,
-            smartPricing: formData.smartPricing,
-            permits: formData.permits,
-            postBookingInstructions: formData.postBookingInstructions,
-            additionalDescription: formData.description,
-            checkoutSlots: formData.checkoutSlots,
-          },
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      const newPhotos = photoUrls.map((url, i) => ({
-        id: i + 1,
-        name: `photo-${i + 1}.jpg`,
-        url,
-      }));
-      setFormData({ ...formData, photos: newPhotos });
-
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
-      console.error('Save failed:', err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleRemovePhoto = (id: number) => {
-    setFormData({
-      ...formData,
-      photos: formData.photos.filter(p => p.id !== id)
-    });
-  };
-
-  const scrollToSection = (sectionId: string) => {
-    setActiveSection(sectionId);
-    setMobileMenuOpen(false);
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  useEffect(() => {
-    if (!isLoaded || !formData.latitude || !formData.longitude || !streetViewRef.current) return;
-    if (!window.google?.maps) return;
-    const lat = parseFloat(formData.latitude);
-    const lng = parseFloat(formData.longitude);
-    if (isNaN(lat) || isNaN(lng)) return;
-    const location = new window.google.maps.LatLng(lat, lng);
-    if (!streetViewInstanceRef.current) {
-      streetViewInstanceRef.current = new window.google.maps.StreetViewPanorama(streetViewRef.current, {
-        position: location,
-        pov: { heading: 0, pitch: 0 },
-        zoom: 1,
-        addressControl: false,
-        fullscreenControl: false,
-      });
-    } else {
-      streetViewInstanceRef.current.setPosition(location);
-    }
-  }, [isLoaded, formData.latitude, formData.longitude]);
-
+  // Load listing data
   useEffect(() => {
     if (id) {
       loadListing();
@@ -267,71 +248,137 @@ export default function EditListingPage() {
         return;
       }
 
-      setFormData({
-        name: data.name || '',
-        region: data.verification_metadata?.region || 'HR',
-        address: data.address || '',
-        addressLine2: data.verification_metadata?.addressLine2 || '',
-        town: data.verification_metadata?.town || '',
-        postalCode: data.verification_metadata?.postalCode || '',
-        latitude: data.latitude != null && data.latitude !== 0 ? String(data.latitude) : '',
-        longitude: data.longitude != null && data.longitude !== 0 ? String(data.longitude) : '',
-        type: data.verification_metadata?.type || '',
-        description: data.verification_metadata?.additionalDescription || data.description || '',
-        spaceType: data.verification_metadata?.spaceType || '',
-        vehicleSize: data.verification_metadata?.vehicleSize || '',
-        hasHeightRestrictions: data.verification_metadata?.hasHeightRestrictions ?? true,
-        maxHeight: data.verification_metadata?.maxHeight || '2.5m',
-        hasAccessControl: data.verification_metadata?.hasAccessControl ?? true,
-        accessControlType: data.verification_metadata?.accessControlType || 'Electronic keypad',
-        requiresPermit: data.verification_metadata?.requiresPermit ?? false,
-        spaceAllocated: data.verification_metadata?.spaceAllocated || '',
-        features: data.verification_metadata?.features || [],
-        available24_7: data.verification_metadata?.available24_7 || false,
-        schedule: (() => {
-          const days = ['Ponedjeljak','Utorak','Srijeda','Četvrtak','Petak','Subota','Nedjelja'];
-          const saved = data.verification_metadata?.schedule;
-          const oldOpen = data.verification_metadata?.openTime || '00:00';
-          const oldClose = data.verification_metadata?.closeTime || '23:59';
-          const oldDays: string[] = data.verification_metadata?.daysAvailable || days;
-          return Object.fromEntries(days.map(d => [d, saved?.[d] ?? {
-            enabled: oldDays.includes(d),
-            openTime: oldOpen,
-            closeTime: oldClose,
-          }]));
-        })(),
-        smartPricing: data.verification_metadata?.smartPricing || false,
-        permits: data.verification_metadata?.permits || '',
-        postBookingInstructions: data.verification_metadata?.postBookingInstructions || '',
-        addPostBookingInfo: !!data.verification_metadata?.postBookingInstructions,
-        checkoutSlots: data.verification_metadata?.checkoutSlots || [
-          { type: 'hour', value: 1 },
-          { type: 'hour', value: 2 },
-          { type: 'hour', value: 3 },
-        ],
-        base_price_hourly: data.base_price_hourly != null ? String(data.base_price_hourly) : '',
-        base_price_daily: data.base_price_daily != null ? String(data.base_price_daily) : '',
-        base_price_monthly: data.base_price_monthly != null ? String(data.base_price_monthly) : '',
-        photos: (() => {
-          const savedPhotos = data.verification_metadata?.photos || data.verification_photos || [];
-          if (Array.isArray(savedPhotos) && savedPhotos.length > 0) {
-            if (typeof savedPhotos[0] === 'object') {
-              return savedPhotos.filter((p: any) => p.url && !p.url.startsWith('blob:'));
-            }
-            const photoUrls = savedPhotos.filter((url: string) => url && !url.startsWith('blob:'));
-            return photoUrls.map((url: string, i: number) => ({
-              id: i + 1,
-              name: `photo-${i + 1}.jpg`,
-              url,
-            }));
-          }
-          return [];
-        })(),
-      });
+      const meta = data.verification_metadata || {};
+
+      // Map database fields to host form schema
+      setLotName(data.name || '');
+      setAddress(data.address || '');
+      if (data.latitude && data.longitude) {
+        setPin({ lat: data.latitude, lng: data.longitude });
+      }
+      setRegion(meta.region || 'HR');
+      setParkingType(meta.type || '');
+
+      setAccessType(meta.accessType || '');
+      setGatedPhone(meta.gatedPhone || '');
+      setHeightLimit(meta.heightLimit || meta.maxHeight || '');
+      setWidthLimit(meta.widthLimit || '');
+      setExoticVehicles(meta.exoticVehicles || '');
+      setOwnerComment(meta.ownerComment || meta.description || '');
+      setAccessInstructions(meta.accessInstructions || '');
+
+      setAddons(meta.addons || meta.features || []);
+      setIs247(meta.is247 ?? meta.available24_7 ?? true);
+      setOpenDays(meta.openDays || meta.daysAvailable || ['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned']);
+      setHoursFrom(meta.hoursFrom || '');
+      setHoursTo(meta.hoursTo || '');
+
+      setBaseSpots(meta.baseSpots || '');
+      setActiveSpotTypes(meta.activeSpotTypes || []);
+
+      setStandardHourlyPrice(data.base_price_hourly ? String(data.base_price_hourly) : '');
+      setStandardDailyPrice(data.base_price_daily ? String(data.base_price_daily) : '');
+      setStandardMonthlyPrice(data.base_price_monthly ? String(data.base_price_monthly) : '');
+
+      setMinPriceHourly(meta.minPriceHourly ? String(meta.minPriceHourly) : '');
+      setMinPriceDaily(meta.minPriceDaily ? String(meta.minPriceDaily) : '');
+      setMinPriceMonthly(meta.minPriceMonthly ? String(meta.minPriceMonthly) : '');
+      setUseAIDynamicPricing(meta.useAIDynamicPricing ?? true);
+
+      setExistingPhotos(data.verification_photos || []);
+
+      setLoading(false);
     } catch (err) {
       console.error('Error loading listing:', err);
-    } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!supabase) return;
+    setSaving(true);
+    try {
+      const { data: existing } = await supabase
+        .from('locations')
+        .select('verification_photos, verification_metadata')
+        .eq('id', id)
+        .single();
+
+      const meta = existing?.verification_metadata || {};
+      const photoUrls: string[] = [...existingPhotos];
+
+      // Upload new photos
+      for (const photo of photos) {
+        if (photo instanceof File) {
+          const fileName = `${id}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
+          const { error: uploadError } = await supabase.storage
+            .from('locations')
+            .upload(fileName, photo);
+
+          if (!uploadError) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('locations')
+              .getPublicUrl(fileName);
+            photoUrls.push(publicUrl);
+          }
+        }
+      }
+
+      // Save with host form schema
+      const { error } = await supabase
+        .from('locations')
+        .update({
+          name: lotName,
+          address: address,
+          latitude: pin ? pin.lat : null,
+          longitude: pin ? pin.lng : null,
+          base_price_hourly: standardHourlyPrice ? parseFloat(standardHourlyPrice) : null,
+          base_price_daily: standardDailyPrice ? parseFloat(standardDailyPrice) : null,
+          base_price_monthly: standardMonthlyPrice ? parseFloat(standardMonthlyPrice) : null,
+          verification_photos: photoUrls.length > 0 ? photoUrls : null,
+          verification_metadata: {
+            ...meta,
+            region,
+            type: parkingType,
+            accessType,
+            gatedPhone,
+            heightLimit,
+            maxHeight: heightLimit,
+            widthLimit,
+            exoticVehicles,
+            ownerComment,
+            description: ownerComment,
+            accessInstructions,
+            addons,
+            features: addons,
+            is247,
+            available24_7: is247,
+            openDays,
+            daysAvailable: openDays,
+            hoursFrom,
+            hoursTo,
+            baseSpots,
+            activeSpotTypes,
+            standardHourlyPrice,
+            standardDailyPrice,
+            standardMonthlyPrice,
+            useDynamicPrice,
+            minPriceHourly,
+            minPriceDaily,
+            minPriceMonthly,
+            useAIDynamicPricing,
+          },
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      console.error('Save failed:', err);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -340,9 +387,7 @@ export default function EditListingPage() {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="relative flex items-center justify-center w-20 h-20 mx-auto mb-4">
-            {/* Rotating white ring */}
             <div className="absolute inset-0 rounded-full border-4 border-gray-100 border-t-white animate-spin" style={{ animationDuration: '1s' }} />
-            {/* Pulsating logo */}
             <div className="animate-pulse w-12 h-12 rounded-full bg-[#020617] flex items-center justify-center shadow-lg z-10">
               <span className="text-lg font-black tracking-tight text-white select-none">P</span>
             </div>
@@ -354,503 +399,295 @@ export default function EditListingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <PayparqPageHeader
-        title="Uredi popis"
-        onBack={() => router.back()}
-        lineColor="black"
-      />
+    <div className="min-h-screen bg-white overflow-x-hidden">
+      <PayparqPageHeader title="Uredi popis" onBack={() => router.back()} lineColor="black" />
 
-      {/* Success Message */}
       {success && (
         <div className="fixed top-20 left-4 right-4 max-w-sm p-3 bg-green-100 border border-green-300 rounded text-green-700 text-sm z-40">
           ✓ Listing updated successfully
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
-        {/* LEFT INFO PANEL */}
-        <div className="md:col-span-1">
-          <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6 space-y-4 md:space-y-6 sticky top-24 md:top-32">
-            <div>
-              <p className="text-sm font-semibold text-gray-900 mb-1">Uredjivanje vašeg oglasa</p>
-              <p className="text-xs text-gray-500">Ažurirajte detalje vašeg parkirnog mjesta kako bi privukli više vozača.</p>
-            </div>
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <form className="space-y-4">
 
-            <div className="border-t border-gray-100 pt-4 space-y-3">
-              <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Sekcije za uređivanje</p>
-              <div className="space-y-2 text-xs">
-                {SECTIONS.map((section) => (
-                  <div key={section.id} className="flex items-start gap-2 text-gray-700">
-                    <span className="flex-shrink-0 mt-0.5">•</span>
-                    <span>{section.label}</span>
-                  </div>
-                ))}
+          {/* ── Section 1: Lot Info ── */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-5">
+            <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Podaci o lotu</p>
+            <div className="space-y-3">
+              <div>
+                <label className={labelClass}>Naziv</label>
+                <input type="text" placeholder="npr. Parking Centar Zagreb" value={lotName} onChange={(e) => setLotName(e.target.value)} className={inputClass} required />
               </div>
-            </div>
-
-            <div className="border-t border-gray-100 pt-4 space-y-3">
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="w-full px-4 py-2.5 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50"
-              >
-                {saving ? 'Sprema...' : 'Spremi sve'}
-              </button>
-              <button
-                onClick={() => router.back()}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-semibold text-gray-900 hover:bg-gray-50 transition-colors"
-              >
-                Otkaži
-              </button>
+              <div>
+                <label className={labelClass}>Adresa</label>
+                <AddressMapField address={address} onAddressChange={setAddress} pin={pin} onPinChange={setPin} onRegionDetect={(r) => r && setRegion(r)} isLoaded={isLoaded} />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* MAIN CONTENT */}
-        <div className="md:col-span-2">
-          <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6 space-y-0">
-            {/* SECTION 1: LOCATION */}
-            <CollapsibleSection title="Lokacijski detalji" defaultOpen={true}>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelClass}>Listing Name</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className={inputClass}
-                  />
-                </div>
+          {/* ── Section 2: Lot Specifics ── */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-5">
+            <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Specifičnosti lota</p>
 
-                <div>
-                  <label className={labelClass}>Region</label>
-                  <input
-                    type="text"
-                    value={formData.region}
-                    disabled
-                    className={inputClass + " bg-gray-50 text-gray-500 cursor-not-allowed"}
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <label className={labelClass}>Address</label>
-                  <input
-                    type="text"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className={inputClass}
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <label className={labelClass}>Address Line 2 (Optional)</label>
-                  <input
-                    type="text"
-                    value={formData.addressLine2}
-                    onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
-                    className={inputClass}
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>Town/City</label>
-                  <input
-                    type="text"
-                    value={formData.town}
-                    onChange={(e) => setFormData({ ...formData, town: e.target.value })}
-                    className={inputClass}
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>Postal Code</label>
-                  <input
-                    type="text"
-                    value={formData.postalCode}
-                    onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                    className={inputClass}
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>Latitude</label>
-                  <input
-                    type="text"
-                    value={formData.latitude}
-                    onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                    className={inputClass + " font-mono"}
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>Longitude</label>
-                  <input
-                    type="text"
-                    value={formData.longitude}
-                    onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                    className={inputClass + " font-mono"}
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-600">
-                    📍 Koordinate: {formData.latitude || '—'}, {formData.longitude || '—'}
-                  </div>
-                </div>
-              </div>
-            </CollapsibleSection>
-
-            {/* SECTION 2: SPACE DETAILS */}
-            <CollapsibleSection title="Detalji prostora" defaultOpen={false}>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelClass}>Tip parkinga</label>
-                  <input
-                    type="text"
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className={inputClass}
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>Tip prostora</label>
-                  <select
-                    value={formData.spaceType}
-                    onChange={(e) => setFormData({ ...formData, spaceType: e.target.value })}
-                    className={inputClass}
-                  >
-                    <option value="">Odaberite tip</option>
-                    <option value="private_driveway">Privatni prilaz</option>
-                    <option value="commercial_carpark">Komercijalni parking</option>
-                    <option value="residential_carpark">Stambeni parking</option>
-                    <option value="lockup_garage">Garaža</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className={labelClass}>Veličina vozila</label>
-                  <input
-                    type="text"
-                    value={formData.vehicleSize}
-                    onChange={(e) => setFormData({ ...formData, vehicleSize: e.target.value })}
-                    className={inputClass}
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <Toggle checked={formData.hasHeightRestrictions} onChange={(v) => setFormData({ ...formData, hasHeightRestrictions: v })} />
-                    <span className="block text-xs font-semibold text-gray-600 uppercase">Ograničenja visine</span>
-                  </label>
-                  {formData.hasHeightRestrictions && (
-                    <div className="mt-3">
-                      <label className={labelClass}>Maksimalna visina</label>
-                      <input
-                        type="text"
-                        placeholder="npr. 2.5m"
-                        value={formData.maxHeight}
-                        onChange={(e) => setFormData({ ...formData, maxHeight: e.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <Toggle checked={formData.hasAccessControl} onChange={(v) => setFormData({ ...formData, hasAccessControl: v })} />
-                    <span className="block text-xs font-semibold text-gray-600 uppercase">Kontrola pristupa</span>
-                  </label>
-                  {formData.hasAccessControl && (
-                    <div className="mt-3">
-                      <label className={labelClass}>Tip kontrole pristupa</label>
-                      <select
-                        value={formData.accessControlType}
-                        onChange={(e) => setFormData({ ...formData, accessControlType: e.target.value })}
-                        className={inputClass}
-                      >
-                        <option value="Electronic keypad">Electronic keypad</option>
-                        <option value="Gate with code">Gate with code</option>
-                        <option value="RFID card">RFID card</option>
-                        <option value="Mobile app">Mobile app</option>
-                        <option value="Manual entry">Manual entry</option>
-                      </select>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <Toggle checked={formData.requiresPermit} onChange={(v) => setFormData({ ...formData, requiresPermit: v })} />
-                    <span className="block text-xs font-semibold text-gray-600 uppercase">Dozvola obavezna</span>
-                  </label>
-                </div>
-
-                <div>
-                  <label className={labelClass}>Dodijeljeni prostor</label>
-                  <input
-                    type="text"
-                    value={formData.spaceAllocated}
-                    onChange={(e) => setFormData({ ...formData, spaceAllocated: e.target.value })}
-                    className={inputClass}
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-gray-600 mb-3 uppercase">Karakteristike</label>
-                  <AmenitiesChips
-                    selected={formData.features}
-                    onToggle={(amenityId) => {
-                      setFormData({
-                        ...formData,
-                        features: formData.features.includes(amenityId)
-                          ? formData.features.filter(f => f !== amenityId)
-                          : [...formData.features, amenityId]
-                      });
-                    }}
-                    editable={true}
-                  />
-                </div>
-              </div>
-            </CollapsibleSection>
-
-            {/* SECTION 3: AVAILABILITY & HOURS */}
-            <CollapsibleSection title="Dostupnost i radno vrijeme" defaultOpen={false}>
-              <div className="space-y-3">
-                <label className="flex items-center gap-3 cursor-pointer mb-4">
-                  <Toggle checked={formData.available24_7} onChange={(v) => setFormData({ ...formData, available24_7: v })} />
-                  <span className="text-xs font-semibold text-gray-600 uppercase">Dostupan 24/7</span>
-                </label>
-
-                {['Ponedjeljak','Utorak','Srijeda','Četvrtak','Petak','Subota','Nedjelja'].map(day => {
-                  const d = formData.schedule[day] ?? { enabled: true, openTime: '00:00', closeTime: '23:59' };
-                  return (
-                    <div key={day} className="flex items-center gap-3">
-                      <div className="w-28 flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={d.enabled}
-                          onChange={(e) => setFormData({ ...formData, schedule: { ...formData.schedule, [day]: { ...d, enabled: e.target.checked } } })}
-                          className="rounded border-gray-300"
-                        />
-                        <span className="text-xs font-semibold text-black">{day}</span>
-                      </div>
-                      {d.enabled && !formData.available24_7 ? (
-                        <>
-                          <input
-                            type="time"
-                            value={d.openTime}
-                            onChange={(e) => setFormData({ ...formData, schedule: { ...formData.schedule, [day]: { ...d, openTime: e.target.value } } })}
-                            className="px-2 py-1 border border-gray-300 rounded-lg text-xs text-black w-24"
-                          />
-                          <span className="text-xs text-gray-400">–</span>
-                          <input
-                            type="time"
-                            value={d.closeTime}
-                            onChange={(e) => setFormData({ ...formData, schedule: { ...formData.schedule, [day]: { ...d, closeTime: e.target.value } } })}
-                            className="px-2 py-1 border border-gray-300 rounded-lg text-xs text-black w-24"
-                          />
-                        </>
-                      ) : d.enabled ? (
-                        <span className="text-xs text-gray-400">00:00 – 24:00</span>
-                      ) : (
-                        <span className="text-xs text-black/30 italic">Zatvoreno</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </CollapsibleSection>
-
-            {/* SECTION 4: PRICING */}
-            <CollapsibleSection title="Cijene" defaultOpen={false}>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className={labelClass}>Satna cijena (€)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.base_price_hourly}
-                    onChange={(e) => setFormData({ ...formData, base_price_hourly: e.target.value })}
-                    className={inputClass}
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>Dnevna cijena (€)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.base_price_daily}
-                    onChange={(e) => setFormData({ ...formData, base_price_daily: e.target.value })}
-                    className={inputClass}
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>Mjesečna cijena (€)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.base_price_monthly}
-                    onChange={(e) => setFormData({ ...formData, base_price_monthly: e.target.value })}
-                    className={inputClass}
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-xs text-blue-700"><strong>Savjet:</strong> Koristite "Upravljaj kalendarom i cijenama" za postavljanje cijena za određene datume.</p>
-              </div>
-            </CollapsibleSection>
-
-            {/* SECTION 5: DESCRIPTION */}
-            <CollapsibleSection title="Opis" defaultOpen={false}>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className={inputClass + " min-h-[120px]"}
-                placeholder="Opišite vaš parking..."
-              />
-            </CollapsibleSection>
-
-            {/* SECTION 6: ADDITIONAL INFO */}
-            <CollapsibleSection title="Dodatne informacije" defaultOpen={false}>
-              <div className="space-y-4">
-                <div>
-                  <label className="flex items-center gap-3 cursor-pointer mb-3">
-                    <Toggle checked={formData.addPostBookingInfo} onChange={(v) => setFormData({ ...formData, addPostBookingInfo: v })} />
-                    <span className="text-xs font-semibold text-gray-600 uppercase">Dodaj upute nakon rezervacije</span>
-                  </label>
-                  {formData.addPostBookingInfo && (
-                    <textarea
-                      value={formData.postBookingInstructions}
-                      onChange={(e) => setFormData({ ...formData, postBookingInstructions: e.target.value })}
-                      className={inputClass + " min-h-[100px]"}
-                      placeholder="E.g., Gate code, parking spot location, contact info..."
-                    />
-                  )}
-                </div>
-              </div>
-            </CollapsibleSection>
-
-            {/* SECTION 7: PHOTOS */}
-            <CollapsibleSection title="Fotografije" defaultOpen={true}>
-              <div className="grid grid-cols-3 gap-3">
-                {formData.photos.map((photo) => (
-                  <div key={photo.id} className="relative group">
-                    <img
-                      src={photo.url}
-                      alt={photo.name}
-                      className="w-full h-40 object-cover rounded-lg border border-gray-200"
-                    />
-                    <div className="absolute inset-0 bg-gray-500 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                      <p className="text-white text-xs font-semibold text-center px-2">{photo.name}</p>
-                    </div>
-                    <button
-                      onClick={() => handleRemovePhoto(photo.id)}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-red-500 text-white p-1 rounded-full transition-all"
-                    >
-                      ✕
+            <CollapsibleSection title="Stvari koje biste trebali znati" defaultOpen={false}>
+              <div>
+                <label className={labelClass}>Vrsta Pristupa</label>
+                <div className="flex gap-2 flex-wrap">
+                  {['Rampa/Brana', 'Bez Rampe', 'Recepcija/Čuvar'].map((t) => (
+                    <button key={t} type="button" onClick={() => setAccessType(t)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ${accessType === t ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
+                      {t}
                     </button>
+                  ))}
+                </div>
+                {accessType === 'Rampa/Brana' && (
+                  <div className="mt-2">
+                    <label className={subLabelClass}>Telefon (hitni slučaj / rezervacija)</label>
+                    <input type="tel" placeholder="+385 91 000 0000" value={gatedPhone} onChange={(e) => setGatedPhone(e.target.value)} className={inputClass} />
                   </div>
-                ))}
-                <label className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex items-center justify-center text-center cursor-pointer hover:border-black/40 hover:bg-gray-50 transition-colors">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files) {
-                        const maxId = formData.photos.length > 0 ? Math.max(...formData.photos.map(p => p.id)) : 0;
-                        const newPhotos = Array.from(e.target.files).map((file, idx) => ({
-                          id: maxId + idx + 1,
-                          name: file.name.replace(/\.[^/.]+$/, ''),
-                          url: URL.createObjectURL(file),
-                        }));
-                        setFormData({
-                          ...formData,
-                          photos: [...formData.photos, ...newPhotos],
-                        });
-                      }
-                    }}
-                  />
-                  <div>
-                    <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-xs font-semibold text-gray-600">Click to add photos</p>
-                  </div>
-                </label>
+                )}
               </div>
-              <p className="text-xs text-gray-500 mt-3">Note: Photos are saved with the listing. They will appear on the search page once saved.</p>
+
+              <div>
+                <label className={labelClass}>Vrsta parkinga</label>
+                <div className="flex gap-2 flex-wrap">
+                  {['Parcela', 'Garaža', 'Valet', 'Parking'].map((t) => (
+                    <button key={t} type="button" onClick={() => setParkingType(t)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ${parkingType === t ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className={labelClass}>Ograničenje visine (m)</label>
+                  <input type="text" placeholder="npr. 2.10" value={heightLimit} onChange={(e) => setHeightLimit(e.target.value)} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Ograničenje širine (m)</label>
+                  <input type="text" placeholder="npr. 2.20" value={widthLimit} onChange={(e) => setWidthLimit(e.target.value)} className={inputClass} />
+                </div>
+              </div>
+
+              <div>
+                <label className={labelClass}>Egzotična vozila</label>
+                <div className="flex gap-2">
+                  {['Da', 'Ne', 'Na upit'].map((v) => (
+                    <button key={v} type="button" onClick={() => setExoticVehicles(v)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ${exoticVehicles === v ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className={labelClass}>Komentar Vlasnika</label>
+                <textarea placeholder="npr. Parking je zaštićen 24/7 video nadzorom..." value={ownerComment} onChange={(e) => setOwnerComment(e.target.value)} rows={3} className="w-full border border-gray-300 rounded-md px-3.5 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-colors resize-none" />
+              </div>
+
+              <div>
+                <label className={labelClass}>Upute za pristup</label>
+                <textarea placeholder="npr. Uđite s Ulice kralja Tomislava..." value={accessInstructions} onChange={(e) => setAccessInstructions(e.target.value)} rows={3} className="w-full border border-gray-300 rounded-md px-3.5 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-colors resize-none" />
+                <p className="text-xs text-gray-400 mt-1">Prikazuje se vozaču nakon rezervacije i u mobilnom skeneru.</p>
+              </div>
             </CollapsibleSection>
 
-            {/* SECTION 8: STREET VIEW */}
-            <CollapsibleSection title="Pogled s ceste" defaultOpen={false}>
-              {formData.latitude && formData.longitude ? (
-                <div ref={streetViewRef} className="rounded-lg overflow-hidden border border-gray-300 w-full h-80" />
-              ) : (
-                <div className="rounded-lg border border-gray-300 w-full h-80 flex items-center justify-center bg-gray-50">
-                  <p className="text-xs text-gray-400">Nema koordinata za prikaz Street Viewa</p>
+            <CollapsibleSection title="Dodaci (10)" defaultOpen={false}>
+              <div className="flex flex-wrap gap-2">
+                {ADDONS.map((a) => (
+                  <button key={a} type="button" onClick={() => toggleAddon(a)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ${addons.includes(a) ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
+                    {a}
+                  </button>
+                ))}
+              </div>
+            </CollapsibleSection>
+
+            <CollapsibleSection title="Radno Vrijeme (Pristupno vrijeme)" defaultOpen={false}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-gray-800">24/7</p>
+                  <p className="text-xs text-gray-400">Otvoreno cijelo vrijeme</p>
+                </div>
+                <Toggle checked={is247} onChange={setIs247} />
+              </div>
+
+              {!is247 && (
+                <div className="space-y-3 pt-1">
+                  <div>
+                    <label className={subLabelClass}>Dani</label>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned'].map((d) => (
+                        <button key={d} type="button" onClick={() => toggleDay(d)}
+                          className={`w-10 h-8 rounded text-xs font-bold border transition-colors ${openDays.includes(d) ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-500 border-gray-300 hover:border-gray-500'}`}>
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className={subLabelClass}>Od</label>
+                      <input type="time" value={hoursFrom} onChange={(e) => setHoursFrom(e.target.value)} className={inputClass} />
+                    </div>
+                    <div>
+                      <label className={subLabelClass}>Do</label>
+                      <input type="time" value={hoursTo} onChange={(e) => setHoursTo(e.target.value)} className={inputClass} />
+                    </div>
+                  </div>
                 </div>
               )}
-              <p className="text-xs text-gray-500 mt-3">📍 Koordinate: {formData.latitude || '—'}, {formData.longitude || '—'}</p>
             </CollapsibleSection>
 
-            {/* SECTION 9: CHECKOUT SLOTS */}
-            <CollapsibleSection title="Checkout Dodaci" defaultOpen={false}>
-              <p className="text-xs text-gray-600 mb-4">Odaberite što svaki od 3 gumba na checkout stranici nudi kupcu.</p>
-              <div className="grid grid-cols-3 gap-3">
-                {([0, 1, 2] as const).map((idx) => {
-                  const slot = formData.checkoutSlots?.[idx] || { type: 'hour', value: idx + 1 };
-                  const hoursOpts = [
-                    { value: 'hour:1', label: '+1h' },
-                    { value: 'hour:2', label: '+2h' },
-                    { value: 'hour:3', label: '+3h' },
-                  ];
-                  const vrstaOpts = [
-                    { value: 'vrsta:oversized', label: 'Oversized 1.25×' },
-                    { value: 'vrsta:premium', label: 'Premium 1.5×' },
-                    { value: 'vrsta:kamper', label: 'Kamper 2×' },
-                    { value: 'vrsta:bus', label: 'Bus 5×' },
-                    { value: 'vrsta:valet', label: 'Valet 2×' },
-                    { value: 'vrsta:vip_valet', label: 'VIP Valet 3×' },
-                    { value: 'vrsta:late_checkout', label: 'Late Checkout ½d' },
-                  ];
-                  const allOpts = [...hoursOpts, ...vrstaOpts];
-                  const currentVal = `${slot.type}:${slot.value}`;
-                  return (
-                    <div key={idx}>
-                      <label className={labelClass}>Slot {idx + 1}</label>
-                      <select
-                        value={currentVal}
-                        onChange={(e) => {
-                          const [type, value] = e.target.value.split(':');
-                          const updated = [...(formData.checkoutSlots || [{ type: 'hour', value: 1 }, { type: 'hour', value: 2 }, { type: 'hour', value: 3 }])];
-                          updated[idx] = { type: type as 'hour' | 'vrsta', value: type === 'hour' ? Number(value) : value };
-                          setFormData({ ...formData, checkoutSlots: updated });
-                        }}
-                        className={inputClass}
-                      >
-                        {allOpts.map((o) => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
-                        ))}
-                      </select>
+            <CollapsibleSection title="Kapacitet" defaultOpen={false}>
+              <div>
+                <label className={labelClass}>Broj mjesta</label>
+                <input type="number" placeholder="10" min="1" value={baseSpots} onChange={(e) => setBaseSpots(e.target.value)} className={inputClass} required />
+              </div>
+            </CollapsibleSection>
+
+            <CollapsibleSection title="Vrsta mjesta" defaultOpen={false}>
+              <p className="text-xs text-gray-600 mb-3 leading-relaxed">Razlikujte kategoriju mjesta — odaberite koje ćete smjestiti uz množitelj standardne cijene</p>
+              <div className="space-y-2">
+                {SPOT_TYPES.map((st) => (
+                  <div key={st.key} onClick={() => toggleSpotType(st.key)}
+                    className={`flex items-center justify-between px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${activeSpotTypes.includes(st.key) ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-900">{st.label}</p>
+                      {st.desc && <p className="text-xs text-gray-400 mt-0.5">{st.desc}</p>}
                     </div>
-                  );
-                })}
+                    <span className={`text-xs font-bold ml-3 flex-shrink-0 ${activeSpotTypes.includes(st.key) ? 'text-gray-900' : 'text-gray-400'}`}>{st.mult}</span>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleSection>
+
+            <CollapsibleSection title="Cijena" defaultOpen={false}>
+              <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
+                <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> Nema provizije! Naknadu plaća kupac!</p>
+              </div>
+
+              <div className="space-y-4 mb-6 pb-6 border-b border-gray-100">
+                <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">Standard</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <div>
+                    <label className={labelClass}>Satna (€/h)</label>
+                    <input type="number" placeholder="2.50" min="0" step="0.50" value={standardHourlyPrice} onChange={(e) => setStandardHourlyPrice(e.target.value)} className={inputClass} required />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Dnevna (€/dan)</label>
+                    <input type="number" placeholder="15.00" min="0" step="0.50" value={standardDailyPrice} onChange={(e) => setStandardDailyPrice(e.target.value)} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Mjesečna (€/mj)</label>
+                    <input type="number" placeholder="300.00" min="0" step="10" value={standardMonthlyPrice} onChange={(e) => setStandardMonthlyPrice(e.target.value)} className={inputClass} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-2 border-t border-gray-100">
+                <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">Minimalne cijene koje ćete prihvatiti</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <div>
+                    <label className={labelClass}>Satna (€/h)</label>
+                    <input type="number" placeholder="1.00" min="0" step="0.10" value={minPriceHourly} onChange={(e) => setMinPriceHourly(e.target.value)} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Dnevna (€/dan)</label>
+                    <input type="number" placeholder="5.00" min="0" step="0.10" value={minPriceDaily} onChange={(e) => setMinPriceDaily(e.target.value)} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Mjesečna (€/mj)</label>
+                    <input type="number" placeholder="100.00" min="0" step="10" value={minPriceMonthly} onChange={(e) => setMinPriceMonthly(e.target.value)} className={inputClass} />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-4">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800">AI Dynamic Pricing</p>
+                    <p className="text-xs text-gray-400">Kalkulacija cijene za maksimalnu zaradu</p>
+                  </div>
+                  <Toggle checked={useAIDynamicPricing} onChange={setUseAIDynamicPricing} />
+                </div>
+              </div>
+            </CollapsibleSection>
+
+            <CollapsibleSection title="Fotografije (Neobavezno)" defaultOpen={false}>
+              <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
+                <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> Povećajte konverzije</p>
+                <p className="text-xs text-black leading-relaxed">Ogledni parkingi s fotografijama imaju 33-72% veće stope konverzije. Preporučujemo dodavanje 3-5 kvalitetnih fotografija vašeg parking mjesta.</p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-500 transition-colors"
+                  onClick={() => document.getElementById('photo-input')?.click()}>
+                  <p className="text-xs font-semibold text-gray-700 mb-1">Kliknite za upload ili prevucite fotografije</p>
+                  <p className="text-xs text-gray-500">JPG, PNG, max 5MB po datoteci</p>
+                  <input
+                    id="photo-input"
+                    type="file"
+                    multiple
+                    accept="image/jpeg,image/png"
+                    onChange={(e) => {
+                      const files = Array.from(e.currentTarget.files || []);
+                      setPhotos([...photos, ...files].slice(0, 10));
+                    }}
+                    className="hidden"
+                  />
+                </div>
+
+                {(existingPhotos.length > 0 || photos.length > 0) && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    {existingPhotos.map((url, idx) => (
+                      <div key={`existing-${idx}`} className="relative group">
+                        <img src={url} alt={`Fotografija ${idx + 1}`} className="w-full h-24 object-cover rounded-lg border border-gray-200" />
+                        <button
+                          type="button"
+                          onClick={() => setExistingPhotos(existingPhotos.filter((_, i) => i !== idx))}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    {photos.map((photo, idx) => (
+                      <div key={`new-${idx}`} className="relative group">
+                        <img src={URL.createObjectURL(photo)} alt={`Nova fotografija ${idx + 1}`} className="w-full h-24 object-cover rounded-lg border border-gray-200" />
+                        <button
+                          type="button"
+                          onClick={() => setPhotos(photos.filter((_, i) => i !== idx))}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CollapsibleSection>
           </div>
-        </div>
+
+          {/* CTA */}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 py-3 rounded-lg font-bold text-base text-white disabled:opacity-60 transition-opacity shadow-sm bg-gray-900 hover:bg-gray-800">
+              {saving ? 'Sprema...' : 'Spremi'}
+            </button>
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="flex-1 py-3 rounded-lg font-bold text-base border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors">
+              Otkaži
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
