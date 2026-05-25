@@ -212,6 +212,7 @@ export function SearchPage() {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const mapRef = useRef<google.maps.Map | null>(null);
+  const autocompleteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [vehicleInput, setVehicleInput] = useState('');
   const [vehicleCheckResult, setVehicleCheckResult] = useState<'fits' | 'prohibited' | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<{ make: string; model: string; height: number } | null>(null);
@@ -638,11 +639,11 @@ export function SearchPage() {
     setPhotoIndex(0);
   }, [selectedListing?.id]);
 
-  // Initialize Places service and handle location search
+  // Initialize Places service and handle location search - immediate, no debounce
   useEffect(() => {
     if (!isLoaded || !showPredictions) return;
 
-    if (searchLocation.length > 0) {
+    if (searchLocation.length > 0 && searchLocation !== 'Trenutna lokacija') {
       const sessionToken = new google.maps.places.AutocompleteSessionToken();
       const service = new google.maps.places.AutocompleteService();
 
@@ -678,15 +679,24 @@ export function SearchPage() {
         console.error('Autocomplete error:', error);
         setPredictions([]);
       });
-    } else {
+    } else if (searchLocation.length === 0) {
       setPredictions([]);
     }
   }, [searchLocation, showPredictions, isLoaded]);
 
   const handleSelectPrediction = (placeId: string, mainText: string) => {
-    setSearchLocation(mainText || '');
+    // Validate mainText - must have at least 2 characters
+    const cleanText = mainText?.trim() || '';
+    if (cleanText.length < 2) return;
+
+    setSearchLocation(cleanText);
     setShowPredictions(false);
-    setShowMobileSearchEdit(false);
+
+    // Only close mobile modal on desktop (not on mobile - user needs to click Primijeni)
+    const isMobile = window.innerWidth < 768;
+    if (!isMobile) {
+      setShowMobileSearchEdit(false);
+    }
 
     // Blur the input to prevent dropdown from reopening
     const input = document.querySelector('input[placeholder="Search location..."]') as HTMLInputElement;
@@ -694,7 +704,7 @@ export function SearchPage() {
 
     // Get coordinates using Geocoding API
     const geocoder = new google.maps.Geocoder();
-    geocoder.geocode({ address: mainText }, (results, status) => {
+    geocoder.geocode({ address: cleanText }, (results, status) => {
       if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
         const location = results[0].geometry.location;
         const lat = location.lat();
@@ -762,7 +772,10 @@ export function SearchPage() {
           return prev;
         });
       } else {
-        console.error('Geocoding error:', status);
+        // Silently ignore geocoding errors (zero results, etc)
+        // This can happen if the address is too vague or invalid
+        setNoResultsForLocation(null);
+        setNearbyCitiesWithParking([]);
       }
     });
   };
@@ -1111,19 +1124,19 @@ export function SearchPage() {
             <div className="flex-1 flex flex-col justify-center relative">
               <label className="text-xs font-semibold text-gray-400 mb-0.5 leading-none">Kamo ideš?</label>
               <div className="flex items-center gap-2">
-                {usingCurrentLocation ? <MapPin className="w-4 h-4 text-blue-500 flex-shrink-0" /> : <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />}
+                {usingCurrentLocation ? <MapPin className="w-4 h-4 text-black flex-shrink-0" /> : <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />}
                 <input
                   type="text"
                   placeholder={usingCurrentLocation ? 'Trenutna lokacija' : 'Search location...'}
                   value={searchLocation}
-                  onChange={(e) => { setUsingCurrentLocation(false); setSearchLocation(e.target.value); }}
+                  onChange={(e) => { setUsingCurrentLocation(false); setSearchLocation(e.target.value); setShowPredictions(true); }}
                   onFocus={() => {
                     setShowPredictions(true);
                     if (nearbyPlaces.length === 0) {
                       fetchNearbyPlaces();
                     }
                   }}
-                  className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none cursor-pointer flex-1 leading-none"
+                  className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none cursor-pointer flex-1 leading-none caret-blue-500"
                 />
               </div>
               {/* Predictions dropdown */}
@@ -1160,30 +1173,26 @@ export function SearchPage() {
                   )}
 
                   {/* Google Places Predictions - only when typing */}
-                  {searchLocation && searchLocation !== 'Trenutna lokacija' && (
+                  {searchLocation && searchLocation !== 'Trenutna lokacija' && predictions.length > 0 && (
                     <>
-                      {predictions.length > 0 ? (
-                        predictions.map((pred) => (
-                          <button
-                            key={pred.place_id}
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              handleSelectPrediction(pred.place_id, pred.main_text || pred.description?.split(',')[0] || '');
-                            }}
-                            className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-start gap-2 text-sm border-t border-gray-200"
-                          >
-                            <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />
-                            <div className="flex-1">
-                              <div className="text-gray-900 font-medium">{pred.main_text || pred.description?.split(',')[0] || 'Location'}</div>
-                              {(pred.secondary_text || pred.description?.split(',').slice(1).join(',')) && (
-                                <div className="text-xs text-gray-500">{pred.secondary_text || pred.description?.split(',').slice(1).join(',')}</div>
-                              )}
-                            </div>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-3 py-2 text-xs text-gray-500">No locations found</div>
-                      )}
+                      {predictions.map((pred) => (
+                        <button
+                          key={pred.place_id}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSelectPrediction(pred.place_id, pred.main_text || pred.description?.split(',')[0] || '');
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-start gap-2 text-sm border-t border-gray-200"
+                        >
+                          <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <div className="text-gray-900 font-medium">{pred.main_text || pred.description?.split(',')[0] || 'Location'}</div>
+                            {(pred.secondary_text || pred.description?.split(',').slice(1).join(',')) && (
+                              <div className="text-xs text-gray-500">{pred.secondary_text || pred.description?.split(',').slice(1).join(',')}</div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
                     </>
                   )}
 
@@ -1320,7 +1329,7 @@ export function SearchPage() {
             onClick={() => setShowMobileSearchEdit(true)}
             className="flex-1 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 px-3 py-1 text-left flex items-center gap-2"
           >
-            <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />
+            {searchLocation ? <MapPin className="w-4 h-4 text-black flex-shrink-0" /> : <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />}
             <div className="flex flex-col justify-center flex-1">
               <div className="text-xs text-gray-600 font-semibold truncate">{searchLocation || 'Kamo ideš?'}</div>
               {startTime && endTime && (
@@ -1363,14 +1372,14 @@ export function SearchPage() {
             {/* Location Search */}
             <div>
               <label className="text-xs font-semibold text-gray-400 mb-2 block uppercase">Kamo ideš?</label>
-              <div className="border border-gray-300 rounded-lg bg-white px-3 py-2 flex items-center gap-2 focus-within:border-[#000000] focus-within:ring-2 focus-within:ring-blue-500">
-                {usingCurrentLocation ? <MapPin className="w-4 h-4 text-blue-500 flex-shrink-0" /> : <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />}
+              <div className="border border-gray-300 rounded-lg bg-white px-3 py-2 flex items-center gap-2 focus-within:border-[#000000] focus-within:ring-2 focus-within:ring-black">
+                {usingCurrentLocation ? <MapPin className="w-4 h-4 text-black flex-shrink-0" /> : <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />}
                 <input
                   ref={locationInputRef}
                   type="text"
                   placeholder={usingCurrentLocation ? 'Trenutna lokacija' : 'Search location...'}
                   value={searchLocation}
-                  onChange={(e) => { setUsingCurrentLocation(false); setSearchLocation(e.target.value); }}
+                  onChange={(e) => { setUsingCurrentLocation(false); setSearchLocation(e.target.value); setShowPredictions(true); }}
                   onFocus={() => {
                     setShowPredictions(true);
                     if (nearbyPlaces.length === 0) {
@@ -2455,7 +2464,7 @@ export function SearchPage() {
             {/* Search location marker - Native Marker, no spike */}
             {searchLocationPin && (() => {
               const pinSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 32" width="24" height="31.5">
-                <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#000000" stroke="white" stroke-width="1"/>
+                <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#0047FF" stroke="white" stroke-width="1"/>
               </svg>`;
               const pinScaledWidth = 31.2;
               const pinScaledHeight = 40.95;
@@ -2607,7 +2616,7 @@ export function SearchPage() {
                 {/* Search location marker - Blue pin */}
                 {searchLocationPin && (() => {
                   const pinSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 32" width="24" height="31.5">
-                    <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#000000" stroke="white" stroke-width="1"/>
+                    <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#0047FF" stroke="white" stroke-width="1"/>
                   </svg>`;
                   const pinScaledWidth = 31.2;
                   const pinScaledHeight = 40.95;
