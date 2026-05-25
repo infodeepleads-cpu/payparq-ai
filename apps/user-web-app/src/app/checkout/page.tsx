@@ -572,16 +572,17 @@ function PaidCheckoutForm({
     }).catch(() => {});
   }, [email, plate, phone, clientSecret]);
 
-  function updatePIAmount(baseAmountCents: number) {
+  function updatePIAmount(totalAmountCents: number) {
     if (!clientSecret || clientSecret === 'free') return;
     const piId = clientSecret.split('_secret_')[0];
     if (!piId?.startsWith('pi_')) return;
-    const fee = Math.round(99 + (baseAmountCents * 0.05));
-    const totalAmount = baseAmountCents + fee;
+    const addOnsCents = totalAmountCents - originalAmountCents;
+    const fee = Math.round(99 + (originalAmountCents * 0.05));
+    const finalAmount = originalAmountCents + fee + addOnsCents;
     fetch('/api/stripe/payment-intent', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ payment_intent_id: piId, amount_cents: totalAmount }),
+      body: JSON.stringify({ payment_intent_id: piId, amount_cents: finalAmount }),
     }).catch(() => {});
   }
 
