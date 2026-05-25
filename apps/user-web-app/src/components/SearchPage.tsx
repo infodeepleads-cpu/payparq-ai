@@ -117,6 +117,7 @@ export function SearchPage() {
   const [reservationType, setReservationType] = useState('Satna/dnevna');
   const [searchLocation, setSearchLocationState] = useState<string>('');
   const [usingCurrentLocation, setUsingCurrentLocation] = useState(false);
+  const [geoLoading, setGeoLoading] = useState(false);
   const [predictions, setPredictions] = useState<any[]>([]);
   const [showPredictions, setShowPredictions] = useState(false);
   const [searchLocationPin, setSearchLocationPin] = useState<{ lat: number; lng: number } | null>(null);
@@ -773,18 +774,42 @@ export function SearchPage() {
   };
 
   const handleCurrentLocation = () => {
-    if (navigator.geolocation) {
+    if (searchLocationPin) {
+      setMapCenter(searchLocationPin);
+      setSearchLocationState('');
+      setUsingCurrentLocation(true);
+      setShowPredictions(false);
+    } else if (navigator.geolocation) {
+      setGeoLoading(true);
       navigator.geolocation.getCurrentPosition((position) => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
-        setMapCenter({
-          lat,
-          lng,
-        });
+        setMapCenter({ lat, lng });
         setSearchLocationPin({ lat, lng });
         setSearchLocationState('');
         setUsingCurrentLocation(true);
         setShowPredictions(false);
+        setGeoLoading(false);
+      }, () => {
+        setGeoLoading(false);
+      });
+    }
+  };
+
+  const handleRefreshLocation = () => {
+    if (navigator.geolocation) {
+      setGeoLoading(true);
+      navigator.geolocation.getCurrentPosition((position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setMapCenter({ lat, lng });
+        setSearchLocationPin({ lat, lng });
+        setSearchLocationState('');
+        setUsingCurrentLocation(true);
+        setShowPredictions(false);
+        setGeoLoading(false);
+      }, () => {
+        setGeoLoading(false);
       });
     }
   };
@@ -1094,6 +1119,20 @@ export function SearchPage() {
                   }}
                   className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none cursor-pointer flex-1 leading-none"
                 />
+                {usingCurrentLocation && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleRefreshLocation(); }}
+                    disabled={geoLoading}
+                    className="flex-shrink-0 text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 4v6h6" />
+                      <path d="M23 20v-6h-6" />
+                      <path d="M20.49 9A9 9 0 0 0 5.64 5.64" />
+                      <path d="M3.51 15A9 9 0 0 0 18.36 18.36" />
+                    </svg>
+                  </button>
+                )}
               </div>
               {/* Predictions dropdown */}
               {showPredictions && (
@@ -1255,7 +1294,7 @@ export function SearchPage() {
           >
             <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />
             <div className="flex flex-col justify-center flex-1">
-              <div className="text-xs text-gray-600 font-semibold truncate">{searchLocation || 'Gdje ideš?'}</div>
+              <div className="text-xs text-gray-600 font-semibold truncate">{searchLocation || 'Kamo ideš?'}</div>
               {startTime && endTime && (
                 <div className="text-xs text-gray-700 font-medium">
                   {new Date(startTime).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })} to {new Date(endTime).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })}
@@ -1315,6 +1354,20 @@ export function SearchPage() {
                   }}
                   className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none flex-1"
                 />
+                {usingCurrentLocation && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleRefreshLocation(); }}
+                    disabled={geoLoading}
+                    className="flex-shrink-0 text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 4v6h6" />
+                      <path d="M23 20v-6h-6" />
+                      <path d="M20.49 9A9 9 0 0 0 5.64 5.64" />
+                      <path d="M3.51 15A9 9 0 0 0 18.36 18.36" />
+                    </svg>
+                  </button>
+                )}
               </div>
               {/* Predictions - Uber style */}
               {showPredictions && (
