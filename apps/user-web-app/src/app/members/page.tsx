@@ -1904,7 +1904,7 @@ export default function MembersPage() {
             );
           })()}
 
-          <div className="flex gap-3 overflow-x-auto pb-1">
+          <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}>
             {homeContext?.parkTaxiIncluded ? (
               <div className="min-w-[210px] rounded-xl border border-black/10 bg-white p-3 space-y-2">
                 <p className="text-sm font-semibold text-black">Park&Taxi</p>
