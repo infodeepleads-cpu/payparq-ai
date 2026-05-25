@@ -1,7 +1,6 @@
 'use client';
 
 import React, { Suspense, lazy, useEffect, useMemo, useState, useRef } from 'react';
-import html2pdf from 'html2pdf.js';
 const LotMap = lazy(() => import('@/components/LotMap'));
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -709,34 +708,40 @@ function SuccessContent() {
   };
 
   const handleDownloadPass = () => {
-    console.log('[Download] Button clicked');
     const passCard = document.querySelector('[data-pass-card]') as HTMLElement;
-    if (!passCard) {
-      console.log('[Download] No pass card found');
-      alert('Could not find pass card to download');
-      return;
-    }
-    try {
-      const opt = {
-        margin: 5,
-        filename: `payparq-parking-pass-${resCode || 'pass'}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, allowTaint: true, useCORS: true, logging: false },
-        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
-      };
-      console.log('[Download] Starting PDF generation...');
-      html2pdf()
-        .set(opt)
-        .from(passCard)
-        .save()
-        .catch((err: any) => {
-          console.error('[Download] PDF generation error:', err);
-          alert('Failed to download. Please try again.');
-        });
-    } catch (err) {
-      console.error('[Download] Error:', err);
-      alert('Failed to download pass. Please try again or contact support.');
-    }
+    if (!passCard) return;
+
+    const printWindow = window.open('', '_blank', 'width=600,height=800');
+    if (!printWindow) return;
+
+    // Collect all stylesheets from current page
+    const styles = Array.from(document.styleSheets)
+      .map(sheet => {
+        try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n'); }
+        catch { return ''; }
+      })
+      .join('\n');
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>PayParq Parking Pass</title>
+  <style>
+    ${styles}
+    @page { margin: 10mm; }
+    body { margin: 0; padding: 16px; background: white; }
+    @media print { body { padding: 0; } }
+  </style>
+</head>
+<body>${passCard.outerHTML}</body>
+</html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
   };
 
   const SUPPORT_WHATSAPP = '385915963139';
@@ -1223,7 +1228,7 @@ function SuccessContent() {
           {/* Members zona — slim single link + download */}
           {summary?.email && (
             <div className="flex items-center justify-center gap-4 py-3">
-              <button type="button" onClick={handleDownloadPass} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDownloadPass(); }} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
                 ⬇ Preuzmi
               </button>
               <span style={{ color: '#94a3b8' }}>·</span>
