@@ -13,7 +13,7 @@ import { ReservationTypeDropdown } from './ReservationTypeDropdown';
 import { DestinationPickerWidget } from './DestinationPickerWidget';
 import { ScrollableDateTimePicker } from './ScrollableDateTimePicker';
 import { useLocale } from './LocaleProvider';
-import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle, List } from 'lucide-react';
+import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle, List, DollarSign } from 'lucide-react';
 import { resolveScannerTruthPriceEuro, getViablePrice } from '@/lib/locationPricing';
 import { AMENITIES_LIST } from '@/lib/amenities';
 import { AmenitiesChips } from './AmenitiesChips';
@@ -682,21 +682,35 @@ export function SearchPage() {
           const nearby = prev.filter(l => haversineKm(lat, lng, l.lat, l.lng) <= RADIUS_KM);
 
           if (nearby.length === 0 && prev.length > 0) {
-            setNoResultsForLocation(mainText);
+            // Extract just the city name (first part before comma or full text if no comma)
+            const cityName = mainText.split(',')[0].trim();
+            setNoResultsForLocation(cityName);
 
-            // Find unique city clusters from available lots (group by ~20km proximity)
+            // Find unique city clusters from available lots using reverse geocoding
+            const geocoder = new google.maps.Geocoder();
             const cityMap: Map<string, { lat: number; lng: number; count: number }> = new Map();
-            prev.forEach(lot => {
-              let assigned = false;
+            let processed = 0;
+
+            prev.forEach((lot, idx) => {
+              // Group by proximity first
+              let foundCluster = false;
               cityMap.forEach((city, key) => {
                 if (haversineKm(lot.lat, lot.lng, city.lat, city.lng) < 20) {
                   cityMap.set(key, { ...city, count: city.count + 1 });
-                  assigned = true;
+                  foundCluster = true;
                 }
               });
-              if (!assigned) {
-                const cityName = lot.address.split(',').slice(-2, -1)[0]?.trim() || lot.name;
-                cityMap.set(cityName, { lat: lot.lat, lng: lot.lng, count: 1 });
+
+              if (!foundCluster) {
+                // Use address as city name, extract the second-to-last part (usually city)
+                const parts = lot.address.split(',').map(p => p.trim()).filter(p => p && !/^\d+$/.test(p) && !/^\d{4,}/.test(p.trim()));
+                const cityName = parts.length > 1 ? parts[parts.length - 1] : (parts[0] || lot.name);
+                const cleanCityName = cityName.replace(/^\d+\s+/, '').trim();
+
+                // Only add if it's not pure digits and has actual letters
+                if (cleanCityName && !cityMap.has(cleanCityName) && /[a-zčšž]/i.test(cleanCityName)) {
+                  cityMap.set(cleanCityName, { lat: lot.lat, lng: lot.lng, count: 1 });
+                }
               }
             });
 
@@ -708,8 +722,9 @@ export function SearchPage() {
                 count: data.count,
                 distanceKm: Math.round(haversineKm(lat, lng, data.lat, data.lng)),
               }))
+              .filter(s => s.name && s.name.length > 2 && !/^\d+$/.test(s.name) && !/^\d{4,}/.test(s.name) && !/^\d+\s+/.test(s.name))
               .sort((a, b) => a.distanceKm - b.distanceKm)
-              .slice(0, 4);
+              .slice(0, 6);
 
             setNearbyCitiesWithParking(suggestions);
           } else {
@@ -774,6 +789,10 @@ export function SearchPage() {
   useEffect(() => {
     let filtered = listings;
 
+    // Distance filter - only show lots within 50km of search location
+    const ref = searchLocationPin || mapCenter;
+    filtered = filtered.filter((l) => haversineKm(ref.lat, ref.lng, l.lat, l.lng) <= 50);
+
     // Quick filters
     if (quickFilters.includes('instant-access')) {
       filtered = filtered.filter((l) => l.availability);
@@ -821,7 +840,6 @@ export function SearchPage() {
 
     // Apply sorting
     const sorted = [...filtered];
-    const ref = searchLocationPin || mapCenter;
     console.log(`=== SORTING: ${sortBy}`);
     console.log(`ref point (searchLocationPin=${searchLocationPin ? 'yes' : 'no'}):`, ref);
     console.log(`filtered listings count: ${filtered.length}`);
@@ -1650,38 +1668,46 @@ export function SearchPage() {
                 </div>
               </div>
             ) : filteredListings.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-center px-4">
+              <div className="overflow-y-auto px-4 py-4">
                 <div className="w-full max-w-sm">
                   {noResultsForLocation ? (
                     <>
-                      <p className="text-gray-900 font-bold text-lg">Nema parkinga u {noResultsForLocation}</p>
-                      <p className="text-sm text-gray-500 mt-1 mb-4">Još ne pokrivamo ovu lokaciju</p>
-                      {nearbyCitiesWithParking.length > 0 && (
-                        <div>
-                          <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Dostupno parkiranje u blizini</p>
-                          <div className="space-y-2">
-                            {nearbyCitiesWithParking.map((city) => (
+                      <div className="mb-6 pb-6 border-b border-gray-200">
+                        <p className="text-gray-900 font-bold text-lg">Nema parkinga na lokaciji {noResultsForLocation}</p>
+                        <p className="text-sm text-gray-600 mt-1">Nema dostupnih parkinga na ovoj lokaciji</p>
+                      </div>
+
+                      <div>
+                        <p className="text-gray-900 font-semibold text-base mb-3">Pregledaj neke druge parkinge u našem portfelju</p>
+                        {listings.length > 0 ? (
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {listings.slice(0, 5).map((lot) => (
                               <button
-                                key={city.name}
+                                key={lot.id}
                                 onClick={() => {
-                                  setMapCenter({ lat: city.lat, lng: city.lng });
-                                  setSearchLocationPin({ lat: city.lat, lng: city.lng });
-                                  setSearchLocation(city.name);
-                                  setNoResultsForLocation(null);
-                                  setNearbyCitiesWithParking([]);
+                                  setMapCenter({ lat: lot.lat, lng: lot.lng });
+                                  setSearchLocationPin({ lat: lot.lat, lng: lot.lng });
                                 }}
-                                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 transition-colors"
+                                className="w-full text-left px-3 py-2 border border-black/20 hover:border-black/40 rounded-lg transition-colors"
                               >
-                                <div className="text-left">
-                                  <div className="text-sm font-semibold text-gray-900">{city.name}</div>
-                                  <div className="text-xs text-gray-500">{city.count} {city.count === 1 ? 'lokacija' : 'lokacije'}</div>
+                                <div className="text-sm font-semibold text-gray-900">{lot.name}</div>
+                                <div className="text-xs text-gray-500">{lot.address}</div>
+                                <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
+                                  <span className="flex items-center gap-1">
+                                    {lot.distance.toFixed(1)} km
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    €
+                                    {lot.pricePerHour?.toFixed(2)}/h
+                                  </span>
                                 </div>
-                                <div className="text-xs text-gray-400">{city.distanceKm} km</div>
                               </button>
                             ))}
                           </div>
-                        </div>
-                      )}
+                        ) : (
+                          <p className="text-sm text-gray-500">Učitavanje parkinga...</p>
+                        )}
+                      </div>
                     </>
                   ) : (
                     <>
@@ -2498,36 +2524,46 @@ export function SearchPage() {
           <div className="flex-1 overflow-y-auto w-full h-full">
             <div className="p-4 space-y-3">
             {filteredListings.length === 0 ? (
-              <div className="flex items-center justify-center h-32 text-center px-4">
+              <div className="overflow-y-auto px-4 py-4">
                 <div className="w-full">
                   {noResultsForLocation ? (
                     <>
-                      <p className="text-gray-900 font-bold">Nema parkinga u {noResultsForLocation}</p>
-                      <p className="text-sm text-gray-500 mt-1 mb-3">Još ne pokrivamo ovu lokaciju</p>
-                      {nearbyCitiesWithParking.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-xs font-semibold text-gray-400 uppercase">Dostupno u blizini</p>
-                          {nearbyCitiesWithParking.map((city) => (
-                            <button
-                              key={city.name}
-                              onClick={() => {
-                                setMapCenter({ lat: city.lat, lng: city.lng });
-                                setSearchLocationPin({ lat: city.lat, lng: city.lng });
-                                setSearchLocation(city.name);
-                                setNoResultsForLocation(null);
-                                setNearbyCitiesWithParking([]);
-                              }}
-                              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 transition-colors"
-                            >
-                              <div className="text-left">
-                                <div className="text-sm font-semibold text-gray-900">{city.name}</div>
-                                <div className="text-xs text-gray-500">{city.count} {city.count === 1 ? 'lokacija' : 'lokacije'}</div>
-                              </div>
-                              <div className="text-xs text-gray-400">{city.distanceKm} km</div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      <div className="mb-6 pb-6 border-b border-gray-200">
+                        <p className="text-gray-900 font-bold">Nema parkinga na lokaciji {noResultsForLocation}</p>
+                        <p className="text-sm text-gray-600 mt-1">Nema dostupnih parkinga na ovoj lokaciji</p>
+                      </div>
+
+                      <div>
+                        <p className="text-gray-900 font-semibold text-base mb-3">Pregledaj neke druge parkinge u našem portfelju</p>
+                        {listings.length > 0 ? (
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {listings.slice(0, 5).map((lot) => (
+                              <button
+                                key={lot.id}
+                                onClick={() => {
+                                  setMapCenter({ lat: lot.lat, lng: lot.lng });
+                                  setSearchLocationPin({ lat: lot.lat, lng: lot.lng });
+                                }}
+                                className="w-full text-left px-3 py-2 border border-black/20 hover:border-black/40 rounded-lg transition-colors"
+                              >
+                                <div className="text-sm font-semibold text-gray-900">{lot.name}</div>
+                                <div className="text-xs text-gray-500">{lot.address}</div>
+                                <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
+                                  <span className="flex items-center gap-1">
+                                    {lot.distance.toFixed(1)} km
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    €
+                                    {lot.pricePerHour?.toFixed(2)}/h
+                                  </span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">Učitavanje parkinga...</p>
+                        )}
+                      </div>
                     </>
                   ) : (
                     <>
