@@ -223,6 +223,12 @@ export default function EditListingPage() {
   const [photos, setPhotos] = useState<File[]>([]);
   const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
 
+  const [checkoutSlots, setCheckoutSlots] = useState<{ type: 'hour' | 'vrsta'; value: number | string }[]>([
+    { type: 'hour', value: 1 },
+    { type: 'hour', value: 2 },
+    { type: 'hour', value: 3 },
+  ]);
+
   // Load listing data
   useEffect(() => {
     if (id) {
@@ -286,6 +292,11 @@ export default function EditListingPage() {
       setUseAIDynamicPricing(meta.useAIDynamicPricing ?? true);
 
       setExistingPhotos(data.verification_photos || []);
+      setCheckoutSlots(meta.checkoutSlots || [
+        { type: 'hour', value: 1 },
+        { type: 'hour', value: 2 },
+        { type: 'hour', value: 3 },
+      ]);
 
       setLoading(false);
     } catch (err) {
@@ -367,6 +378,7 @@ export default function EditListingPage() {
             minPriceDaily,
             minPriceMonthly,
             useAIDynamicPricing,
+            checkoutSlots,
           },
         })
         .eq('id', id);
@@ -612,6 +624,50 @@ export default function EditListingPage() {
                   </div>
                   <Toggle checked={useAIDynamicPricing} onChange={setUseAIDynamicPricing} />
                 </div>
+              </div>
+            </CollapsibleSection>
+
+            <CollapsibleSection title="Blagajna Dodaci (Checkout Widgets)" defaultOpen={false}>
+              <p className="text-xs text-gray-600 mb-4">Odaberite što svaki od 3 gumba na checkout stranici nudi kupcu.</p>
+              <div className="grid grid-cols-3 gap-3">
+                {([0, 1, 2] as const).map((idx) => {
+                  const slot = checkoutSlots?.[idx] || { type: 'hour', value: idx + 1 };
+                  const hoursOpts = [
+                    { value: 'hour:1', label: '+1h' },
+                    { value: 'hour:2', label: '+2h' },
+                    { value: 'hour:3', label: '+3h' },
+                  ];
+                  const vrstaOpts = [
+                    { value: 'vrsta:oversized', label: 'Oversized 1.25×' },
+                    { value: 'vrsta:premium', label: 'Premium 1.5×' },
+                    { value: 'vrsta:kamper', label: 'Kamper 2×' },
+                    { value: 'vrsta:bus', label: 'Bus 5×' },
+                    { value: 'vrsta:valet', label: 'Valet 2×' },
+                    { value: 'vrsta:vip_valet', label: 'VIP Valet 3×' },
+                    { value: 'vrsta:late_checkout', label: 'Late Checkout ½d' },
+                  ];
+                  const allOpts = [...hoursOpts, ...vrstaOpts];
+                  const currentVal = `${slot.type}:${slot.value}`;
+                  return (
+                    <div key={idx}>
+                      <label className={labelClass}>Slot {idx + 1}</label>
+                      <select
+                        value={currentVal}
+                        onChange={(e) => {
+                          const [type, value] = e.target.value.split(':');
+                          const updated = [...(checkoutSlots || [{ type: 'hour', value: 1 }, { type: 'hour', value: 2 }, { type: 'hour', value: 3 }])];
+                          updated[idx] = { type: type as 'hour' | 'vrsta', value: type === 'hour' ? Number(value) : value };
+                          setCheckoutSlots(updated);
+                        }}
+                        className={inputClass}
+                      >
+                        {allOpts.map((o) => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
               </div>
             </CollapsibleSection>
 
