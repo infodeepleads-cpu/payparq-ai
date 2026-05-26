@@ -4,17 +4,19 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../config/app_config.dart';
 import '../../../../theme.dart';
+import '../../../../logic/providers/locale_provider.dart';
 
-class FinanceScreen extends StatefulWidget {
+class FinanceScreen extends ConsumerStatefulWidget {
   const FinanceScreen({super.key});
 
   @override
-  State<FinanceScreen> createState() => _FinanceScreenState();
+  ConsumerState<FinanceScreen> createState() => _FinanceScreenState();
 }
 
-class _FinanceScreenState extends State<FinanceScreen> {
+class _FinanceScreenState extends ConsumerState<FinanceScreen> {
   final _ibanController = TextEditingController();
   final _holderController = TextEditingController();
 
@@ -55,7 +57,8 @@ class _FinanceScreenState extends State<FinanceScreen> {
     try {
       final token = await _getToken();
       if (token == null) {
-        setState(() { _error = 'Niste prijavljeni.'; _loading = false; });
+        final isHr = ref.read(localeIsCroatianProvider);
+        setState(() { _error = Lang.sel(isHr, 'Not logged in.', 'Niste prijavljeni.'); _loading = false; });
         return;
       }
       final uri = Uri.parse('${AppConfig.webAppBaseUrl}/api/owners/bank-details');
@@ -72,25 +75,28 @@ class _FinanceScreenState extends State<FinanceScreen> {
           _loading = false;
         });
       } else {
-        setState(() { _error = 'Greška pri učitavanju.'; _loading = false; });
+        final isHr = ref.read(localeIsCroatianProvider);
+        setState(() { _error = Lang.sel(isHr, 'Error loading.', 'Greška pri učitavanju.'); _loading = false; });
       }
     } catch (_) {
-      setState(() { _error = 'Greška pri učitavanju.'; _loading = false; });
+      final isHr = ref.read(localeIsCroatianProvider);
+      setState(() { _error = Lang.sel(isHr, 'Error loading.', 'Greška pri učitavanju.'); _loading = false; });
     }
   }
 
   Future<void> _save() async {
     final iban = _ibanController.text.trim();
     final holder = _holderController.text.trim();
+    final isHr = ref.read(localeIsCroatianProvider);
     if (iban.isEmpty || holder.isEmpty) {
-      setState(() { _error = 'IBAN i ime su obavezni.'; });
+      setState(() { _error = Lang.sel(isHr, 'IBAN and name required.', 'IBAN i ime su obavezni.'); });
       return;
     }
     setState(() { _saving = true; _error = null; _successMsg = null; });
     try {
       final token = await _getToken();
       if (token == null) {
-        setState(() { _error = 'Niste prijavljeni.'; _saving = false; });
+        setState(() { _error = Lang.sel(isHr, 'Not logged in.', 'Niste prijavljeni.'); _saving = false; });
         return;
       }
       final uri = Uri.parse('${AppConfig.webAppBaseUrl}/api/owners/bank-details');
@@ -101,21 +107,22 @@ class _FinanceScreenState extends State<FinanceScreen> {
       );
       if (res.statusCode == 200) {
         await _load();
-        setState(() { _editing = false; _successMsg = 'Spremljeno.'; _saving = false; });
+        setState(() { _editing = false; _successMsg = Lang.sel(isHr, 'Saved.', 'Spremljeno.'); _saving = false; });
       } else {
         final body = jsonDecode(res.body) as Map<String, dynamic>?;
         setState(() {
-          _error = body?['error']?.toString() ?? 'Greška pri spremanju.';
+          _error = body?['error']?.toString() ?? Lang.sel(isHr, 'Error saving.', 'Greška pri spremanju.');
           _saving = false;
         });
       }
     } catch (_) {
-      setState(() { _error = 'Greška pri spremanju.'; _saving = false; });
+      setState(() { _error = Lang.sel(isHr, 'Error saving.', 'Greška pri spremanju.'); _saving = false; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isHr = ref.watch(localeIsCroatianProvider);
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: _loading
@@ -133,7 +140,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Financije',
+                            Lang.sel(isHr, 'Finance', 'Financije'),
                             style: GoogleFonts.inter(
                               fontSize: 40,
                               fontWeight: FontWeight.bold,
@@ -143,7 +150,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Bankovni podaci za isplatu prihoda.',
+                            Lang.sel(isHr, 'Bank details for income payout.', 'Bankovni podaci za isplatu prihoda.'),
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               color: AppTheme.textSecondary,
@@ -162,7 +169,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                             }),
                             icon: const Icon(Icons.edit_outlined, size: 18),
                             label: Text(
-                              'Uredi',
+                              Lang.sel(isHr, 'Edit', 'Uredi'),
                               style: GoogleFonts.inter(),
                             ),
                             style: ElevatedButton.styleFrom(
@@ -193,7 +200,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Bankovni podaci',
+                          Lang.sel(isHr, 'Bank Details', 'Bankovni podaci'),
                           style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -202,7 +209,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Podaci se koriste za isplatu zarađenih sredstava.',
+                          Lang.sel(isHr, 'Details used for payout.', 'Podaci se koriste za isplatu zarađenih sredstava.'),
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             color: AppTheme.textSecondary,
@@ -212,22 +219,22 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
                         // Read-only display
                         if (!_editing && _savedHolder != null && _savedIban != null) ...[
-                          _readonlyRow('Ime i prezime', _savedHolder!),
+                          _readonlyRow(Lang.sel(isHr, 'Name and Surname', 'Ime i prezime'), _savedHolder!),
                           const SizedBox(height: 16),
                           _readonlyRow('IBAN', _savedIban!, mono: true),
                         ],
 
                         // Edit / first-time form
                         if (_editing || _savedIban == null) ...[
-                          _fieldLabel('Ime i prezime'),
+                          _fieldLabel(Lang.sel(isHr, 'Name and Surname', 'Ime i prezime')),
                           const SizedBox(height: 8),
-                          _textField(_holderController, 'npr. Ivan Horvat'),
+                          _textField(_holderController, Lang.sel(isHr, 'e.g. Ivan Horvat', 'npr. Ivan Horvat')),
                           const SizedBox(height: 20),
                           _fieldLabel('IBAN'),
                           const SizedBox(height: 8),
                           _textField(
                             _ibanController,
-                            'npr. HR12 1001 0051 8630 0016 0',
+                            Lang.sel(isHr, 'e.g. HR12 1001 0051 8630 0016 0', 'npr. HR12 1001 0051 8630 0016 0'),
                             mono: true,
                             inputFormatters: [
                               FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9 ]')),
@@ -254,7 +261,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                     ),
-                                    child: Text('Odustani', style: GoogleFonts.inter()),
+                                    child: Text(Lang.sel(isHr, 'Cancel', 'Odustani'), style: GoogleFonts.inter()),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -277,7 +284,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                         )
                                       : Text(
-                                          'Spremi',
+                                          Lang.sel(isHr, 'Save', 'Spremi'),
                                           style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                                         ),
                                 ),
