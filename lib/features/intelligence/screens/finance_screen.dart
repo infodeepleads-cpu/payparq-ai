@@ -189,7 +189,6 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                   // Card
                   Container(
                     width: double.infinity,
-                    constraints: const BoxConstraints(maxWidth: 560),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
