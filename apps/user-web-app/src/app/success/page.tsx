@@ -1127,7 +1127,7 @@ function SuccessContent() {
             </div>
 
             {/* Price footer */}
-            <div className="px-5 py-3 flex items-center justify-between" style={{ background: '#F0F5FF' }}>
+            <div className="px-5 py-3 flex items-center justify-between" style={{ borderTop: '1px solid #CBD5E1' }}>
               <div>
                 <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Ukupno plaćeno</p>
                 <p className="text-[24px] font-black leading-none" style={{ color: '#1A3A6B' }}>
@@ -1144,7 +1144,7 @@ function SuccessContent() {
 
 
             {/* ── Getting There ── */}
-            <div style={{ background: '#F0F5FF', borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
+            <div style={{ borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
               <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>Kako doći · Getting There</p>
             </div>
             <div className="px-5 py-4 space-y-3">
@@ -1156,7 +1156,7 @@ function SuccessContent() {
               )}
               {mapsUrl ? (
                 <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-3 rounded-xl px-4 py-3 transition-colors"
+                  className="flex items-center gap-3 rounded-xl px-4 py-3 transition-colors print:hidden"
                   style={{ background: '#EBF0FA', border: '1px solid #2451A0' }}>
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#2451A0' }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
@@ -1183,7 +1183,7 @@ function SuccessContent() {
             </div>
 
             {/* ── Instructions ── */}
-            <div style={{ background: '#F0F5FF', borderTop: '1px solid #CBD5E1', borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
+            <div style={{ borderTop: '1px solid #CBD5E1', borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
               <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>Upute za korištenje · Instructions</p>
             </div>
             <div className="px-5 py-1 divide-y" style={{ borderColor: '#E2E8F0' }}>
@@ -1201,7 +1201,7 @@ function SuccessContent() {
             </div>
 
             {/* ── Contact numbers ── */}
-            <div style={{ background: '#F0F5FF', borderTop: '1px solid #CBD5E1', borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
+            <div style={{ borderTop: '1px solid #CBD5E1', borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
               <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>Kontakt · Support</p>
             </div>
             <div className="px-5 py-4 space-y-2.5">
@@ -1230,8 +1230,8 @@ function SuccessContent() {
 
           </div>
 
-          {/* Download + Members */}
-          <div className="flex items-center justify-center gap-3 py-3">
+          {/* Download + Members — hidden from print/PDF */}
+          <div className="flex items-center justify-center gap-3 py-3 print:hidden">
             <button
               type="button"
               onClick={handleDownloadPass}
