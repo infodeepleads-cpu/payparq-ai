@@ -192,8 +192,6 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
 
   const handleVenueSelect = (venue: Venue) => {
     setSelectedVenue(venue);
-    onSelect(venue, startTime, endTime);
-    onClose();
   };
 
   const handleSearch = () => {
