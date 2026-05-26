@@ -2192,14 +2192,14 @@ export function SearchPage() {
                   )}
                 </div>
 
-                {/* Kako Radi Dropdown */}
+                {/* Kako radi Dropdown */}
                 <div className="pt-6 border-t border-gray-200 mt-6">
                   <button
                     onClick={() => setShowHowToRedeem(!showHowToRedeem)}
                     className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
                   >
                     <ChevronDown className="w-5 h-5 text-gray-600" />
-                    <p className="text-base font-bold text-gray-900">Kako Radi</p>
+                    <p className="text-base font-bold text-gray-900">Kako radi</p>
                   </button>
                   {showHowToRedeem && (
                     <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
@@ -3067,14 +3067,14 @@ export function SearchPage() {
                 )}
               </div>
 
-              {/* Kako Radi */}
+              {/* Kako radi */}
               <div className="pt-3 border-t border-gray-200 mb-4 px-4">
                 <button
                   onClick={() => setShowHowToRedeem(!showHowToRedeem)}
                   className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
                 >
                   <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showHowToRedeem ? 'rotate-180' : ''}`} />
-                  <p className="text-sm font-bold text-gray-900">Kako Radi</p>
+                  <p className="text-sm font-bold text-gray-900">Kako radi</p>
                 </button>
                 {showHowToRedeem && (
                   <div className="space-y-2 text-xs text-gray-900 leading-relaxed mt-2 ml-6">
