@@ -117,130 +117,208 @@ class _FinanceScreenState extends State<FinanceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.sidebarBackground,
-      appBar: AppBar(
-        backgroundColor: AppTheme.sidebarBackground,
-        elevation: 0,
-        title: Text(
-          'Financije',
-          style: GoogleFonts.inter(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-          ),
-        ),
-        actions: [
-          if (!_loading && !_editing)
-            TextButton(
-              onPressed: () => setState(() { _editing = true; _successMsg = null; _error = null; }),
-              child: Text('Uredi', style: GoogleFonts.inter(color: Colors.white70, fontSize: 14)),
-            ),
-        ],
-      ),
+      backgroundColor: AppTheme.background,
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: Colors.white))
+          ? const Center(child: CircularProgressIndicator(color: Colors.black))
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(48.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Bankovni podaci',
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Unesite podatke za isplatu prihoda.',
-                    style: GoogleFonts.inter(color: Colors.white54, fontSize: 13),
-                  ),
-                  const SizedBox(height: 28),
-
-                  if (!_editing && _savedHolder != null && _savedIban != null) ...[
-                    _infoTile('Ime i prezime', _savedHolder!),
-                    const SizedBox(height: 12),
-                    _infoTile('IBAN', _savedIban!, mono: true),
-                    const SizedBox(height: 24),
-                  ],
-
-                  if (_editing || _savedIban == null) ...[
-                    _label('Ime i prezime'),
-                    const SizedBox(height: 8),
-                    _field(_holderController, 'npr. Ivan Horvat'),
-                    const SizedBox(height: 16),
-                    _label('IBAN'),
-                    const SizedBox(height: 8),
-                    _field(_ibanController, 'npr. HR1210010051863000160', mono: true,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9 ]')),
-                          _IbanFormatter(),
-                        ]),
-                    const SizedBox(height: 28),
-                    Row(
-                      children: [
-                        if (_editing)
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: _saving ? null : () {
-                                setState(() {
-                                  _editing = false;
-                                  _ibanController.text = _savedIban ?? '';
-                                  _holderController.text = _savedHolder ?? '';
-                                  _error = null;
-                                });
-                              },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.white54,
-                                side: const BorderSide(color: Colors.white24),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                              child: Text('Odustani', style: GoogleFonts.inter()),
+                  // Header row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Financije',
+                            style: GoogleFonts.inter(
+                              fontSize: 40,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                              letterSpacing: -1,
                             ),
                           ),
-                        if (_editing) const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _saving ? null : _save,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Bankovni podaci za isplatu prihoda.',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: AppTheme.textSecondary,
                             ),
-                            child: _saving
-                                ? const SizedBox(
-                                    height: 18, width: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                                  )
-                                : Text('Spremi', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                          ),
+                        ],
+                      ),
+                      if (!_editing && _savedIban != null)
+                        SizedBox(
+                          height: 44,
+                          child: ElevatedButton.icon(
+                            onPressed: () => setState(() {
+                              _editing = true;
+                              _successMsg = null;
+                              _error = null;
+                            }),
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            label: Text(
+                              'Uredi',
+                              style: GoogleFonts.inter(),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
                           ),
                         ),
+                    ],
+                  ),
+                  const SizedBox(height: 48),
+
+                  // Card
+                  Container(
+                    width: double.infinity,
+                    constraints: const BoxConstraints(maxWidth: 560),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Bankovni podaci',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Podaci se koriste za isplatu zarađenih sredstava.',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+
+                        // Read-only display
+                        if (!_editing && _savedHolder != null && _savedIban != null) ...[
+                          _readonlyRow('Ime i prezime', _savedHolder!),
+                          const SizedBox(height: 16),
+                          _readonlyRow('IBAN', _savedIban!, mono: true),
+                        ],
+
+                        // Edit / first-time form
+                        if (_editing || _savedIban == null) ...[
+                          _fieldLabel('Ime i prezime'),
+                          const SizedBox(height: 8),
+                          _textField(_holderController, 'npr. Ivan Horvat'),
+                          const SizedBox(height: 20),
+                          _fieldLabel('IBAN'),
+                          const SizedBox(height: 8),
+                          _textField(
+                            _ibanController,
+                            'npr. HR12 1001 0051 8630 0016 0',
+                            mono: true,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9 ]')),
+                              _IbanFormatter(),
+                            ],
+                          ),
+                          const SizedBox(height: 28),
+                          Row(
+                            children: [
+                              if (_editing) ...[
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: _saving ? null : () => setState(() {
+                                      _editing = false;
+                                      _ibanController.text = _savedIban ?? '';
+                                      _holderController.text = _savedHolder ?? '';
+                                      _error = null;
+                                    }),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.black,
+                                      side: BorderSide(color: Colors.grey[400]!),
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                    child: Text('Odustani', style: GoogleFonts.inter()),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                              ],
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: _saving ? null : _save,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.black,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                  child: _saving
+                                      ? const SizedBox(
+                                          height: 18,
+                                          width: 18,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        )
+                                      : Text(
+                                          'Spremi',
+                                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                                        ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+
+                        if (_error != null) ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            _error!,
+                            style: GoogleFonts.inter(color: Colors.red[700], fontSize: 13),
+                          ),
+                        ],
+                        if (_successMsg != null) ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            _successMsg!,
+                            style: GoogleFonts.inter(color: Colors.green[700], fontSize: 13),
+                          ),
+                        ],
                       ],
                     ),
-                  ],
-
-                  if (_error != null) ...[
-                    const SizedBox(height: 16),
-                    Text(_error!, style: GoogleFonts.inter(color: Colors.redAccent, fontSize: 13)),
-                  ],
-                  if (_successMsg != null) ...[
-                    const SizedBox(height: 16),
-                    Text(_successMsg!, style: GoogleFonts.inter(color: Colors.greenAccent, fontSize: 13)),
-                  ],
+                  ),
                 ],
               ),
             ),
     );
   }
 
-  Widget _label(String text) => Text(
+  Widget _fieldLabel(String text) => Text(
     text,
-    style: GoogleFonts.inter(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+    style: GoogleFonts.inter(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: Colors.black,
+    ),
   );
 
-  Widget _field(
+  Widget _textField(
     TextEditingController controller,
     String hint, {
     bool mono = false,
@@ -248,43 +326,48 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }) =>
       TextField(
         controller: controller,
-        style: mono
-            ? GoogleFonts.robotoMono(color: Colors.white, fontSize: 14)
-            : GoogleFonts.inter(color: Colors.white, fontSize: 14),
         inputFormatters: inputFormatters,
+        style: mono
+            ? GoogleFonts.robotoMono(fontSize: 13, color: Colors.black)
+            : GoogleFonts.inter(fontSize: 13, color: Colors.black),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: GoogleFonts.inter(color: Colors.white24, fontSize: 14),
+          hintStyle: GoogleFonts.inter(color: Colors.grey[400], fontSize: 13),
           filled: true,
-          fillColor: Colors.white.withOpacity(0.07),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide.none,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey[400]!),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          focusedBorder: const OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(8)),
+            borderSide: BorderSide(color: Colors.black),
+          ),
         ),
       );
 
-  Widget _infoTile(String label, String value, {bool mono = false}) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.07),
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: GoogleFonts.inter(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: mono
-              ? GoogleFonts.robotoMono(color: Colors.white, fontSize: 14)
-              : GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+  Widget _readonlyRow(String label, String value, {bool mono = false}) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: AppTheme.textSecondary,
+          letterSpacing: 0.5,
         ),
-      ],
-    ),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        value,
+        style: mono
+            ? GoogleFonts.robotoMono(fontSize: 14, color: Colors.black)
+            : GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black),
+      ),
+    ],
   );
 }
 
