@@ -783,10 +783,23 @@ export function SearchPage() {
           return prev;
         });
       } else {
-        // Silently ignore geocoding errors (zero results, etc)
-        // This can happen if the address is too vague or invalid
-        setNoResultsForLocation(null);
-        setNearbyCitiesWithParking([]);
+        // Geocoding failed - try to find a nearby parking lot and use that as reference
+        const nearbyLots = prev.filter(l => {
+          if (!l.lat || !l.lng) return false;
+          // Check if lot address contains the search text (e.g. "Split" in address)
+          return l.address && l.address.toLowerCase().includes(cleanText.toLowerCase());
+        });
+
+        if (nearbyLots.length > 0) {
+          // Use the first nearby lot's coordinates
+          const avgLat = nearbyLots.reduce((sum, l) => sum + (l.lat || 0), 0) / nearbyLots.length;
+          const avgLng = nearbyLots.reduce((sum, l) => sum + (l.lng || 0), 0) / nearbyLots.length;
+          setMapCenter({ lat: avgLat, lng: avgLng });
+          setSearchLocationPin({ lat: avgLat, lng: avgLng });
+        } else {
+          setNoResultsForLocation(cleanText);
+          setNearbyCitiesWithParking([]);
+        }
       }
     });
   };
