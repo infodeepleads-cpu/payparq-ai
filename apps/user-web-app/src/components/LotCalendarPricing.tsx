@@ -209,7 +209,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
   const selectedDay = selectedDate ? parseInt(selectedDate.split('-')[2]) : null;
 
   return (
-    <div className="h-full bg-white flex flex-col w-full md:p-6 p-3 md:p-4">
+    <div className="h-full bg-white flex flex-col w-full md:p-6 p-3 md:p-4 animate-in fade-in duration-300">
       {/* Header */}
       <div className="mb-4 md:mb-6">
         <h2 className="text-xl md:text-2xl font-bold text-gray-900">{lotName}</h2>
@@ -238,9 +238,9 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
         {/* Calendar Grid */}
         <div className="border border-gray-200 rounded-lg p-2 md:p-6">
           <div className="grid grid-cols-7 gap-1.5 md:gap-2">
-            {['Ponedjeljak', 'Utorak', 'Srijeda', 'Četvrtak', 'Petak', 'Subota', 'Nedjelja'].map((day) => (
-              <div key={day} className="text-center font-semibold text-xs md:text-sm text-gray-700 py-2 md:py-3 flex-shrink-0">
-                <span translate="no">{day.substring(0, 3)}</span>
+            {[['Ponedjeljak', 'Po'], ['Utorak', 'U'], ['Srijeda', 'Sr'], ['Četvrtak', 'Č'], ['Petak', 'Pe'], ['Subota', 'Su'], ['Nedjelja', 'Ne']].map(([fullDay, shortLabel]) => (
+              <div key={fullDay} className="text-center font-semibold text-xs md:text-sm text-gray-700 py-2 md:py-3 flex-shrink-0">
+                <span translate="no">{shortLabel}</span>
               </div>
             ))}
             {[...Array(emptyBefore)].map((_, i) => (

@@ -538,10 +538,10 @@ export default function EditListingPage() {
                   <div>
                     <label className={subLabelClass}>Dani</label>
                     <div className="flex gap-1.5 flex-wrap">
-                      {['Ponedjeljak', 'Utorak', 'Srijeda', 'Četvrtak', 'Petak', 'Subota', 'Nedjelja'].map((d) => (
-                        <button key={d} type="button" onClick={() => toggleDay(d)}
-                          className={`w-10 h-8 rounded text-xs font-bold border transition-colors ${openDays.includes(d) ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-500 border-gray-300 hover:border-gray-500'}`}>
-                          {d.substring(0, 3)}
+                      {[['Ponedjeljak', 'Po'], ['Utorak', 'U'], ['Srijeda', 'Sr'], ['Četvrtak', 'Č'], ['Petak', 'Pe'], ['Subota', 'Su'], ['Nedjelja', 'Ne']].map(([fullDay, shortLabel]) => (
+                        <button key={fullDay} type="button" onClick={() => toggleDay(fullDay)}
+                          className={`w-10 h-8 rounded text-xs font-bold border transition-colors ${openDays.includes(fullDay) ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-500 border-gray-300 hover:border-gray-500'}`}>
+                          {shortLabel}
                         </button>
                       ))}
                     </div>
