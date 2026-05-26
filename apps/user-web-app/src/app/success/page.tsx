@@ -707,41 +707,21 @@ function SuccessContent() {
     }
   };
 
-  const handleDownloadPass = () => {
+  const handleDownloadPass = async () => {
     const passCard = document.querySelector('[data-pass-card]') as HTMLElement;
     if (!passCard) return;
 
-    const printWindow = window.open('', '_blank', 'width=600,height=800');
-    if (!printWindow) return;
-
-    // Collect all stylesheets from current page
-    const styles = Array.from(document.styleSheets)
-      .map(sheet => {
-        try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n'); }
-        catch { return ''; }
+    const html2pdf = (await import('html2pdf.js')).default;
+    html2pdf()
+      .set({
+        margin: 8,
+        filename: 'payparq-pass.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       })
-      .join('\n');
-
-    printWindow.document.write(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>PayParq Parking Pass</title>
-  <style>
-    ${styles}
-    @page { margin: 10mm; }
-    body { margin: 0; padding: 16px; background: white; }
-    @media print { body { padding: 0; } }
-  </style>
-</head>
-<body>${passCard.outerHTML}</body>
-</html>`);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 500);
+      .from(passCard)
+      .save();
   };
 
   const SUPPORT_WHATSAPP = '385915963139';
