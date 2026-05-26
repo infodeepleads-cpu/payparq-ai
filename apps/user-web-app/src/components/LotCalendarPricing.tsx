@@ -237,7 +237,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
         <div className="border border-gray-200 rounded-lg p-2 md:p-6">
           <div className="grid grid-cols-7 gap-1.5 md:gap-2">
             {['pon', 'uto', 'sri', 'čet', 'pet', 'sub', 'ned'].map((day) => (
-              <div key={day} className="text-center font-semibold text-xs md:text-sm text-gray-700 py-2 md:py-3 flex-shrink-0">
+              <div key={day} translate="no" className="text-center font-semibold text-xs md:text-sm text-gray-700 py-2 md:py-3 flex-shrink-0">
                 {day}
               </div>
             ))}
@@ -432,7 +432,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel }: DateConfigW
             />
           </div>
           <div className="space-y-2">
-            <label className="block text-sm md:text-base font-semibold text-gray-900">Do</label>
+            <label translate="no" className="block text-sm md:text-base font-semibold text-gray-900">Do</label>
             <input
               type="time"
               value={closeTime}
@@ -471,7 +471,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel }: DateConfigW
           {priceMode === 'manual' && (
             <div className="grid grid-cols-3 gap-2 md:gap-3">
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">Sat (€)</label>
+                <label translate="no" className="block text-xs md:text-sm font-medium text-gray-700">Sat (€)</label>
                 <input
                   type="number"
                   min="0"
@@ -630,7 +630,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel }: RangeConfigWidget
             />
           </div>
           <div className="space-y-2">
-            <label className="block text-sm md:text-base font-semibold text-gray-900">Do</label>
+            <label translate="no" className="block text-sm md:text-base font-semibold text-gray-900">Do</label>
             <input
               type="time"
               value={closeTime}
@@ -669,7 +669,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel }: RangeConfigWidget
           {priceMode === 'manual' && (
             <div className="grid grid-cols-3 gap-2 md:gap-3">
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">Sat (€)</label>
+                <label translate="no" className="block text-xs md:text-sm font-medium text-gray-700">Sat (€)</label>
                 <input
                   type="number"
                   min="0"

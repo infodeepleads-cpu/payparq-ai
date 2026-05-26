@@ -1782,11 +1782,6 @@ export default function MembersPage() {
                   {formatLoyaltyLevelLabel(loyaltySummary?.level)}
                   {(loyaltySummary?.pointsYear ?? 0) > 0 ? ` · ${loyaltySummary?.pointsYear ?? 0} pts` : ""}
                 </p>
-                {loyaltySummary?.nextLevel && (
-                  <p className="text-[10px] text-[#3E22C6]/70">
-                    {loyaltySummary.nextLevelProgressPercent}% do {formatLoyaltyLevelLabel(loyaltySummary.nextLevel)}
-                  </p>
-                )}
               </div>
             </div>
           </div>

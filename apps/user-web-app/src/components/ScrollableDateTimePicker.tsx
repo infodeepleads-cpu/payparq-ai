@@ -110,8 +110,9 @@ export function ScrollableDateTimePicker({
         {/* Days Scroll */}
         <div
           ref={daysContainerRef}
+          data-scrollable
           className="flex gap-2 overflow-x-auto pb-2 scroll-smooth"
-          style={{ scrollBehavior: 'smooth' }}
+          style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
         >
           {days.map(day => {
             const isSelected =

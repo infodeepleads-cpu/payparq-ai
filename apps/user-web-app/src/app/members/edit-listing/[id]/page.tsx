@@ -511,7 +511,7 @@ export default function EditListingPage() {
             <CollapsibleSection title="Dodaci" defaultOpen={false}>
               <div className="flex flex-wrap gap-2">
                 {ADDONS.map((a) => (
-                  <button key={a} type="button" onClick={() => toggleAddon(a)}
+                  <button key={a} type="button" onClick={() => toggleAddon(a)} translate="no"
                     className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ${addons.includes(a) ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
                     {a}
                   </button>
@@ -534,7 +534,7 @@ export default function EditListingPage() {
                     <label className={subLabelClass}>Dani</label>
                     <div className="flex gap-1.5 flex-wrap">
                       {['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned'].map((d) => (
-                        <button key={d} type="button" onClick={() => toggleDay(d)}
+                        <button key={d} type="button" onClick={() => toggleDay(d)} translate="no"
                           className={`w-10 h-8 rounded text-xs font-bold border transition-colors ${openDays.includes(d) ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-500 border-gray-300 hover:border-gray-500'}`}>
                           {d}
                         </button>
@@ -579,10 +579,6 @@ export default function EditListingPage() {
             </CollapsibleSection>
 
             <CollapsibleSection title="Cijena" defaultOpen={false}>
-              <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
-                <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> Nema provizije! Naknadu plaća kupac!</p>
-              </div>
-
               <div className="space-y-4 mb-6 pb-6 border-b border-gray-100">
                 <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">Standard</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -650,7 +646,7 @@ export default function EditListingPage() {
                   const currentVal = `${slot.type}:${slot.value}`;
                   return (
                     <div key={idx}>
-                      <label className={labelClass}>Slot {idx + 1}</label>
+                      <label className={labelClass}>Widget {idx + 1}</label>
                       <select
                         value={currentVal}
                         onChange={(e) => {
