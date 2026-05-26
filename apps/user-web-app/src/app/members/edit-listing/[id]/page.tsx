@@ -155,7 +155,7 @@ function AddressMapField({ address, onAddressChange, pin, onPinChange, onRegionD
   );
 }
 
-const ADDONS = ['Valet', 'EV punjenje', 'Pretakanje', 'Pranje', 'Natkriveno', 'Rampa/Brana', 'CCTV', 'Pristup invalidima', 'Osoblje', 'Garaža', 'Shuttle'];
+const ADDONS = ['Valet', 'EV punjenje', 'Pretakanje', 'Pranje', 'Natkriveno', 'Rampa/Brana', 'CCTV', 'Pristup invalidima', 'Osoblje', 'Garaža', 'Shuttle servis'];
 const SPOT_TYPES = [
   { key: 'standard_xxl', label: 'Preveliko vozilo (XXL)', mult: '1.25×' },
   { key: 'premium', label: 'Premium (Sjena, Ulaz, Garaža)', mult: '1.5×' },
@@ -203,7 +203,7 @@ export default function EditListingPage() {
   const [is247, setIs247] = useState(true);
   const [hoursFrom, setHoursFrom] = useState('');
   const [hoursTo, setHoursTo] = useState('');
-  const [openDays, setOpenDays] = useState<string[]>(['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned']);
+  const [openDays, setOpenDays] = useState<string[]>(['Ponedjeljak', 'Utorak', 'Srijeda', 'Četvrtak', 'Petak', 'Subota', 'Nedjelja']);
   const toggleDay = (d: string) => setOpenDays((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]);
 
   const [baseSpots, setBaseSpots] = useState('');
@@ -275,7 +275,10 @@ export default function EditListingPage() {
 
       setAddons(meta.addons || meta.features || []);
       setIs247(meta.is247 ?? meta.available24_7 ?? true);
-      setOpenDays(meta.openDays || meta.daysAvailable || ['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned']);
+      const savedDays = meta.openDays || meta.daysAvailable || [];
+      const dayMapping: Record<string, string> = { 'Pon': 'Ponedjeljak', 'Uto': 'Utorak', 'Sri': 'Srijeda', 'Čet': 'Četvrtak', 'Pet': 'Petak', 'Sub': 'Subota', 'Ned': 'Nedjelja' };
+      const convertedDays = savedDays.map((d: string) => dayMapping[d] || d);
+      setOpenDays(convertedDays.length > 0 ? convertedDays : ['Ponedjeljak', 'Utorak', 'Srijeda', 'Četvrtak', 'Petak', 'Subota', 'Nedjelja']);
       setHoursFrom(meta.hoursFrom || '');
       setHoursTo(meta.hoursTo || '');
 
@@ -336,6 +339,8 @@ export default function EditListingPage() {
       }
 
       // Save with host form schema
+      const reverseMapping: Record<string, string> = { 'Ponedjeljak': 'Pon', 'Utorak': 'Uto', 'Srijeda': 'Sri', 'Četvrtak': 'Čet', 'Petak': 'Pet', 'Subota': 'Sub', 'Nedjelja': 'Ned' };
+      const abbreviatedDays = openDays.map(d => reverseMapping[d] || d);
       const { error } = await supabase
         .from('locations')
         .update({
@@ -364,8 +369,8 @@ export default function EditListingPage() {
             features: addons,
             is247,
             available24_7: is247,
-            openDays,
-            daysAvailable: openDays,
+            openDays: abbreviatedDays,
+            daysAvailable: abbreviatedDays,
             hoursFrom,
             hoursTo,
             baseSpots,
@@ -533,10 +538,10 @@ export default function EditListingPage() {
                   <div>
                     <label className={subLabelClass}>Dani</label>
                     <div className="flex gap-1.5 flex-wrap">
-                      {['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned'].map((d) => (
+                      {['Ponedjeljak', 'Utorak', 'Srijeda', 'Četvrtak', 'Petak', 'Subota', 'Nedjelja'].map((d) => (
                         <button key={d} type="button" onClick={() => toggleDay(d)}
                           className={`w-10 h-8 rounded text-xs font-bold border transition-colors ${openDays.includes(d) ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-500 border-gray-300 hover:border-gray-500'}`}>
-                          <span translate="no">{d}</span>
+                          {d.substring(0, 3)}
                         </button>
                       ))}
                     </div>
@@ -547,7 +552,7 @@ export default function EditListingPage() {
                       <input type="time" value={hoursFrom} onChange={(e) => setHoursFrom(e.target.value)} className={inputClass} />
                     </div>
                     <div>
-                      <label className={subLabelClass}>Do</label>
+                      <label className={subLabelClass}>Kraj</label>
                       <input type="time" value={hoursTo} onChange={(e) => setHoursTo(e.target.value)} className={inputClass} />
                     </div>
                   </div>

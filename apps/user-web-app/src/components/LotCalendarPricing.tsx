@@ -194,10 +194,12 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-4"></div>
-          <p className="text-sm text-gray-600">Učitavanje...</p>
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <div className="relative flex items-center justify-center w-16 h-16">
+          <div className="absolute inset-0 rounded-full border-4 border-black/10 border-t-black animate-spin" style={{ animationDuration: '1s' }} />
+          <div className="animate-pulse w-10 h-10 rounded-full bg-black flex items-center justify-center shadow-lg z-10">
+            <span className="text-sm font-black tracking-tight text-white select-none">P</span>
+          </div>
         </div>
       </div>
     );
@@ -236,9 +238,9 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
         {/* Calendar Grid */}
         <div className="border border-gray-200 rounded-lg p-2 md:p-6">
           <div className="grid grid-cols-7 gap-1.5 md:gap-2">
-            {['pon', 'uto', 'sri', 'čet', 'pe', 'su', 'ned'].map((day) => (
+            {['Ponedjeljak', 'Utorak', 'Srijeda', 'Četvrtak', 'Petak', 'Subota', 'Nedjelja'].map((day) => (
               <div key={day} className="text-center font-semibold text-xs md:text-sm text-gray-700 py-2 md:py-3 flex-shrink-0">
-                <span translate="no">{day}</span>
+                <span translate="no">{day.substring(0, 3)}</span>
               </div>
             ))}
             {[...Array(emptyBefore)].map((_, i) => (
@@ -471,7 +473,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel }: DateConfigW
           {priceMode === 'manual' && (
             <div className="grid grid-cols-3 gap-2 md:gap-3">
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700"><span translate="no">Sati (€)</span></label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700">Sat (€)</label>
                 <input
                   type="number"
                   min="0"
@@ -669,7 +671,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel }: RangeConfigWidget
           {priceMode === 'manual' && (
             <div className="grid grid-cols-3 gap-2 md:gap-3">
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700"><span translate="no">Sati (€)</span></label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700">Sat (€)</label>
                 <input
                   type="number"
                   min="0"
