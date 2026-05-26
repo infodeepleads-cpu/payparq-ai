@@ -1220,16 +1220,6 @@ function SuccessContent() {
 
           </div>
 
-          {/* Members zona — slim single link + download */}
-          <div className="flex items-center justify-center gap-4 py-3">
-            <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDownloadPass(); }} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
-              ⬇ Preuzmi
-            </button>
-            <span style={{ color: '#94a3b8' }}>·</span>
-            <Link href={membersHref} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
-              Members zona
-            </Link>
-          </div>
 
         </div>
       </main>
