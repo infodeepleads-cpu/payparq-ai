@@ -418,7 +418,7 @@ function SuccessContent() {
   );
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [lookupError, setLookupError] = useState('');
-  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupLoading, setLookupLoading] = useState(true);
   const [extendLoading, setExtendLoading] = useState(false);
   const [extendFeedback, setExtendFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -506,9 +506,10 @@ function SuccessContent() {
 
   useEffect(() => {
     let active = true;
-    if (!sessionId) return;
+    if (!sessionId) { setLookupLoading(false); return; }
     if (!hasRealSessionId) {
       setLookupError('Payment confirmation is still syncing. Please refresh this page in a few seconds.');
+      setLookupLoading(false);
       return;
     }
     const run = async () => {
@@ -1006,6 +1007,19 @@ function SuccessContent() {
     },
   ];
 
+  if (lookupLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#EBF0FA' }}>
+        <div className="relative flex items-center justify-center w-20 h-20">
+          <div className="absolute inset-0 rounded-full border-4 border-[#1A3A6B]/10 border-t-[#1A3A6B] animate-spin" style={{ animationDuration: '1s' }} />
+          <div className="animate-pulse w-12 h-12 rounded-full bg-[#1A3A6B] flex items-center justify-center shadow-lg z-10">
+            <span className="text-lg font-black tracking-tight text-white select-none">P</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen text-black flex flex-col" style={{ background: '#EBF0FA' }}>
 
@@ -1030,7 +1044,6 @@ function SuccessContent() {
                   {resCode && (
                     <span className="text-white font-mono text-[12px] font-bold bg-white/10 rounded px-2 py-0.5">{resCode}</span>
                   )}
-                  {lookupLoading && <p className="text-white/40 text-[9px] animate-pulse">syncing...</p>}
                 </div>
               </div>
             </div>
