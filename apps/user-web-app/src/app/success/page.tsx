@@ -712,17 +712,27 @@ function SuccessContent() {
     const passCard = document.querySelector('[data-pass-card]') as HTMLElement;
     if (!passCard) return;
 
-    const html2pdf = (await import('html2pdf.js')).default;
-    html2pdf()
-      .set({
-        margin: 8,
-        filename: 'payparq-pass.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      })
-      .from(passCard)
-      .save();
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      window.print();
+      return;
+    }
+
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      await html2pdf()
+        .set({
+          margin: 8,
+          filename: 'payparq-pass.pdf',
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        })
+        .from(passCard)
+        .save();
+    } catch {
+      window.print();
+    }
   };
 
   const SUPPORT_WHATSAPP = '385915963139';
@@ -1221,23 +1231,23 @@ function SuccessContent() {
           </div>
 
           {/* Download + Members */}
-          <div className="flex items-center justify-center gap-4 py-3">
+          <div className="flex items-center justify-center gap-3 py-3">
             <button
               type="button"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDownloadPass(); }}
-              className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity"
-              style={{ color: '#2451A0' }}
+              onClick={handleDownloadPass}
+              className="flex-1 px-4 py-3 rounded-xl text-[13px] font-bold text-center"
+              style={{ background: '#EBF0FA', color: '#2451A0', border: '1px solid #2451A0' }}
             >
               ⬇ Preuzmi
             </button>
-            <span style={{ color: '#94a3b8' }}>·</span>
-            <a
-              href={membersHref}
-              className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity"
-              style={{ color: '#2451A0' }}
+            <button
+              type="button"
+              onClick={() => { window.location.href = membersHref; }}
+              className="flex-1 px-4 py-3 rounded-xl text-[13px] font-bold text-center"
+              style={{ background: '#EBF0FA', color: '#2451A0', border: '1px solid #2451A0' }}
             >
-              Members zona
-            </a>
+              Members zona →
+            </button>
           </div>
 
         </div>
