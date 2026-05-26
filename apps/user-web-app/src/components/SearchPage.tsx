@@ -2751,11 +2751,11 @@ export function SearchPage() {
                         listing={liveListing}
                         isSelected={isSelected}
                         onSelect={() => {
-                          setSelectedListing(listing);
+                          setSelectedListing(liveListing);
                           setShowMobileDetails(true);
                         }}
                         onBook={() => {
-                          setSelectedListing(listing);
+                          setSelectedListing(liveListing);
                           setShowMobileDetails(true);
                         }}
                         badgeText={badgeText}
