@@ -60,8 +60,9 @@ export default async function RootLayout({
   const locale: AppLocale = localeFromCookie ?? localeFromHeader ?? DEFAULT_LOCALE;
 
   return (
-    <html lang={locale}>
+    <html lang={locale} translate="no">
       <head>
+        <meta name="google" content="notranslate" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

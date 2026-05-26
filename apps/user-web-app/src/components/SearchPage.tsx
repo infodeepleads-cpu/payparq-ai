@@ -114,8 +114,7 @@ export function SearchPage() {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showMobileMap, setShowMobileMap] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
-  const initializedRef = useRef(false);
+  const [locationReady, setLocationReady] = useState(false);
   const [reservationType, setReservationType] = useState('Satna/dnevna');
   const [searchLocation, setSearchLocationState] = useState<string>('');
   const [usingCurrentLocation, setUsingCurrentLocation] = useState(false);
@@ -417,16 +416,27 @@ export function SearchPage() {
 
   // Auto-request current location on mount
   useEffect(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition((position) => {
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
-      userGpsRef.current = { lat, lng };
-      setMapCenter({ lat, lng });
-      setSearchLocationPin({ lat, lng });
-      setSearchLocationState('Trenutna lokacija');
-      setUsingCurrentLocation(true);
-    });
+    if (!navigator.geolocation) {
+      setLocationReady(true);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        userGpsRef.current = { lat, lng };
+        setMapCenter({ lat, lng });
+        setSearchLocationPin({ lat, lng });
+        setSearchLocationState('Trenutna lokacija');
+        setUsingCurrentLocation(true);
+        setLocationReady(true);
+      },
+      () => {
+        // GPS denied or failed — still ready, just use default center
+        setLocationReady(true);
+      },
+      { timeout: 5000 }
+    );
   }, []);
 
   // Load recent searches from localStorage
@@ -600,10 +610,6 @@ export function SearchPage() {
             ? parkingListings.filter((l) => l.id === urlHubId || l.display_id === urlHubId)
             : parkingListings;
           setFilteredListings(displayList);
-          if (displayList.length > 0 && !initializedRef.current) {
-            initializedRef.current = true;
-            setInitialized(true);
-          }
           if (displayList.length > 0) {
             setSelectedListing(displayList[0]);
             if (urlHubId) {
@@ -622,13 +628,6 @@ export function SearchPage() {
         setFilteredListings([]);
       } finally {
         setLoading(false);
-        // Fallback: force-initialize after 3s so GPS denial/timeout doesn't hang the spinner forever
-        setTimeout(() => {
-          if (!initializedRef.current) {
-            initializedRef.current = true;
-            setInitialized(true);
-          }
-        }, 3000);
       }
     };
 
@@ -1004,10 +1003,6 @@ export function SearchPage() {
     console.log(`Sorted result (${sortBy}):`, sorted.slice(0, 5).map(l => ({ name: l.name, dist: haversineKm(ref.lat, ref.lng, l.lat, l.lng).toFixed(2) })));
     if (!isHubIdMode) {
       setFilteredListings(sorted);
-      if (sorted.length > 0 && !initializedRef.current) {
-        initializedRef.current = true;
-        setInitialized(true);
-      }
     }
   }, [listings, priceRange[0], priceRange[1], selectedFeatures.join(','), selectedFilters.join(','), parkingType, quickFilters.join(','), sortBy, `${searchLocationPin?.lat},${searchLocationPin?.lng}`, durationHours, startTime, endTime, isHubIdMode]);
 
@@ -1091,7 +1086,7 @@ export function SearchPage() {
     setVehicleCheckResult(null);
   }, [selectedListing?.id]);
 
-  if (loading || !initialized) {
+  if (loading || !locationReady) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-white">
         <div className="relative flex items-center justify-center w-20 h-20">

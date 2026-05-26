@@ -434,13 +434,13 @@ export default function MembersPage() {
 
   const [homeContext, setHomeContext] = useState<MembersHomeContext | null>(null);
   const [ownerListings, setOwnerListings] = useState<Array<{id: string; name: string; address: string; verification_status: string; capacity: number; display_id: string; verification_metadata?: any}>>([]);
-  const [ownerListingsLoading, setOwnerListingsLoading] = useState(false);
+  const [ownerListingsLoading, setOwnerListingsLoading] = useState(true);
   const [selectedLotForManagement, setSelectedLotForManagement] = useState<string | null>(null);
   const [walletSummary, setWalletSummary] = useState<WalletSummary | null>(null);
   const [loyaltySummary, setLoyaltySummary] = useState<LoyaltySummary | null>(null);
   const [rewardWalletLedger, setRewardWalletLedger] = useState<RewardWalletLedgerRow[]>([]);
   const [rewardLoyaltyLedger, setRewardLoyaltyLedger] = useState<RewardLoyaltyLedgerRow[]>([]);
-  const [homeContextLoading, setHomeContextLoading] = useState(false);
+  const [homeContextLoading, setHomeContextLoading] = useState(true);
   const [homeFeedback, setHomeFeedback] = useState<
     Partial<Record<HomeWidgetId, { type: "success" | "error"; text: string }>>
   >({});
@@ -467,6 +467,7 @@ export default function MembersPage() {
   const hasMemberIdentity = normalizedMemberEmail.length > 0;
 
   const isEmailVerified = devSignedIn || Boolean((user as { email_confirmed_at?: string | null } | null)?.email_confirmed_at);
+  const pageReady = !homeContextLoading && !ownerListingsLoading;
 
   function parseCurrency(value: string | null | undefined) {
     const normalized = (value ?? "eur").toString().toUpperCase();
@@ -1248,7 +1249,7 @@ export default function MembersPage() {
       }, 500);
       return;
     }
-    if (!user || !supabase) return;
+    if (!user || !supabase) { setOwnerListingsLoading(false); return; }
     setOwnerListingsLoading(true);
     supabase
       .from('locations')
@@ -3023,6 +3024,19 @@ export default function MembersPage() {
           <p className="text-sm text-black/80">
             WhatsApp: <a className="underline" href="https://wa.me/385915963139">+385915963139</a>
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!pageReady) {
+    return (
+      <div className="min-h-screen bg-[#05020A] flex items-center justify-center">
+        <div className="relative flex items-center justify-center w-20 h-20">
+          <div className="absolute inset-0 rounded-full border-4 border-white/10 border-t-white animate-spin" style={{ animationDuration: '1s' }} />
+          <div className="animate-pulse w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg z-10">
+            <span className="text-lg font-black tracking-tight text-[#05020A] select-none">P</span>
+          </div>
         </div>
       </div>
     );
