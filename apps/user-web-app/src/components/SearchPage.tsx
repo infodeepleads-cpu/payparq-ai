@@ -791,11 +791,10 @@ export function SearchPage() {
         });
 
         if (nearbyLots.length > 0) {
-          // Use the average coordinates of nearby lots
-          const avgLat = nearbyLots.reduce((sum, l) => sum + (l.lat || 0), 0) / nearbyLots.length;
-          const avgLng = nearbyLots.reduce((sum, l) => sum + (l.lng || 0), 0) / nearbyLots.length;
-          setMapCenter({ lat: avgLat, lng: avgLng });
-          setSearchLocationPin({ lat: avgLat, lng: avgLng });
+          // Use the first nearby lot's coordinates as reference
+          const lot = nearbyLots[0];
+          setMapCenter({ lat: lot.lat, lng: lot.lng });
+          setSearchLocationPin({ lat: lot.lat, lng: lot.lng });
           setSearchLocation(cleanText);
         } else {
           setNoResultsForLocation(cleanText);

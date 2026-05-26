@@ -392,17 +392,17 @@ function SummaryPanel({
           {promoError && showPromoDropdown && <p className="text-xs text-red-600 text-center">{promoError}</p>}
         </div>
 
-        <div className="flex flex-col gap-1 mb-4">
-          <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
-            <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
-              <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-            </span>
+        <div className="flex flex-col gap-2 mb-4">
+          <div className="flex items-center gap-2 text-xs text-gray-900 font-semibold">
+            <div className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-green-600 flex-shrink-0">
+              <span className="text-white text-xs font-bold">✓</span>
+            </div>
             <span>Otkaži besplatno do vremena početka</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
-            <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
-              <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-            </span>
+          <div className="flex items-center gap-2 text-xs text-gray-900 font-semibold">
+            <div className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-green-600 flex-shrink-0">
+              <span className="text-white text-xs font-bold">✓</span>
+            </div>
             <span>Jednostavno promijenite rezervaciju</span>
           </div>
         </div>
