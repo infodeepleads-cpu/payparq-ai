@@ -784,18 +784,19 @@ export function SearchPage() {
         });
       } else {
         // Geocoding failed - try to find a nearby parking lot and use that as reference
-        const nearbyLots = prev.filter(l => {
+        const nearbyLots = listings.filter(l => {
           if (!l.lat || !l.lng) return false;
           // Check if lot address contains the search text (e.g. "Split" in address)
           return l.address && l.address.toLowerCase().includes(cleanText.toLowerCase());
         });
 
         if (nearbyLots.length > 0) {
-          // Use the first nearby lot's coordinates
+          // Use the average coordinates of nearby lots
           const avgLat = nearbyLots.reduce((sum, l) => sum + (l.lat || 0), 0) / nearbyLots.length;
           const avgLng = nearbyLots.reduce((sum, l) => sum + (l.lng || 0), 0) / nearbyLots.length;
           setMapCenter({ lat: avgLat, lng: avgLng });
           setSearchLocationPin({ lat: avgLat, lng: avgLng });
+          setSearchLocation(cleanText);
         } else {
           setNoResultsForLocation(cleanText);
           setNearbyCitiesWithParking([]);
