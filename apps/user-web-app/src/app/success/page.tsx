@@ -914,6 +914,7 @@ function SuccessContent() {
   const qrRef = useRef<HTMLCanvasElement>(null);
   const qrData = sessionId || `payparq-${checkoutLocationIdLabel || 'pass'}`;
   useEffect(() => {
+    if (lookupLoading) return;
     const canvas = qrRef.current;
     if (!canvas) return;
     import('qrcode').then((mod) => {
@@ -922,7 +923,7 @@ function SuccessContent() {
         .toCanvas(canvas, qrData, { width: 128, margin: 1, color: { dark: '#000000', light: '#ffffff' } })
         .catch(() => {});
     });
-  }, [qrData]);
+  }, [qrData, lookupLoading]);
 
   const mapsUrl = useMemo(() => {
     const addr = storedBooking?.address || checkoutLocationName || checkoutLocation || '';
@@ -965,7 +966,8 @@ function SuccessContent() {
     return dateStr;
   }, [checkoutEnd, checkoutStart]);
 
-  const emergencyPhone = (summary?.addons_config?.phone_sms as string | undefined) ?? '+385915963139';
+  const emergencyPhoneRaw = (summary?.addons_config?.phone_sms as string | undefined) ?? '+385915963139';
+  const emergencyPhone = /^[+\d\s()/-]{6,20}$/.test(emergencyPhoneRaw.trim()) ? emergencyPhoneRaw.trim() : '+385915963139';
   const resCode = summary?.session_id ? deriveReservationCode(summary.session_id) : (storedPiId ? 'PP-' + storedPiId.slice(-4).toUpperCase() : null);
 
   const [howStep, setHowStep] = useState<number | null>(null);
@@ -1219,17 +1221,15 @@ function SuccessContent() {
           </div>
 
           {/* Members zona — slim single link + download */}
-          {summary?.email && (
-            <div className="flex items-center justify-center gap-4 py-3">
-              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDownloadPass(); }} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
-                ⬇ Preuzmi
-              </button>
-              <span style={{ color: '#94a3b8' }}>·</span>
-              <Link href={membersHref} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
-                Members zona
-              </Link>
-            </div>
-          )}
+          <div className="flex items-center justify-center gap-4 py-3">
+            <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDownloadPass(); }} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
+              ⬇ Preuzmi
+            </button>
+            <span style={{ color: '#94a3b8' }}>·</span>
+            <Link href={membersHref} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
+              Members zona
+            </Link>
+          </div>
 
         </div>
       </main>
