@@ -713,9 +713,9 @@ export function SearchPage() {
     const input = document.querySelector('input[placeholder="Search location..."]') as HTMLInputElement;
     if (input) input.blur();
 
-    // Get coordinates using Geocoding API
+    // Get coordinates using Geocoding API — use placeId (exact match) not address text (ambiguous)
     const geocoder = new google.maps.Geocoder();
-    geocoder.geocode({ address: cleanText }, (results, status) => {
+    geocoder.geocode({ placeId }, (results, status) => {
       if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
         const location = results[0].geometry.location;
         const lat = location.lat();
