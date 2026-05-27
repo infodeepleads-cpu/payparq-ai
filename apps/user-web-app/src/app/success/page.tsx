@@ -81,6 +81,7 @@ const SUCCESS_TRANSLATIONS = {
   'Kod kopiran': { en: 'Code copied', hr: 'Kod kopiran' },
   'Podijelite sa prijateljima': { en: 'Share with friends', hr: 'Podijelite sa prijateljima' },
   '10% na sljedeću rezervaciju': { en: '10% off your next stay', hr: '10% na sljedeću rezervaciju' },
+  'Ističe za 15 dana': { en: 'Expires in 15 days', hr: 'Ističe za 15 dana' },
 } as const;
 
 const successT = (key: string, locale: 'en' | 'hr'): string => {
@@ -1345,9 +1346,12 @@ function SuccessContent() {
                     </button>
                   </div>
                 </div>
-                <div className="bg-[#0F6E56]/5 px-3 py-2.5 rounded-lg border border-[#0F6E56]/20">
+                <div className="bg-[#0F6E56]/5 px-3 py-2.5 rounded-lg border border-[#0F6E56]/20 space-y-1.5">
                   <p className="text-[12px] text-[#0F6E56] font-medium">
                     {successT('10% na sljedeću rezervaciju', locale)}
+                  </p>
+                  <p className="text-[11px] text-[#0F6E56]/70">
+                    {successT('Ističe za 15 dana', locale)}
                   </p>
                 </div>
               </div>
