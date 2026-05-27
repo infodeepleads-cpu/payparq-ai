@@ -704,6 +704,11 @@ export function SearchPage() {
 
             const photoUrl = verificationPhotos.length > 0 ? verificationPhotos[0] : (loc.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=400');
 
+            const accessHoursText = (metadata.access_hours as string | undefined) || 'pon – pet: 6:00 – 23:00\nsub – ned: 7:00 – 23:00';
+            const thingsToKnowText = (metadata.things_to_know as string | undefined) || UNIVERSAL_THINGS_TO_KNOW;
+            const gettingThereText = (metadata.getting_there as string | undefined) || 'Unesite adresu lokacije u navigaciju. Ulaz je označen znakom za parkiranje.';
+            const howItWorksText = (metadata.how_it_works as string | undefined) || '1. Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju\n2. Samo uđite ako nema nikoga\n3. Odvezite se kad budete spremni otići';
+
             return {
               id: loc.id,
               display_id: loc.display_id || undefined,
@@ -724,11 +729,11 @@ export function SearchPage() {
               type: (loc.type || 'self-park') as any,
               maxHeight: loc.max_height ? parseFloat(loc.max_height) : undefined,
               heightRestrictions: loc.height_restrictions === true || loc.height_restrictions === 'yes',
-              accessHours: (metadata.access_hours as string | undefined) || 'pon – pet: 6:00 – 23:00\nsub – ned: 7:00 – 23:00',
+              accessHours: locale === 'en' ? translateText(accessHoursText, locale) : accessHoursText,
               amenities: (metadata.amenities as string | undefined) || 'Valet usluga, Garaža - Natkrivena, Osoblje na licu mjesta, EV punjenje, Pristup invalidskim kolicima',
-              thingsToKnow: (metadata.things_to_know as string | undefined) || UNIVERSAL_THINGS_TO_KNOW,
-              gettingThere: (metadata.getting_there as string | undefined) || 'Unesite adresu lokacije u navigaciju. Ulaz je označen znakom za parkiranje.',
-              howItWorks: (metadata.how_it_works as string | undefined) || '1. Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju\n2. Samo uđite ako nema nikoga\n3. Odvezite se kad budete spremni otići',
+              thingsToKnow: locale === 'en' ? translateText(thingsToKnowText, locale) : thingsToKnowText,
+              gettingThere: locale === 'en' ? translateText(gettingThereText, locale) : gettingThereText,
+              howItWorks: locale === 'en' ? translateText(howItWorksText, locale) : howItWorksText,
               spots: loc.total_spots || loc.capacity,
               baseHourlyRate: pricePerHour,
               baseDailyRate: pricePerDay,
