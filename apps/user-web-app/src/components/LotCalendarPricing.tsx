@@ -322,6 +322,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
             <DateConfigWidget
               config={selectedDateConfig}
               lotCapacity={parseInt(lotCapacity)}
+              locale={locale}
               onSave={(config) => handleSaveDate(config)}
               onCancel={() => setSelectedDate(null)}
             />
@@ -361,6 +362,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
                 setRangeStartDate(null);
                 setRangeEndDate(null);
               }}
+              locale={locale}
             />
           </div>
         </div>
@@ -374,9 +376,10 @@ interface DateConfigWidgetProps {
   lotCapacity: number;
   onSave: (config: DateConfig) => void;
   onCancel: () => void;
+  locale: 'en' | 'hr';
 }
 
-function DateConfigWidget({ config, lotCapacity, onSave, onCancel }: DateConfigWidgetProps) {
+function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale }: DateConfigWidgetProps) {
   const [capacity, setCapacity] = useState(config.capacity ? String(config.capacity) : '');
   const [isOpen, setIsOpen] = useState(config.isOpen);
   const [openTime, setOpenTime] = useState(config.openTime);
@@ -572,9 +575,10 @@ interface RangeConfigWidgetProps {
   lotCapacity: number;
   onApply: (config: Omit<DateConfig, 'date'>) => void;
   onCancel: () => void;
+  locale: 'en' | 'hr';
 }
 
-function RangeConfigWidget({ lotCapacity, onApply, onCancel }: RangeConfigWidgetProps) {
+function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale }: RangeConfigWidgetProps) {
   const [capacity, setCapacity] = useState(String(lotCapacity));
   const [isOpen, setIsOpen] = useState(true);
   const [openTime, setOpenTime] = useState('00:00');
