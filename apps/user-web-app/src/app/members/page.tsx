@@ -1105,7 +1105,7 @@ export default function MembersPage() {
 
   const refreshHomeContext = useCallback(async (options?: { silent?: boolean }) => {
     const shouldSilentlyRefresh = Boolean(options?.silent);
-    if (!normalizedMemberEmail) {
+    if (!normalizedMemberEmail || !isSignedIn) {
       setHomeContext(null);
       setWalletSummary(null);
       setLoyaltySummary(null);
@@ -1175,7 +1175,7 @@ export default function MembersPage() {
         setPermitsLoading(false);
       }
     }
-  }, [activeItem, getMemberAuthHeaders, normalizedMemberEmail]);
+  }, [activeItem, getMemberAuthHeaders, isSignedIn, normalizedMemberEmail]);
   const startExtendSyncPolling = useCallback((previousCheckOut: string | null) => {
     if (typeof window === "undefined") {
       return;
