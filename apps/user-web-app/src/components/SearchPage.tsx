@@ -137,6 +137,11 @@ const translateText = (text: string, locale: 'en' | 'hr'): string => {
     'Osoblje na licu mjesta': 'On-site Staff',
     'EV punjenje': 'EV Charging',
     'Pristup invalidskim kolicima': 'Wheelchair Accessible',
+    'U ovoj ustanovi imate vremena do trenutka kada vaša rezervacija počne otkazati svoje parkiranje za puni povrat novca. Rezervaciju možete otkazati na web stranici ili aplikaciji PayParq.': 'At this facility, you have until your reservation starts to cancel your parking for a full refund. You can cancel your reservation on the PayParq website or app.',
+    'Ako imate problema sa svojom rezervacijom, a vrijeme je nakon početka, obratite se našim PayParq timom koji će rado pomoći ispraviti svaku situaciju!': 'If you have problems with your reservation after it starts, contact our PayParq team who will be happy to help fix any situation!',
+    'Nema dostupnih informacija.': 'No information available.',
+    'Nema dostupnih uputa za dolazak.': 'No getting there instructions available.',
+    'Kako radi': 'How it works',
   };
   let result = text;
   Object.entries(commonPhrases).forEach(([hr, en]) => {
@@ -3225,13 +3230,13 @@ export function SearchPage() {
                   className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
                 >
                   <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showHowToRedeem ? 'rotate-180' : ''}`} />
-                  <p className="text-sm font-bold text-gray-900">Kako radi</p>
+                  <p className="text-sm font-bold text-gray-900">{t('Kako radi', locale)}</p>
                 </button>
                 {showHowToRedeem && (
                   <div className="space-y-2 text-xs text-gray-900 leading-relaxed mt-2 ml-6">
                     {selectedListing.howItWorks
-                      ? selectedListing.howItWorks.split('\n').map((step, i) => <p key={i}>{step}</p>)
-                      : <p className="text-gray-400">Nema dostupnih informacija.</p>}
+                      ? selectedListing.howItWorks.split('\n').map((step, i) => <p key={i}>{translateText(step, locale)}</p>)
+                      : <p className="text-gray-400">{translateText('Nema dostupnih informacija.', locale)}</p>}
                   </div>
                 )}
               </div>
@@ -3243,13 +3248,13 @@ export function SearchPage() {
                   className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
                 >
                   <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showGettingThere ? 'rotate-180' : ''}`} />
-                  <p className="text-sm font-bold text-gray-900">Getting There</p>
+                  <p className="text-sm font-bold text-gray-900">{t('Getting There', locale)}</p>
                 </button>
                 {showGettingThere && (
                   <div className="space-y-2 text-xs text-gray-900 leading-relaxed mt-2 ml-6">
                     {selectedListing.gettingThere
-                      ? <p>{selectedListing.gettingThere}</p>
-                      : <p className="text-gray-400">Nema dostupnih uputa za dolazak.</p>}
+                      ? <p>{translateText(selectedListing.gettingThere, locale)}</p>
+                      : <p className="text-gray-400">{translateText('Nema dostupnih uputa za dolazak.', locale)}</p>}
                   </div>
                 )}
               </div>
@@ -3265,8 +3270,8 @@ export function SearchPage() {
                 </button>
                 {showCancellationPolicy && (
                   <div className="space-y-2 text-xs text-gray-900 leading-relaxed mt-2 ml-6">
-                    <p>U ovoj ustanovi imate vremena do trenutka kada vaša rezervacija počne otkazati svoje parkiranje za puni povrat novca. Rezervaciju možete otkazati na web stranici ili aplikaciji PayParq.</p>
-                    <p>Ako imate problema sa svojom rezervacijom, a vrijeme je nakon početka, obratite se našim PayParq timom koji će rado pomoći ispraviti svaku situaciju!</p>
+                    <p>{translateText('U ovoj ustanovi imate vremena do trenutka kada vaša rezervacija počne otkazati svoje parkiranje za puni povrat novca. Rezervaciju možete otkazati na web stranici ili aplikaciji PayParq.', locale)}</p>
+                    <p>{translateText('Ako imate problema sa svojom rezervacijom, a vrijeme je nakon početka, obratite se našim PayParq timom koji će rado pomoći ispraviti svaku situaciju!', locale)}</p>
                   </div>
                 )}
               </div>
