@@ -18,6 +18,8 @@ export async function POST(request: NextRequest) {
       subtotal,
       fees,
       total,
+      promoCodeId,
+      discountAmount,
     } = body;
 
     // Validate required fields
@@ -56,6 +58,8 @@ export async function POST(request: NextRequest) {
         startTime,
         duration: duration.toString(),
         pricePerHour: pricePerHour.toString(),
+        promoCodeId: promoCodeId || '',
+        discountAmount: discountAmount ? discountAmount.toString() : '0',
       },
     });
 

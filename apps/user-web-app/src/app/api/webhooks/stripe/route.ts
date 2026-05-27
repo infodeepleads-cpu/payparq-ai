@@ -136,6 +136,7 @@ export async function POST(request: NextRequest) {
         const commissionRate = parseFloat(meta.lot_commission_rate || '0.15');
         const plate = meta.plate_number || meta.plate || meta.plateNumber || '';
         const customerEmail = meta.customer_email || meta.customerEmail || session.customer_details?.email || '';
+        const promoCodeId = meta.promoCodeId || '';
 
         if (locationId) {
           const { data: location } = await supabase
@@ -173,6 +174,19 @@ export async function POST(request: NextRequest) {
               check_out: meta.check_out || '',
               status: 'reserved',
             });
+
+            // Create referral record if promo code was used
+            if (promoCodeId) {
+              const referralAmount = Math.round(chargedCents * 0.1); // 10% referral
+              await supabase.from('referrals').insert({
+                booking_id: session.id,
+                location_id: locationId,
+                promo_code_id: promoCodeId,
+                referral_amount: referralAmount,
+                status: 'pending',
+              });
+              console.log('[webhook] Referral created for promo code:', promoCodeId, 'amount:', referralAmount);
+            }
 
             await sendPaymentNotification(location.owner_id, {
               location: location.name || 'Parking lot',
