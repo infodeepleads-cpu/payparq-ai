@@ -140,7 +140,7 @@ const translateText = (text: string, locale: 'en' | 'hr'): string => {
   };
   let result = text;
   Object.entries(commonPhrases).forEach(([hr, en]) => {
-    result = result.replace(new RegExp(hr, 'g'), en);
+    result = result.replace(hr, en);
   });
   return result;
 };
