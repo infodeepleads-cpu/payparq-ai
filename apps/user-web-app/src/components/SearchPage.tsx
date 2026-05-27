@@ -126,6 +126,17 @@ const translateText = (text: string, locale: 'en' | 'hr'): string => {
     'Rezervaciju možete otkazati na web stranici ili aplikaciji PayParq': 'You can cancel your reservation on the PayParq website or app',
     'Ako imate problema sa svojom rezervacijom, a vrijeme je nakon početka, obratite se našim PayParq timom koji će rado pomoći ispraviti svaku situaciju': 'If you have problems with your reservation after it starts, contact our PayParq team who will be happy to help fix any situation',
     'Nema dostupnih informacija o radnom vremenu.': 'No access hours information available.',
+    'Zbog ograničenja veličine, ova lokacija ne može primiti kamionete i putničke kombije.': 'Due to size restrictions, this location cannot accommodate trucks and commercial vans.',
+    'Za egzotična vozila obratite se izravno servisu radi dostupnosti i cijene.': 'For exotic vehicles, contact the facility directly for availability and pricing.',
+    'Kamioni, kombiji i veliki SUV-ovi smatraju se super velikim i podliježu dodatnim naknadama na licu mjesta.': 'Trucks, vans and large SUVs are considered oversized and are subject to additional on-site fees.',
+    'Unesite adresu lokacije u navigaciju. Ulaz je označen znakom za parkiranje.': 'Enter the location address in your navigation. The entrance is marked with a parking sign.',
+    'pon – pet: 6:00 – 23:00': 'Mon - Fri: 6:00 AM - 11:00 PM',
+    'sub – ned: 7:00 – 23:00': 'Sat - Sun: 7:00 AM - 11:00 PM',
+    'Valet usluga': 'Valet Service',
+    'Garaža - Natkrivena': 'Covered Garage',
+    'Osoblje na licu mjesta': 'On-site Staff',
+    'EV punjenje': 'EV Charging',
+    'Pristup invalidskim kolicima': 'Wheelchair Accessible',
   };
   let result = text;
   Object.entries(commonPhrases).forEach(([hr, en]) => {
@@ -3303,7 +3314,7 @@ export function SearchPage() {
                 href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
                 className="block w-full px-5 py-5 bg-blue-500 text-white text-base font-bold rounded-lg hover:bg-blue-700 transition-colors text-center"
               >
-                Rezervirajte sada — €{totalPrice.toFixed(2)}
+                {t('Rezervirajte sada', locale)} — €{totalPrice.toFixed(2)}
               </a>
             </div>
           </div>

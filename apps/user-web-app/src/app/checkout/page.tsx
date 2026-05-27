@@ -78,6 +78,8 @@ const CHECKOUT_TRANSLATIONS = {
   'End Date': { en: 'End Date', hr: 'Završni datum' },
   'End Time': { en: 'End Time', hr: 'Vrijeme završetka' },
   'Price breakdown': { en: 'Price breakdown', hr: 'Raščlamba cijena' },
+  'COUPON APPLIED': { en: 'COUPON APPLIED', hr: 'KUPON PRIMIJENJEN' },
+  'CHECKOUT FREE': { en: 'CHECKOUT FREE', hr: 'BESPLATNA KUPNJA' },
 } as const;
 
 const checkoutT = (key: string, locale: 'en' | 'hr'): string => {
@@ -457,8 +459,8 @@ function SummaryPanel({
 
         {promoDiscountPercent === 100 ? (
           <div className="border-t border-gray-100 pt-4 text-center">
-            <div className="text-sm font-bold text-green-600 mb-2">COUPON APPLIED</div>
-            <div className="text-2xl font-bold text-green-600">CHECKOUT FREE</div>
+            <div className="text-sm font-bold text-green-600 mb-2">{checkoutT('COUPON APPLIED', locale)}</div>
+            <div className="text-2xl font-bold text-green-600">{checkoutT('CHECKOUT FREE', locale)}</div>
           </div>
         ) : (
           <div className="border-t border-gray-100 pt-4 hidden lg:block">
