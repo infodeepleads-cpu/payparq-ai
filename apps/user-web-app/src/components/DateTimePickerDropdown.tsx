@@ -54,11 +54,11 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
     }
   }, [isOpen]);
 
-  // Generate date options for next 30 days
+  // Generate date options for next 365 days
   const generateDateOptions = () => {
     const dates = [];
     const today = new Date();
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 365; i++) {
       const date = new Date(today);
       date.setDate(date.getDate() + i);
       const formatted = date.toISOString().slice(0, 10);
@@ -68,11 +68,11 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
     return dates;
   };
 
-  // Generate time options (every 30 min)
+  // Generate time options (every 15 min)
   const generateTimeOptions = () => {
     const times: Array<{ value: string; label: string }> = [];
     for (let h = 0; h < 24; h++) {
-      for (let m of [0, 30]) {
+      for (let m of [0, 15, 30, 45]) {
         const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
         times.push({ value: timeStr, label: timeStr });
       }

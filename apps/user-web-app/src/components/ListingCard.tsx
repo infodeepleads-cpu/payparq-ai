@@ -1,5 +1,6 @@
 'use client';
 
+import { useLocale } from './LocaleProvider';
 import Image from 'next/image';
 import {
   MapPin,
@@ -62,6 +63,13 @@ interface ListingCardProps {
 }
 
 export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText, checkoutUrl, durationHours = 1, showFee = false, hideDetailsButton = false, spots, reservationType = 'Satna/dnevna' }: ListingCardProps) {
+  const { locale } = useLocale();
+  const getSpacesText = (count: number): string => {
+    if (locale === 'en') {
+      return count === 1 ? '1 space' : `${count} spaces`;
+    }
+    return count === 1 ? '1 mjesto' : `${count} mjesta`;
+  };
   const getDisplayPrice = (list: Parking, duration: number, type: string): number => {
     if (type === 'Mjesečna') {
       return list.pricePerMonth || list.pricePerHour;
@@ -114,7 +122,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
         {/* Yellow Spots Widget Below Photo */}
         <div className="flex items-center justify-center gap-1 bg-yellow-100 rounded-md w-full mt-1" style={{ padding: '4px 2px' }}>
           <Info className="w-3 h-3 text-yellow-700 flex-shrink-0" />
-          <span className="text-xs font-semibold text-gray-900">{(() => { const s = listing.id.charCodeAt(listing.id.length - 1) % 5 + 1; return s === 1 ? '1 mjesto' : `${s} mjesta`; })()}</span>
+          <span className="text-xs font-semibold text-gray-900">{(() => { const s = listing.id.charCodeAt(listing.id.length - 1) % 5 + 1; return getSpacesText(s); })()}</span>
         </div>
       </div>
 
@@ -140,7 +148,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
                 <span className="text-xs font-semibold text-gray-900">({listing.reviews})</span>
               </>
             ) : (
-              <span className="text-xs font-semibold text-gray-900">Novi objekt</span>
+              <span className="text-xs font-semibold text-gray-900">{locale === 'en' ? 'New listing' : 'Novi objekt'}</span>
             )}
           </div>
 
@@ -164,7 +172,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
           {/* Spots Left Widget - Always show */}
           <div className="flex items-center gap-1 bg-yellow-100 rounded-md whitespace-nowrap" style={{ padding: '4px 6px' }}>
             <Info className="w-3.5 h-3.5 text-yellow-700" />
-            <span className="text-xs font-semibold text-gray-900">{(() => { const s = listing.id.charCodeAt(listing.id.length - 1) % 5 + 1; return s === 1 ? '1 mjesto' : `${s} mjesta`; })()}</span>
+            <span className="text-xs font-semibold text-gray-900">{(() => { const s = listing.id.charCodeAt(listing.id.length - 1) % 5 + 1; return getSpacesText(s); })()}</span>
           </div>
 
           {!hideDetailsButton && (
@@ -176,7 +184,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
               }}
               className="text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors whitespace-nowrap"
             >
-              Detalji
+              {locale === 'en' ? 'Details' : 'Detalji'}
             </button>
           )}
           <button
@@ -189,7 +197,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
             }}
             className="px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors whitespace-nowrap cursor-pointer"
           >
-            Rezervirajte sada
+            {locale === 'en' ? 'Book now' : 'Rezervirajte sada'}
           </button>
         </div>
       </div>

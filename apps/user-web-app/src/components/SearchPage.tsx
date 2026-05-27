@@ -13,14 +13,121 @@ import { ReservationTypeDropdown } from './ReservationTypeDropdown';
 import { DestinationPickerWidget } from './DestinationPickerWidget';
 import { ScrollableDateTimePicker } from './ScrollableDateTimePicker';
 import { useLocale } from './LocaleProvider';
-import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle, List, DollarSign } from 'lucide-react';
+import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle, List, DollarSign, Globe } from 'lucide-react';
 import { resolveScannerTruthPriceEuro, getViablePrice } from '@/lib/locationPricing';
-import { AMENITIES_LIST } from '@/lib/amenities';
+import { AMENITIES_LIST, normalizeAmenityLabels } from '@/lib/amenities';
 import { AmenitiesChips } from './AmenitiesChips';
 
 const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
 
 const UNIVERSAL_THINGS_TO_KNOW = 'Zbog ograničenja veličine, ova lokacija ne može primiti kamionete i putničke kombije.\n\nZa egzotična vozila obratite se izravno servisu radi dostupnosti i cijene.\n\nKamioni, kombiji i veliki SUV-ovi smatraju se super velikim i podliježu dodatnim naknadama na licu mjesta.';
+
+const TRANSLATIONS = {
+  'Satna/dnevna': { en: 'Hourly/Daily', hr: 'Satna/dnevna' },
+  'Kamo ideš?': { en: 'Where are you going?', hr: 'Kamo ideš?' },
+  'Trenutna lokacija': { en: 'Current Location', hr: 'Trenutna lokacija' },
+  'Natkriveno/Garaža': { en: 'Covered/Garage', hr: 'Natkriveno/Garaža' },
+  'Poredaj po Udaljenosti': { en: 'Sort by Distance', hr: 'Poredaj po Udaljenosti' },
+  'Poredaj po Cijeni': { en: 'Sort by Price', hr: 'Poredaj po Cijeni' },
+  'Poredaj po Relevantnosti': { en: 'Sort by Relevance', hr: 'Poredaj po Relevantnosti' },
+  'Novi objekt': { en: 'New listing', hr: 'Novi objekt' },
+  'Besplatno otkazivanje': { en: 'Free cancellation', hr: 'Besplatno otkazivanje' },
+  'Garancija Mjesta': { en: 'Space guarantee', hr: 'Garancija Mjesta' },
+  'Kako radi': { en: 'How it works', hr: 'Kako radi' },
+  'Rezervirajte sada': { en: 'Book now', hr: 'Rezervirajte sada' },
+  'Nema pronađenih parkirnih mjesta': { en: 'No parking available', hr: 'Nema pronađenih parkirnih mjesta' },
+  'Nema dostupnih mjesta blizu tog područja': { en: 'No available spaces near that area', hr: 'Nema dostupnih mjesta blizu tog područja' },
+  'Poredaj po': { en: 'Sort by', hr: 'Poredaj po' },
+  'Najkraća Šetnja': { en: 'Shortest Walk', hr: 'Najkraća Šetnja' },
+  'mjesta': { en: 'spaces', hr: 'mjesta' },
+  'preostalo mjesto': { en: 'remaining space', hr: 'preostalo mjesto' },
+  'preostala mjesta': { en: 'remaining spaces', hr: 'preostala mjesta' },
+  'preostalih mjesta': { en: 'remaining spaces', hr: 'preostalih mjesta' },
+  'Instant Access': { en: 'Instant Access', hr: 'Instant Access' },
+  'Self Park': { en: 'Self Park', hr: 'Self Park' },
+  'All Parking Options': { en: 'All Parking Options', hr: 'All Parking Options' },
+  'Filters': { en: 'Filters', hr: 'Filteri' },
+  'Show total price with fees': { en: 'Show total price with fees', hr: 'Prikaži ukupnu cijenu s naknadama' },
+  'Pokušajte prilagoditi svoje filtre': { en: 'Try adjusting your filters', hr: 'Pokušajte prilagoditi svoje filtre' },
+  'Pokušajte sa bližom lokacijom': { en: 'Try a closer location, different dates, or times', hr: 'Pokušajte sa bližom lokacijom, drugačijim datumima ili vremenima' },
+  'Učitavanje parkinga...': { en: 'Loading parking...', hr: 'Učitavanje parkinga...' },
+  'Vaša rezervacija je produžena bez dodatnih troškova!': { en: 'Your reservation has been extended at no extra cost!', hr: 'Vaša rezervacija je produžena bez dodatnih troškova!' },
+  'Things You Should Know': { en: 'Things You Should Know', hr: 'Važne informacije' },
+  'Valet': { en: 'Valet', hr: 'Valet' },
+  'Prijevoz': { en: 'Shuttle', hr: 'Prijevoz' },
+  'EV Punjenje': { en: 'EV Charging', hr: 'EV Punjenje' },
+  'Pristup invalidskim kolicima': { en: 'Wheelchair Accessible', hr: 'Pristup invalidskim kolicima' },
+  'Rampa': { en: 'Ramp', hr: 'Rampa' },
+  'Ulazak/Izlazak': { en: 'In/Out Access', hr: 'Ulazak/Izlazak' },
+  'Punjenje goriva': { en: 'Fuel Refill', hr: 'Punjenje goriva' },
+  'Garaža': { en: 'Garage', hr: 'Garaža' },
+  'Samoparkirani': { en: 'Self-Park', hr: 'Samoparkirani' },
+  'Povratak': { en: 'Back', hr: 'Povratak' },
+  'Show total price': { en: 'Show total price', hr: 'Prikaži ukupnu cijenu' },
+  'Odustani': { en: 'Cancel', hr: 'Odustani' },
+  'Vrijeme': { en: 'Time', hr: 'Vrijeme' },
+  'Primijeni': { en: 'Apply', hr: 'Primijeni' },
+  'Zračna Luka': { en: 'Airport', hr: 'Zračna Luka' },
+  'Gradovi': { en: 'Cities', hr: 'Gradovi' },
+  'Eventovi': { en: 'Events', hr: 'Eventovi' },
+  'Parking near airports': { en: 'Parking near airports', hr: 'Parking near airports' },
+  'Parking in city centers': { en: 'Parking in city centers', hr: 'Parking in city centers' },
+  'Parking near event venues': { en: 'Parking near event venues', hr: 'Parking near event venues' },
+  'Ulazi i izlazi dozvoljeni': { en: 'Entrance and exit allowed', hr: 'Ulazi i izlazi dozvoljeni' },
+  'Nema ulaza i izlaza': { en: 'No entrance and exit', hr: 'Nema ulaza i izlaza' },
+  'Sigurna plaćanja omogućuje Stripe': { en: 'Secure payments powered by Stripe', hr: 'Sigurna plaćanja omogućuje Stripe' },
+  'Rezervacija parkinga': { en: 'Parking Reservation', hr: 'Rezervacija parkinga' },
+  'Nema dostupnih sadržaja.': { en: 'No amenities available.', hr: 'Nema dostupnih sadržaja.' },
+  'Amenities': { en: 'Amenities', hr: 'Sadržaji' },
+  'Vehicle size restrictions may apply': { en: 'Vehicle size restrictions may apply', hr: 'Vehicle size restrictions may apply' },
+  'Provjerite da li Vam vozilo podliježe ograničenjima i dodatnim naknadama.': { en: 'Check if your vehicle is subject to restrictions and additional fees.', hr: 'Provjerite da li Vam vozilo podliježe ograničenjima i dodatnim naknadama.' },
+  'Zatvori': { en: 'Close', hr: 'Zatvori' },
+  'Access Hours': { en: 'Access Hours', hr: 'Vremenske granice' },
+  'Kako radi': { en: 'How it works', hr: 'Kako radi' },
+  'Getting There': { en: 'Getting There', hr: 'Kako doći' },
+  'Free Cancellation Policy': { en: 'Free Cancellation Policy', hr: 'Politika besplatnog otkazivanja' },
+  'Nema dostupnih informacija.': { en: 'No information available.', hr: 'Nema dostupnih informacija.' },
+  'Nema dostupnih uputa za dolazak.': { en: 'No directions available.', hr: 'Nema dostupnih uputa za dolazak.' },
+};
+
+const t = (key: string, locale: 'en' | 'hr'): string => {
+  const trans = TRANSLATIONS[key as keyof typeof TRANSLATIONS];
+  return trans ? trans[locale] : key;
+};
+
+const translateText = (text: string, locale: 'en' | 'hr'): string => {
+  if (locale === 'hr') return text;
+  const commonPhrases: Record<string, string> = {
+    'Vozila parkiraju lagano ukoso redom s lijeve strane od ulaza': 'Vehicles park slowly at an angle in a row from the left side of the entrance',
+    'Osoblje se nalazi u jutarnjoj smjeni, u špici sezone na licu mjesta': 'Staff is available during morning shifts, in peak season on-site',
+    'Parking uvijek otvoren': 'Parking always open',
+    'Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju': 'Show the attendant your PayParq parking pass, printed or on your mobile device',
+    'Samo uđite ako nema nikoga': 'Only enter if no one is there',
+    'Odvezite se kad budete spremni otići': 'Drive away when you\'re ready to leave',
+    'Prvi parking, skreni lijevo pored Ulaza u Restoran Burin': 'First parking, turn left next to the Restaurant Burin entrance',
+    'Odmah prvi se lijeve strane ulaz': 'Immediately first on the left side entrance',
+    'Pratite Google Maps': 'Follow Google Maps',
+    'U ovoj ustanovi imate vremena do trenutka kada vaša rezervacija počne otkazati svoje parkiranje za puni povrat novca': 'At this facility, you have until your reservation starts to cancel your parking for a full refund',
+    'Rezervaciju možete otkazati na web stranici ili aplikaciji PayParq': 'You can cancel your reservation on the PayParq website or app',
+    'Ako imate problema sa svojom rezervacijom, a vrijeme je nakon početka, obratite se našim PayParq timom koji će rado pomoći ispraviti svaku situaciju': 'If you have problems with your reservation after it starts, contact our PayParq team who will be happy to help fix any situation',
+    'Nema dostupnih informacija o radnom vremenu.': 'No access hours information available.',
+  };
+  let result = text;
+  Object.entries(commonPhrases).forEach(([hr, en]) => {
+    result = result.replace(new RegExp(hr, 'g'), en);
+  });
+  return result;
+};
+
+const getSpacesText = (count: number, locale: 'en' | 'hr'): string => {
+  if (locale === 'en') {
+    return count === 1 ? '1 space' : `${count} spaces`;
+  }
+  // Croatian pluralization
+  if (count === 1) return '1 preostalo mjesto';
+  if (count <= 4) return `${count} preostala mjesta`;
+  return `${count} preostalih mjesta`;
+};
 
 const HOTSPOTS_BY_REGION: Record<string, Array<{ name: string; lat: number; lng: number; type: string }>> = {
   split: [
@@ -95,7 +202,7 @@ interface Parking {
 }
 
 export function SearchPage() {
-  const { locale } = useLocale();
+  const { locale, setLocale } = useLocale();
   const searchParams = useSearchParams();
   const [isHubIdMode, setIsHubIdMode] = useState(false);
   const [showArrivalPicker, setShowArrivalPicker] = useState(false);
@@ -427,7 +534,7 @@ export function SearchPage() {
         userGpsRef.current = { lat, lng };
         setMapCenter({ lat, lng });
         setSearchLocationPin({ lat, lng });
-        setSearchLocationState('Trenutna lokacija');
+        setSearchLocationState(t('Trenutna lokacija', locale));
         setUsingCurrentLocation(true);
         setLocationReady(true);
       },
@@ -654,7 +761,7 @@ export function SearchPage() {
   useEffect(() => {
     if (!isLoaded || !showPredictions) return;
 
-    if (searchLocation.length > 0 && searchLocation !== 'Trenutna lokacija') {
+    if (searchLocation.length > 0 && !usingCurrentLocation) {
       const sessionToken = new google.maps.places.AutocompleteSessionToken();
       const service = new google.maps.places.AutocompleteService();
 
@@ -662,6 +769,7 @@ export function SearchPage() {
         {
           input: searchLocation,
           sessionToken,
+          language: locale,
           locationBias: {
             center: { lat: 45.5, lng: 15.9 },
             radius: 150000 // ~150km radius covering Split & Zagreb
@@ -817,7 +925,7 @@ export function SearchPage() {
     if (gps) {
       setMapCenter(gps);
       setSearchLocationPin(gps);
-      setSearchLocationState('Trenutna lokacija');
+      setSearchLocationState(t('Trenutna lokacija', locale));
       setUsingCurrentLocation(true);
       setShowPredictions(false);
     } else if (navigator.geolocation) {
@@ -1061,7 +1169,7 @@ export function SearchPage() {
   useEffect(() => {
     // Don't include showMobileDetails - fixed inset-0 overlay already prevents background interaction
     // Also prevents scroll issues in details content
-    const isModalOpen = allParkingDropdownOpen || filterModalOpen || homeDropdownOpen || mobileMenuOpen || sortModalOpen || showDestinationPicker || showPredictions || showMobileSearchEdit || showArrivalPicker || showDeparturePicker;
+    const isModalOpen = allParkingDropdownOpen || filterModalOpen || sortModalOpen || showDestinationPicker || showPredictions || showMobileSearchEdit || showArrivalPicker || showDeparturePicker;
 
     const preventScroll = (e: TouchEvent) => {
       const target = e.target as HTMLElement;
@@ -1089,7 +1197,7 @@ export function SearchPage() {
       document.body.style.overflowX = '';
       document.documentElement.style.overflowX = '';
     };
-  }, [allParkingDropdownOpen, filterModalOpen, homeDropdownOpen, mobileMenuOpen, sortModalOpen, showDestinationPicker, showPredictions, showMobileSearchEdit, showArrivalPicker, showDeparturePicker]);
+  }, [allParkingDropdownOpen, filterModalOpen, sortModalOpen, showDestinationPicker, showPredictions, showMobileSearchEdit, showArrivalPicker, showDeparturePicker]);
 
   useEffect(() => {
     setPhotoIndex(0);
@@ -1116,6 +1224,7 @@ export function SearchPage() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
+
       {/* Header - Logo + Reservation Type Only */}
       <div className="hidden md:block bg-white border-b border-gray-200 py-5 px-6">
         <div className="flex items-center gap-6">
@@ -1135,14 +1244,14 @@ export function SearchPage() {
 
           {/* Reservation Type - Tall Widget */}
           <div className="border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus-within:border-black min-h-[50px] flex flex-col justify-center px-4 py-2 mr-2 flex-1">
-            <label className="text-xs font-semibold text-gray-400 mb-0.5 leading-none">Vrsta rezervacije</label>
+            <label className="text-xs font-semibold text-gray-400 mb-0.5 leading-none">{locale === 'en' ? 'Reservation Type' : 'Vrsta rezervacije'}</label>
             <select
               value={reservationType}
               onChange={(e) => setReservationType(e.target.value)}
               className="bg-white border-none text-sm font-medium text-gray-900 p-0 pr-6 focus:outline-none cursor-pointer w-full leading-none -ml-1 min-w-[400px]"
             >
-              <option value="Satna/dnevna">Satna/dnevna</option>
-              <option value="Mjesečna">Mjesečna</option>
+              <option value="Satna/dnevna">{t('Satna/dnevna', locale)}</option>
+              <option value="Mjesečna">{locale === 'en' ? 'Monthly' : 'Mjesečna'}</option>
             </select>
           </div>
 
@@ -1150,12 +1259,12 @@ export function SearchPage() {
           <div className="border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus-within:border-black min-h-[50px] flex items-center px-4 py-2 w-[800px] overflow-visible">
             {/* Left half - Location search */}
             <div className="flex-1 flex flex-col justify-center relative">
-              <label className="text-xs font-semibold text-gray-400 mb-0.5 leading-none">Kamo ideš?</label>
+              <label className="text-xs font-semibold text-gray-400 mb-0.5 leading-none">{t('Kamo ideš?', locale)}</label>
               <div className="flex items-center gap-2">
                 {usingCurrentLocation ? <MapPin className="w-4 h-4 text-black flex-shrink-0" /> : <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />}
                 <input
                   type="text"
-                  placeholder={usingCurrentLocation ? 'Trenutna lokacija' : 'Search location...'}
+                  placeholder={usingCurrentLocation ? t('Trenutna lokacija', locale) : 'Search location...'}
                   value={searchLocation}
                   onChange={(e) => { setUsingCurrentLocation(false); setSearchLocation(e.target.value); setShowPredictions(true); }}
                   onFocus={() => {
@@ -1201,7 +1310,7 @@ export function SearchPage() {
                   )}
 
                   {/* Google Places Predictions - only when typing */}
-                  {searchLocation && searchLocation !== 'Trenutna lokacija' && predictions.length > 0 && (
+                  {searchLocation && !usingCurrentLocation && predictions.length > 0 && (
                     <>
                       {predictions.map((pred) => (
                         <button
@@ -1290,7 +1399,7 @@ export function SearchPage() {
                   List your lot
                 </a>
                 <a href="/main" className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
-                  Početna
+                  {locale === 'en' ? 'Home' : 'Početna'}
                 </a>
               </div>
             )}
@@ -1299,7 +1408,7 @@ export function SearchPage() {
       </div>
 
       {/* Mobile Header */}
-      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-4 relative z-50">
+      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-4 relative" style={{ zIndex: 50 }}>
         {/* Logo Row with Menu */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -1331,21 +1440,19 @@ export function SearchPage() {
                   <div className="w-4 h-px bg-gray-600"></div>
                 </div>
               </button>
-              {mobileMenuOpen && (
-                <div className="absolute top-full mt-1 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[160px] sm:min-w-[180px]">
-                  <a href="/main" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 rounded-t-lg" onClick={() => setMobileMenuOpen(false)}>
-                    Početna
-                  </a>
-                  <a href="/members" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200">
-                    Log In
-                  </a>
-                  {pwaPrompt && (
-                    <button onClick={handleInstallPWA} className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
-                      Install App
-                    </button>
-                  )}
-                </div>
-              )}
+              <div className="absolute top-full mt-1 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[160px] sm:min-w-[180px]" style={{ display: mobileMenuOpen ? 'block' : 'none' }}>
+                <a href="/main" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 rounded-t-lg" onClick={() => setMobileMenuOpen(false)}>
+                  {locale === 'en' ? 'Home' : 'Početna'}
+                </a>
+                <a href="/members" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200">
+                  Log In
+                </a>
+                {pwaPrompt && (
+                  <button onClick={handleInstallPWA} className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
+                    Install App
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1359,7 +1466,7 @@ export function SearchPage() {
           >
             {searchLocation ? <MapPin className="w-4 h-4 text-black flex-shrink-0" /> : <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />}
             <div className="flex flex-col justify-center flex-1">
-              <div className="text-xs text-gray-600 font-semibold truncate">{searchLocation || 'Kamo ideš?'}</div>
+              <div className="text-xs text-gray-600 font-semibold truncate">{searchLocation || t('Kamo ideš?', locale)}</div>
               {startTime && endTime && (
                 <div className="text-xs text-gray-700 font-medium">
                   {new Date(startTime).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })} to {new Date(endTime).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })}
@@ -1399,13 +1506,13 @@ export function SearchPage() {
 
             {/* Location Search */}
             <div>
-              <label className="text-xs font-semibold text-gray-400 mb-2 block uppercase">Kamo ideš?</label>
+              <label className="text-xs font-semibold text-gray-400 mb-2 block uppercase">{t('Kamo ideš?', locale)}</label>
               <div className="border border-gray-300 rounded-lg bg-white px-3 py-2 flex items-center gap-2 focus-within:border-[#000000] focus-within:ring-2 focus-within:ring-black">
                 {usingCurrentLocation ? <MapPin className="w-4 h-4 text-black flex-shrink-0" /> : <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />}
                 <input
                   ref={locationInputRef}
                   type="text"
-                  placeholder={usingCurrentLocation ? 'Trenutna lokacija' : 'Search location...'}
+                  placeholder={usingCurrentLocation ? t('Trenutna lokacija', locale) : 'Search location...'}
                   value={searchLocation}
                   onChange={(e) => { setUsingCurrentLocation(false); setSearchLocation(e.target.value); setShowPredictions(true); }}
                   onFocus={() => {
@@ -1480,7 +1587,7 @@ export function SearchPage() {
                 <svg className="w-4 h-4 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Vrijeme
+                {t('Vrijeme', locale)}
               </label>
               <div className="border border-gray-300 rounded-lg bg-white px-3 py-2">
                 {reservationType === 'Mjesečna' ? (
@@ -1506,13 +1613,13 @@ export function SearchPage() {
               onClick={() => setShowMobileSearchEdit(false)}
               className="flex-1 px-4 py-2 border border-gray-300 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-50"
             >
-              Odustani
+              {t('Odustani', locale)}
             </button>
             <button
               onClick={() => setShowMobileSearchEdit(false)}
               className="flex-1 px-4 py-2 bg-[#000000] text-white text-sm font-semibold rounded-lg hover:bg-gray-900"
             >
-              Primijeni
+              {t('Primijeni', locale)}
             </button>
           </div>
         </div>
@@ -1555,7 +1662,7 @@ export function SearchPage() {
                 : 'border border-gray-300 text-gray-900 hover:border-gray-400'
             }`}
           >
-            Natkriveno/Garaža
+            {t('Natkriveno/Garaža', locale)}
           </button>
           <button
             onClick={() => toggleQuickFilter('self-park')}
@@ -1610,7 +1717,7 @@ export function SearchPage() {
                               onClick={() => setAllParkingDropdownOpen(false)}
                             >
                               <div translate="no">
-                                <p className="text-sm font-semibold text-gray-900">{cat.label}</p>
+                                <p className="text-sm font-semibold text-gray-900">{t(cat.label, locale)}</p>
                                 <p className="text-xs text-gray-500">{cat.description}</p>
                               </div>
                             </a>
@@ -1627,7 +1734,7 @@ export function SearchPage() {
                             }}
                           >
                             <div translate="no">
-                              <p className="text-sm font-semibold text-gray-900">{cat.label}</p>
+                              <p className="text-sm font-semibold text-gray-900">{t(cat.label, locale)}</p>
                               <p className="text-xs text-gray-500">{cat.description}</p>
                             </div>
                           </button>
@@ -1666,7 +1773,7 @@ export function SearchPage() {
             ref={filterModalRef}
             className="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
           >
-            <h2 className="text-lg font-bold text-gray-900 mb-6">Filters</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-6">{locale === 'en' ? 'Filters' : 'Filteri'}</h2>
 
             <div className="grid grid-cols-2 gap-8 mb-8">
               {/* Left column - 5 filters */}
@@ -1679,7 +1786,7 @@ export function SearchPage() {
                       onChange={() => toggleFilter(filter.id)}
                       className="w-4 h-4 accent-[#000000] rounded cursor-pointer"
                     />
-                    <span className="text-sm font-medium text-gray-900">{filter.label}</span>
+                    <span className="text-sm font-medium text-gray-900">{t(filter.label, locale)}</span>
                     <span className="text-xs text-gray-500">({filter.count})</span>
                   </label>
                 ))}
@@ -1695,7 +1802,7 @@ export function SearchPage() {
                       onChange={() => toggleFilter(filter.id)}
                       className="w-4 h-4 accent-[#000000] rounded cursor-pointer"
                     />
-                    <span className="text-sm font-medium text-gray-900">{filter.label}</span>
+                    <span className="text-sm font-medium text-gray-900">{t(filter.label, locale)}</span>
                     <span className="text-xs text-gray-500">({filter.count})</span>
                   </label>
                 ))}
@@ -1714,7 +1821,7 @@ export function SearchPage() {
                       }`}
                     />
                   </button>
-                  <span className="text-sm font-medium text-gray-900">Show total price</span>
+                  <span className="text-sm font-medium text-gray-900">{t('Show total price', locale)}</span>
                 </div>
               </div>
             </div>
@@ -1725,13 +1832,13 @@ export function SearchPage() {
                 onClick={() => setFilterModalOpen(false)}
                 className="text-sm font-medium text-gray-600 hover:text-gray-900"
               >
-                Povratak
+                {t('Povratak', locale)}
               </button>
               <button
                 onClick={() => setFilterModalOpen(false)}
                 className="px-6 py-2 bg-[#000000] text-white text-sm font-medium rounded-lg hover:bg-gray-900"
               >
-                Show {filteredListings.length} results
+                {locale === 'en' ? `Show ${filteredListings.length} results` : `Prikaži ${filteredListings.length} rezultata`}
               </button>
             </div>
           </div>
@@ -1742,14 +1849,14 @@ export function SearchPage() {
       {sortModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center">
           <div className="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-gray-900 mb-6">Poredaj po</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-6">{t('Poredaj po', locale)}</h2>
 
             <div className="space-y-3 mb-8">
               {[
-                { value: 'distance', label: 'Udaljenost' },
-                { value: 'price-low', label: 'Cijena (nisko-visoko)' },
-                { value: 'price-high', label: 'Cijena (visoko-nisko)' },
-                { value: 'rating', label: 'Ocjena' },
+                { value: 'distance', label: locale === 'en' ? 'Distance' : 'Udaljenost' },
+                { value: 'price-low', label: locale === 'en' ? 'Price (low-high)' : 'Cijena (nisko-visoko)' },
+                { value: 'price-high', label: locale === 'en' ? 'Price (high-low)' : 'Cijena (visoko-nisko)' },
+                { value: 'rating', label: locale === 'en' ? 'Rating' : 'Ocjena' },
               ].map((option) => (
                 <label key={option.value} className="flex items-center gap-3 cursor-pointer">
                   <input
@@ -1799,9 +1906,9 @@ export function SearchPage() {
               }}
               className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="relevance">Poredaj po Relevantnosti</option>
-              <option value="distance">Poredaj po Udaljenosti</option>
-              <option value="price">Poredaj po Cijeni</option>
+              <option value="relevance">{t('Poredaj po Relevantnosti', locale)}</option>
+              <option value="distance">{t('Poredaj po Udaljenosti', locale)}</option>
+              <option value="price">{t('Poredaj po Cijeni', locale)}</option>
             </select>
           </div>
 
@@ -1852,14 +1959,14 @@ export function SearchPage() {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500">Učitavanje parkinga...</p>
+                          <p className="text-sm text-gray-500">{t('Učitavanje parkinga...', locale)}</p>
                         )}
                       </div>
                     </>
                   ) : (
                     <>
-                      <p className="text-gray-600 font-medium">Nema pronađenih parkirnih mjesta</p>
-                      <p className="text-sm text-gray-500 mt-1">Pokušajte prilagoditi svoje filtre</p>
+                      <p className="text-gray-600 font-medium">{t('Nema pronađenih parkirnih mjesta', locale)}</p>
+                      <p className="text-sm text-gray-500 mt-1">{t('Pokušajte prilagoditi svoje filtre', locale)}</p>
                     </>
                   )}
                 </div>
@@ -1887,9 +1994,9 @@ export function SearchPage() {
                       curr.rating > max.rating ? curr : max
                     );
 
-                    badgeMap.set(closest.id, 'Najkraća Šetnja');
-                    if (cheapest.id !== closest.id) badgeMap.set(cheapest.id, 'Najbolja Vrijednost');
-                    if (!badgeMap.has(highestRated.id)) badgeMap.set(highestRated.id, 'Najviše Ocijenjeno');
+                    badgeMap.set(closest.id, locale === 'en' ? 'Shortest Walk' : 'Najkraća Šetnja');
+                    if (cheapest.id !== closest.id) badgeMap.set(cheapest.id, locale === 'en' ? 'Best Value' : 'Najbolja Vrijednost');
+                    if (!badgeMap.has(highestRated.id)) badgeMap.set(highestRated.id, locale === 'en' ? 'Highest Rated' : 'Najviše Ocijenjeno');
                   }
                 }
 
@@ -2008,8 +2115,8 @@ export function SearchPage() {
               <div className="flex items-start gap-3 flex-1">
                 <Info className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
                 <div className="text-left">
-                  <p className="text-sm font-semibold text-gray-900">Vehicle size restrictions may apply</p>
-                  <p className="text-xs text-gray-600 mt-1">Provjerite da li Vam vozilo podliježe ograničenjima i dodatnim naknadama.</p>
+                  <p className="text-sm font-semibold text-gray-900">{t('Vehicle size restrictions may apply', locale)}</p>
+                  <p className="text-xs text-gray-600 mt-1">{t('Provjerite da li Vam vozilo podliježe ograničenjima i dodatnim naknadama.', locale)}</p>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
@@ -2019,8 +2126,8 @@ export function SearchPage() {
             <div className="flex-shrink-0 w-full px-6 py-4 bg-amber-100 flex items-start gap-3 border-b border-amber-300">
               <AlertCircle className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
               <div className="text-left">
-                <p className="text-sm font-semibold text-gray-900">Predlažemo da rezervirate odmah.</p>
-                <p className="text-xs text-gray-900 mt-1">Ovdje imamo samo {(() => { const s = selectedListing.id.charCodeAt(selectedListing.id.length - 1) % 5 + 1; if (s === 1) return '1 preostalo mjesto'; if (s <= 4) return `${s} preostala mjesta`; return `${s} preostalih mjesta`; })()} po ovoj cijeni!</p>
+                <p className="text-sm font-semibold text-gray-900">{locale === 'en' ? 'We recommend booking now.' : 'Predlažemo da rezervirate odmah.'}</p>
+                <p className="text-xs text-gray-900 mt-1">{(() => { const s = selectedListing.id.charCodeAt(selectedListing.id.length - 1) % 5 + 1; return locale === 'en' ? `We only have ${getSpacesText(s, 'en')} at this price!` : `Ovdje imamo samo ${getSpacesText(s, 'hr')} po ovoj cijeni!`; })()}</p>
               </div>
             </div>
 
@@ -2045,7 +2152,7 @@ export function SearchPage() {
                       <span className="text-gray-900">({selectedListing.reviews})</span>
                     </>
                   ) : (
-                    <span className="text-gray-900">Novi objekt</span>
+                    <span className="text-gray-900">{t('Novi objekt', locale)}</span>
                   )}
                 </div>
 
@@ -2068,7 +2175,7 @@ export function SearchPage() {
               {/* Header and Content Combined */}
               <div className="px-8 py-6 space-y-4">
 
-                <p className="text-sm text-gray-700 font-semibold">Rezervacija parkinga</p>
+                <p className="text-sm text-gray-700 font-semibold">{t('Rezervacija parkinga', locale)}</p>
 
                 {/* Date, Time and Price Row */}
                 <button
@@ -2078,7 +2185,7 @@ export function SearchPage() {
                   <div className="flex-1">
                     <p className="text-base font-bold text-gray-900">{formatTimeRange()}</p>
                     <p className="text-sm text-gray-500 mt-1.5">
-                      {selectedListing?.features?.includes('in-out-allowed') ? 'Ulazi i izlazi dozvoljeni' : 'Nema ulaza i izlaza'}
+                      {selectedListing?.features?.includes('in-out-allowed') ? t('Ulazi i izlazi dozvoljeni', locale) : t('Nema ulaza i izlaza', locale)}
                     </p>
                   </div>
                   <div className="text-right flex flex-col items-end">
@@ -2090,7 +2197,7 @@ export function SearchPage() {
                 {/* Grey Box - Reservation Extended */}
                 <div className="bg-gray-200 rounded-lg p-1.5 mt-4">
                   <div className="flex items-center gap-1.5">
-                    <p className="text-xs font-semibold text-gray-900">Vaša rezervacija je produžena bez dodatnih troškova!</p>
+                    <p className="text-xs font-semibold text-gray-900">{t('Vaša rezervacija je produžena bez dodatnih troškova!', locale)}</p>
                     <Info className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
                   </div>
                 </div>
@@ -2099,8 +2206,8 @@ export function SearchPage() {
                 <div className="flex items-center gap-1.5 bg-yellow-100 rounded-md px-3 py-2">
                   <Info className="w-3.5 h-3.5 text-yellow-700 flex-shrink-0" />
                   <div>
-                    <span className="text-xs font-semibold text-gray-900">{(() => { const s = selectedListing.id.charCodeAt(selectedListing.id.length - 1) % 5 + 1; if (s === 1) return '1 preostalo mjesto'; if (s <= 4) return `${s} preostala mjesta`; return `${s} preostalih mjesta`; })()}</span>
-                    <span className="text-xs text-gray-600 ml-1">po ovoj cijeni</span>
+                    <span className="text-xs font-semibold text-gray-900">{(() => { const s = selectedListing.id.charCodeAt(selectedListing.id.length - 1) % 5 + 1; return getSpacesText(s, locale); })()}</span>
+                    <span className="text-xs text-gray-600 ml-1">{locale === 'en' ? 'at this price' : 'po ovoj cijeni'}</span>
                   </div>
                 </div>
 
@@ -2109,7 +2216,7 @@ export function SearchPage() {
                   href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
                   className="inline-block px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  Rezervirajte sada — €{totalPrice.toFixed(2)}
+                  {t('Rezervirajte sada', locale)} — €{totalPrice.toFixed(2)}
                 </a>
 
                 {/* Green Box */}
@@ -2119,7 +2226,7 @@ export function SearchPage() {
                       <span className="text-white text-xs font-bold">✓</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <p className="text-xs text-gray-700 font-semibold">Besplatno otkazivanje</p>
+                      <p className="text-xs text-gray-700 font-semibold">{t('Besplatno otkazivanje', locale)}</p>
                       <Info className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
                     </div>
                   </div>
@@ -2128,7 +2235,7 @@ export function SearchPage() {
                       <span className="text-white text-xs font-bold">✓</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <p className="text-xs text-gray-700 font-semibold">Garancija Mjesta</p>
+                      <p className="text-xs text-gray-700 font-semibold">{t('Garancija Mjesta', locale)}</p>
                       <Info className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
                     </div>
                   </div>
@@ -2136,7 +2243,7 @@ export function SearchPage() {
 
                 {/* Payment Methods */}
                 <div className="pt-2">
-                  <p className="text-xs text-gray-600">Sigurna plaćanja omogućuje Stripe</p>
+                  <p className="text-xs text-gray-600">{t('Sigurna plaćanja omogućuje Stripe', locale)}</p>
                 </div>
 
                 {/* Things You Should Know */}
@@ -2146,7 +2253,7 @@ export function SearchPage() {
                     className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
                   >
                     <ChevronDown className="w-5 h-5 text-gray-600" />
-                    <p className="text-base font-bold text-gray-900">Things You Should Know</p>
+                    <p className="text-base font-bold text-gray-900">{t('Things You Should Know', locale)}</p>
                   </button>
                   {showThingsToKnow && (
                     <div className="space-y-3 mt-3">
@@ -2154,16 +2261,16 @@ export function SearchPage() {
                       <div className="bg-yellow-100 rounded-md px-3 py-2">
                         <div className="flex items-center gap-1.5 mb-1">
                           <Info className="w-3.5 h-3.5 text-yellow-700 flex-shrink-0" />
-                          <p className="text-xs font-semibold text-gray-900">Važna napomena</p>
+                          <p className="text-xs font-semibold text-gray-900">{locale === 'en' ? 'Important Notice' : 'Važna napomena'}</p>
                         </div>
-                        <p className="text-xs text-gray-900">Molimo vas da poštujete vrijeme vaše rezervacije. Ne ulazite prije početka rezervacije niti je napuštajte nakon njezinog završetka. Ako prekršite ova pravila, naplaćeni iznos će biti izravno od operatera parkinga.</p>
+                        <p className="text-xs text-gray-900">{locale === 'en' ? 'Please respect your reservation time. Do not enter before the start time or leave after the end time. If you violate these rules, the charged amount will be refunded directly by the parking operator.' : 'Molimo vas da poštujete vrijeme vaše rezervacije. Ne ulazite prije početka rezervacije niti je napuštajte nakon njezinog završetka. Ako prekršite ova pravila, naplaćeni iznos će biti izravno od operatera parkinga.'}</p>
                       </div>
 
                       {/* Things to Know Content */}
                       <div className="space-y-3 text-sm text-gray-900 leading-relaxed ml-7">
                         {selectedListing.thingsToKnow
-                          ? selectedListing.thingsToKnow.split('\n\n').map((p, i) => <p key={i}>{p}</p>)
-                          : <p className="text-gray-400">Nema dostupnih informacija.</p>}
+                          ? selectedListing.thingsToKnow.split('\n\n').map((p, i) => <p key={i}>{translateText(p, locale)}</p>)
+                          : <p className="text-gray-400">{t('Nema dostupnih informacija.', locale)}</p>}
                       </div>
                     </div>
                   )}
@@ -2176,13 +2283,13 @@ export function SearchPage() {
                     className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
                   >
                     <ChevronDown className="w-5 h-5 text-gray-600" />
-                    <p className="text-base font-bold text-gray-900">Amenities</p>
+                    <p className="text-base font-bold text-gray-900">{t('Amenities', locale)}</p>
                   </button>
                   {showAmenities && (
                     <div className="mt-3 ml-7">
                       {selectedListing.features && selectedListing.features.length > 0
-                        ? <AmenitiesChips selected={selectedListing.features} size="sm" />
-                        : <p className="text-gray-400 text-sm">Nema dostupnih sadržaja.</p>}
+                        ? <AmenitiesChips selected={normalizeAmenityLabels(selectedListing.features)} size="sm" locale={locale} />
+                        : <p className="text-gray-400 text-sm">{t('Nema dostupnih sadržaja.', locale)}</p>}
                     </div>
                   )}
                 </div>
@@ -2199,8 +2306,8 @@ export function SearchPage() {
                   {showAccessHours && (
                     <div className="space-y-2 mt-3 ml-7 text-sm text-gray-900 leading-relaxed">
                       {selectedListing.accessHours
-                        ? selectedListing.accessHours.split('\n').map((line, i) => <p key={i}>{line}</p>)
-                        : <p className="text-gray-400">Nema dostupnih informacija o radnom vremenu.</p>}
+                        ? selectedListing.accessHours.split('\n').map((line, i) => <p key={i}>{translateText(line, locale)}</p>)
+                        : <p className="text-gray-400">{t('Nema dostupnih informacija o radnom vremenu.', locale)}</p>}
                     </div>
                   )}
                 </div>
@@ -2212,15 +2319,15 @@ export function SearchPage() {
                     className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
                   >
                     <ChevronDown className="w-5 h-5 text-gray-600" />
-                    <p className="text-base font-bold text-gray-900">Kako radi</p>
+                    <p className="text-base font-bold text-gray-900">{t('Kako radi', locale)}</p>
                   </button>
                   {showHowToRedeem && (
                     <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
                       {selectedListing.howItWorks
                         ? selectedListing.howItWorks.split('\n').map((step, i) => (
-                            <p key={i}>{step}</p>
+                            <p key={i}>{translateText(step, locale)}</p>
                           ))
-                        : <p className="text-gray-400">Nema dostupnih informacija.</p>}
+                        : <p className="text-gray-400">{t('Nema dostupnih informacija.', locale)}</p>}
                     </div>
                   )}
                 </div>
@@ -2237,8 +2344,8 @@ export function SearchPage() {
                   {showGettingThere && (
                     <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
                       {selectedListing.gettingThere
-                        ? <p>{selectedListing.gettingThere}</p>
-                        : <p className="text-gray-400">Nema dostupnih uputa za dolazak.</p>}
+                        ? <p>{translateText(selectedListing.gettingThere, locale)}</p>
+                        : <p className="text-gray-400">{t('Nema dostupnih uputa za dolazak.', locale)}</p>}
                     </div>
                   )}
                 </div>
@@ -2250,12 +2357,12 @@ export function SearchPage() {
                     className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
                   >
                     <ChevronDown className="w-5 h-5 text-gray-600" />
-                    <p className="text-base font-bold text-gray-900">Free Cancellation Policy</p>
+                    <p className="text-base font-bold text-gray-900">{t('Free Cancellation Policy', locale)}</p>
                   </button>
                   {showCancellationPolicy && (
                     <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
-                      <p>U ovoj ustanovi imate vremena do trenutka kada vaša rezervacija počne otkazati svoje parkiranje za puni povrat novca. Rezervaciju možete otkazati na web stranici ili aplikaciji PayParq.</p>
-                      <p>Ako imate problema sa svojom rezervacijom, a vrijeme je nakon početka, obratite se našim PayParq timom koji će rado pomoći ispraviti svaku situaciju!</p>
+                      <p>{translateText('U ovoj ustanovi imate vremena do trenutka kada vaša rezervacija počne otkazati svoje parkiranje za puni povrat novca. Rezervaciju možete otkazati na web stranici ili aplikaciji PayParq.', locale)}</p>
+                      <p>{translateText('Ako imate problema sa svojom rezervacijom, a vrijeme je nakon početka, obratite se našim PayParq timom koji će rado pomoći ispraviti svaku situaciju!', locale)}</p>
                     </div>
                   )}
                 </div>
@@ -2340,13 +2447,13 @@ export function SearchPage() {
                   href={buildCheckoutUrl(selectedListing)}
                   className="block w-full mt-2 px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
                 >
-                  Rezervirajte sada — €{totalPrice.toFixed(2)}
+                  {t('Rezervirajte sada', locale)} — €{totalPrice.toFixed(2)}
                 </a>
                 <button
                   onClick={() => setShowPriceBreakdown(false)}
                   className="w-full px-4 py-2 bg-gray-200 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-300 transition-colors"
                 >
-                  Zatvori
+                  {t('Zatvori', locale)}
                 </button>
               </div>
             </div>
@@ -2396,7 +2503,7 @@ export function SearchPage() {
                       }}
                       className="w-full mt-6 px-4 py-3 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-900 transition-colors"
                     >
-                      Zatvori
+                      {t('Zatvori', locale)}
                     </button>
                   </div>
                 ) : (
@@ -2411,7 +2518,7 @@ export function SearchPage() {
                       }}
                       className="w-full px-4 py-3 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-900 transition-colors"
                     >
-                      Zatvori
+                      {t('Zatvori', locale)}
                     </button>
                   </div>
                 )}
@@ -2549,7 +2656,7 @@ export function SearchPage() {
                   : 'border border-gray-300 text-gray-900 hover:border-gray-400'
               }`}
             >
-              Natkriveno/Garaža
+              {t('Natkriveno/Garaža', locale)}
             </button>
             <button
               onClick={() => toggleQuickFilter('self-park')}
@@ -2589,8 +2696,8 @@ export function SearchPage() {
             {filteredListings.length === 0 && (
               <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center flex-col gap-4">
                 <div className="bg-white rounded-lg p-6 text-center max-w-sm shadow-lg">
-                  <p className="text-gray-900 font-semibold mb-2">Nema dostupnih mjesta blizu tog područja</p>
-                  <p className="text-sm text-gray-600">Pokušajte sa bližom lokacijom, drugačijim datumima ili vremenima</p>
+                  <p className="text-gray-900 font-semibold mb-2">{t('Nema dostupnih mjesta blizu tog područja', locale)}</p>
+                  <p className="text-sm text-gray-600">{t('Pokušajte sa bližom lokacijom', locale)}</p>
                 </div>
               </div>
             )}
@@ -2708,14 +2815,14 @@ export function SearchPage() {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500">Učitavanje parkinga...</p>
+                          <p className="text-sm text-gray-500">{t('Učitavanje parkinga...', locale)}</p>
                         )}
                       </div>
                     </>
                   ) : (
                     <>
-                      <p className="text-gray-600 font-medium">Nema pronađenih parkirnih mjesta</p>
-                      <p className="text-sm text-gray-500 mt-1">Pokušajte prilagoditi svoje filtre</p>
+                      <p className="text-gray-600 font-medium">{t('Nema pronađenih parkirnih mjesta', locale)}</p>
+                      <p className="text-sm text-gray-500 mt-1">{t('Pokušajte prilagoditi svoje filtre', locale)}</p>
                     </>
                   )}
                 </div>
@@ -2743,9 +2850,9 @@ export function SearchPage() {
                       curr.rating > max.rating ? curr : max
                     );
 
-                    mobileBadgeMap.set(closest.id, 'Najkraća Šetnja');
-                    if (cheapest.id !== closest.id) mobileBadgeMap.set(cheapest.id, 'Najbolja Vrijednost');
-                    if (!mobileBadgeMap.has(highestRated.id)) mobileBadgeMap.set(highestRated.id, 'Najviše Ocijenjeno');
+                    mobileBadgeMap.set(closest.id, locale === 'en' ? 'Shortest Walk' : 'Najkraća Šetnja');
+                    if (cheapest.id !== closest.id) mobileBadgeMap.set(cheapest.id, locale === 'en' ? 'Best Value' : 'Najbolja Vrijednost');
+                    if (!mobileBadgeMap.has(highestRated.id)) mobileBadgeMap.set(highestRated.id, locale === 'en' ? 'Highest Rated' : 'Najviše Ocijenjeno');
                   }
                 }
 
@@ -2899,8 +3006,8 @@ export function SearchPage() {
                 <div className="flex items-center gap-3 flex-1">
                   <Info className="w-4 h-4 text-gray-600 flex-shrink-0" />
                   <div className="text-center">
-                    <p className="text-xs font-semibold text-gray-900">Vehicle size restrictions may apply</p>
-                    <p className="text-xs text-gray-600 mt-0.5">Provjerite da li Vam vozilo podliježi ograničenjima i dodatnim naknadama.</p>
+                    <p className="text-xs font-semibold text-gray-900">{t('Vehicle size restrictions may apply', locale)}</p>
+                    <p className="text-xs text-gray-600 mt-0.5">{t('Provjerite da li Vam vozilo podliježe ograničenjima i dodatnim naknadama.', locale)}</p>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-600 flex-shrink-0" />
@@ -2910,8 +3017,8 @@ export function SearchPage() {
               <div className="flex-shrink-0 w-[calc(100%+40px)] px-4 py-4 bg-amber-100 flex items-start gap-3 border-b border-amber-300 -mx-4">
                 <AlertCircle className="w-4 h-4 text-amber-700 flex-shrink-0" />
                 <div className="text-center">
-                  <p className="text-xs font-semibold text-gray-900">Predlažemo da rezervirate odmah.</p>
-                  <p className="text-xs text-gray-900 mt-0.5">Ovdje imamo samo {(() => { const s = selectedListing.id.charCodeAt(selectedListing.id.length - 1) % 5 + 1; if (s === 1) return '1 preostalo mjesto'; if (s <= 4) return `${s} preostala mjesta`; return `${s} preostalih mjesta`; })()} po ovoj cijeni!</p>
+                  <p className="text-xs font-semibold text-gray-900">{locale === 'en' ? 'We recommend booking now.' : 'Predlažemo da rezervirate odmah.'}</p>
+                  <p className="text-xs text-gray-900 mt-0.5">{(() => { const s = selectedListing.id.charCodeAt(selectedListing.id.length - 1) % 5 + 1; return locale === 'en' ? `We only have ${getSpacesText(s, 'en')} at this price!` : `Ovdje imamo samo ${getSpacesText(s, 'hr')} po ovoj cijeni!`; })()}</p>
                 </div>
               </div>
 
@@ -2936,7 +3043,7 @@ export function SearchPage() {
                         <span className="text-gray-900">({selectedListing.reviews})</span>
                       </>
                     ) : (
-                      <span className="text-gray-900">Novi objekt</span>
+                      <span className="text-gray-900">{t('Novi objekt', locale)}</span>
                     )}
                   </div>
 
@@ -2967,7 +3074,7 @@ export function SearchPage() {
                     <div className="flex-1">
                       <p className="text-sm font-bold text-gray-900">{formatTimeRange()}</p>
                       <p className="text-xs text-gray-500 mt-1">
-                        {selectedListing?.features?.includes('in-out-allowed') ? 'Ulazi i izlazi dozvoljeni' : 'Nema ulaza i izlaza'}
+                        {selectedListing?.features?.includes('in-out-allowed') ? t('Ulazi i izlazi dozvoljeni', locale) : t('Nema ulaza i izlaza', locale)}
                       </p>
                     </div>
                     <div className="text-right flex flex-col items-end ml-2">
@@ -2980,7 +3087,7 @@ export function SearchPage() {
                 {/* Grey Box - Reservation Extended */}
                 <div className="bg-gray-200 rounded-lg p-3 mt-3 px-4 -mx-4">
                   <div className="flex items-center gap-1.5">
-                    <p className="text-xs font-semibold text-gray-900">Vaša rezervacija je produžena bez dodatnih troškova!</p>
+                    <p className="text-xs font-semibold text-gray-900">{t('Vaša rezervacija je produžena bez dodatnih troškova!', locale)}</p>
                     <Info className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
                   </div>
                 </div>
@@ -2992,8 +3099,8 @@ export function SearchPage() {
                       <span className="text-white text-xs font-bold">!</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <p className="text-xs text-gray-700 font-semibold">{(() => { const s = selectedListing.id.charCodeAt(selectedListing.id.length - 1) % 5 + 1; if (s === 1) return '1 preostalo mjesto'; if (s <= 4) return `${s} preostala mjesta`; return `${s} preostalih mjesta`; })()}</p>
-                      <p className="text-xs text-gray-600">po ovoj cijeni!</p>
+                      <p className="text-xs text-gray-700 font-semibold">{(() => { const s = selectedListing.id.charCodeAt(selectedListing.id.length - 1) % 5 + 1; return getSpacesText(s, locale); })()}</p>
+                      <p className="text-xs text-gray-600">{locale === 'en' ? 'at this price!' : 'po ovoj cijeni!'}</p>
                     </div>
                   </div>
                 </div>
@@ -3005,7 +3112,7 @@ export function SearchPage() {
                       <span className="text-white text-xs font-bold">✓</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <p className="text-xs text-gray-700 font-semibold">Besplatno otkazivanje</p>
+                      <p className="text-xs text-gray-700 font-semibold">{t('Besplatno otkazivanje', locale)}</p>
                       <Info className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
                     </div>
                   </div>
@@ -3014,7 +3121,7 @@ export function SearchPage() {
                       <span className="text-white text-xs font-bold">✓</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <p className="text-xs text-gray-700 font-semibold">Garancija Mjesta</p>
+                      <p className="text-xs text-gray-700 font-semibold">{t('Garancija Mjesta', locale)}</p>
                       <Info className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
                     </div>
                   </div>
@@ -3022,7 +3129,7 @@ export function SearchPage() {
 
                 {/* Payment Methods */}
                 <div className="pt-3">
-                  <p className="text-xs text-gray-600">Sigurna plaćanja omogućuje Stripe</p>
+                  <p className="text-xs text-gray-600">{t('Sigurna plaćanja omogućuje Stripe', locale)}</p>
                 </div>
               </div>
 
@@ -3033,7 +3140,7 @@ export function SearchPage() {
                   className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
                 >
                   <ChevronDown className={`w-5 h-5 text-gray-600 transition-transform ${showThingsToKnow ? 'rotate-180' : ''}`} />
-                  <p className="text-sm font-bold text-gray-900">Things You Should Know</p>
+                  <p className="text-sm font-bold text-gray-900">{t('Things You Should Know', locale)}</p>
                 </button>
                 {showThingsToKnow && (
                   <div className="space-y-2 text-xs text-gray-900 leading-relaxed mt-2 ml-6">
@@ -3056,8 +3163,8 @@ export function SearchPage() {
                 {showAmenities && (
                   <div className="mt-2 ml-6">
                     {selectedListing.features && selectedListing.features.length > 0
-                      ? <AmenitiesChips selected={selectedListing.features} size="sm" />
-                      : <p className="text-gray-400 text-xs">Nema dostupnih sadržaja.</p>}
+                      ? <AmenitiesChips selected={normalizeAmenityLabels(selectedListing.features)} size="sm" locale={locale} />
+                      : <p className="text-gray-400 text-xs">{t('Nema dostupnih sadržaja.', locale)}</p>}
                   </div>
                 )}
               </div>

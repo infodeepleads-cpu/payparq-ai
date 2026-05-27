@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Clock, X } from 'lucide-react';
+import { useLocale } from './LocaleProvider';
 
 interface LotCalendarPricingProps {
   lotId: string;
@@ -24,7 +25,17 @@ interface DateConfig {
   priceMonthly: number | null;
 }
 
+const TRANSLATIONS = {
+  'Odustani': { en: 'Cancel', hr: 'Odustani' },
+} as const;
+
+const t = (key: string, locale: 'en' | 'hr'): string => {
+  const trans = TRANSLATIONS[key as keyof typeof TRANSLATIONS];
+  return trans ? trans[locale] : key;
+};
+
 export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, onBack }: LotCalendarPricingProps) {
+  const { locale } = useLocale();
   const [loading, setLoading] = useState(true);
   const [calendarDate, setCalendarDate] = useState(() => new Date(2026, 4, 1));
   const [dateConfigs, setDateConfigs] = useState<Record<string, DateConfig>>({});
@@ -534,7 +545,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel }: DateConfigW
           onClick={onCancel}
           className="flex-1 px-3 md:px-4 py-2.5 md:py-3 border border-gray-300 text-gray-700 rounded-lg text-xs md:text-sm font-medium hover:bg-gray-50 transition-colors"
         >
-          Odustani
+          {t('Odustani', locale)}
         </button>
         <button
           onClick={() => onSave({
@@ -732,7 +743,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel }: RangeConfigWidget
           onClick={onCancel}
           className="flex-1 px-3 md:px-4 py-2.5 md:py-3 border border-gray-300 text-gray-700 rounded-lg text-xs md:text-sm font-medium hover:bg-gray-50 transition-colors"
         >
-          Odustani
+          {t('Odustani', locale)}
         </button>
         <button
           onClick={() => onApply({

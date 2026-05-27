@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLocale } from './LocaleProvider';
 
 interface Venue {
   name: string;
@@ -160,6 +161,25 @@ const getLocalTimeString = (date: Date) => {
   return `${hours}:${minutes}`;
 };
 
+const TRANSLATIONS = {
+  'Kamo ideš?': { en: 'Where do you need parking?', hr: 'Kamo ideš?' },
+  'Odustani': { en: 'Cancel', hr: 'Odustani' },
+  'Airports': { en: 'Airports', hr: 'Aerodromi' },
+  'City Centers': { en: 'City Centers', hr: 'Gradski centri' },
+  'Events': { en: 'Events', hr: 'Događaji' },
+  'Search venues...': { en: 'Search venues...', hr: 'Pretraži mjesta...' },
+  'When do you need parking?': { en: 'When do you need parking?', hr: 'Kada vam treba parking?' },
+  'Select a location': { en: 'Select a location', hr: 'Odaberite lokaciju' },
+  'Search Parking': { en: 'Search Parking', hr: 'Pretraži parking' },
+  '3 nearest:': { en: '3 nearest:', hr: '3 najbliža:' },
+  'No venues found': { en: 'No venues found', hr: 'Nema pronađenih mjesta' },
+} as const;
+
+const t = (key: string, locale: 'en' | 'hr'): string => {
+  const trans = TRANSLATIONS[key as keyof typeof TRANSLATIONS];
+  return trans ? trans[locale] : key;
+};
+
 interface DestinationPickerWidgetProps {
   onClose: () => void;
   onSelect: (venue: Venue, startTime: string, endTime: string) => void;
@@ -167,6 +187,7 @@ interface DestinationPickerWidgetProps {
 }
 
 export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airport' }: DestinationPickerWidgetProps) {
+  const { locale } = useLocale();
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [startTime, setStartTime] = useState<string>(() => {
     const now = new Date();
@@ -235,8 +256,8 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
       <div className="bg-white w-full md:max-w-2xl md:rounded-2xl rounded-t-2xl shadow-2xl max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-5 md:slide-in-from-bottom-0 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
-          <h2 className="text-lg md:text-xl font-semibold text-gray-900">Kamo ideš?</h2>
-          <button onClick={onClose} className="text-sm font-semibold text-gray-600 hover:text-gray-900">Odustani</button>
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900">{t('Kamo ideš?', locale)}</h2>
+          <button onClick={onClose} className="text-sm font-semibold text-gray-600 hover:text-gray-900">{t('Odustani', locale)}</button>
         </div>
 
         <div className="flex-1 overflow-y-auto overscroll-contain">
@@ -251,7 +272,7 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
                       activeTab === tab ? 'bg-black text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                   >
-                    {tab === 'airport' ? 'Airports' : tab === 'city' ? 'City Centers' : 'Events'}
+                    {tab === 'airport' ? t('Airports', locale) : tab === 'city' ? t('City Centers', locale) : t('Events', locale)}
                   </button>
                 ))}
               </div>
@@ -264,7 +285,7 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
                   </svg>
                   <input
                     type="text"
-                    placeholder="Search venues..."
+                    placeholder={t('Search venues...', locale)}
                     value={searchFilter}
                     onChange={(e) => {
                       const newValue = e.target.value;
@@ -285,11 +306,11 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
                   <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-[200px] md:max-h-[140px] overflow-y-auto overscroll-contain">
                     {searchFilter.length === 0 && (
                       <div className="p-1.5 border-b border-gray-200">
-                        <p className="text-xs font-semibold text-gray-700 px-2 py-0.5">3 nearest:</p>
+                        <p className="text-xs font-semibold text-gray-700 px-2 py-0.5">{t('3 nearest:', locale)}</p>
                       </div>
                     )}
                     {filteredVenues.length === 0 ? (
-                      <p className="text-gray-500 text-center py-2 text-xs">No venues found</p>
+                      <p className="text-gray-500 text-center py-2 text-xs">{t('No venues found', locale)}</p>
                     ) : (
                       filteredVenues.slice(0, searchFilter.length === 0 ? 3 : undefined).map((venue) => (
                         <button
@@ -312,7 +333,7 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
 
               {/* Date and time pickers */}
               <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-3">
-                <p className="text-xs font-semibold text-gray-700">When do you need parking?</p>
+                <p className="text-xs font-semibold text-gray-700">{t('When do you need parking?', locale)}</p>
                 <div className="grid grid-cols-2 gap-2 w-full min-w-0">
                   <select value={startDate.toISOString().slice(0, 10)} onChange={(e) => handleStartDateChange(e.target.value)} className="w-full min-w-0 px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black">
                     {generateDateOptions().map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -344,7 +365,7 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            {selectedVenue ? 'Search Parking' : 'Select a location'}
+            {selectedVenue ? t('Search Parking', locale) : t('Select a location', locale)}
           </button>
         </div>
       </div>

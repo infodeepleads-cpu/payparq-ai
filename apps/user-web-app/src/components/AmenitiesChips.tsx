@@ -7,9 +7,10 @@ interface AmenitiesChipsProps {
   onToggle?: (amenityId: string) => void;
   editable?: boolean;
   size?: 'sm' | 'md';
+  locale?: 'en' | 'hr';
 }
 
-export function AmenitiesChips({ selected, onToggle, editable = false, size = 'md' }: AmenitiesChipsProps) {
+export function AmenitiesChips({ selected, onToggle, editable = false, size = 'md', locale = 'hr' }: AmenitiesChipsProps) {
   const sizeClass = size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm';
   const iconSize = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4';
 
@@ -17,7 +18,7 @@ export function AmenitiesChips({ selected, onToggle, editable = false, size = 'm
   const allAmenityIds = new Set([...selected, ...AMENITIES_LIST.map(a => a.id)]);
   const amenities = Array.from(allAmenityIds).map(id => ({
     id,
-    label: getAmenityLabel(id),
+    label: getAmenityLabel(id, locale),
     icon: getAmenityIcon(id),
   }));
 

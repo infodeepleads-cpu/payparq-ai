@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronDown, Car, Camera, MessageCircle, CreditCard, Plus, Minus, ChevronLeft, ChevronRight, MapPin, Route, Info } from "lucide-react";
+import { useLocale } from "@/components/LocaleProvider";
 
 const LotMap = lazy(() => import('@/components/LotMap'));
 import { FooterBrand } from "@/components/FooterBrand";
@@ -57,6 +58,16 @@ type SectionKey =
   | "report"
   | "spots";
 
+const TRANSLATIONS = {
+  'Ukupno': { en: 'Total', hr: 'Ukupno' },
+  'Ukupno recenzija': { en: 'Total reviews', hr: 'Ukupno recenzija' },
+} as const;
+
+const t = (key: string, locale: 'en' | 'hr'): string => {
+  const trans = TRANSLATIONS[key as keyof typeof TRANSLATIONS];
+  return trans ? trans[locale] : key;
+};
+
 export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems, travelTime }: {
   hub: HubData;
   priceLabel: string;
@@ -64,6 +75,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   faqItems: Array<{ q: string; a: string }>;
   travelTime: string;
 }) {
+  const { locale } = useLocale();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
@@ -1247,7 +1259,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     <div className="border-t border-gray-100 pt-2 flex justify-end">
                       <div className="p-2 w-full flex flex-col items-end gap-0">
                         <span className="font-semibold text-black" style={{ fontSize: '20px' }}>{reserveTotalPriceLabel}</span>
-                        <span className="text-xs text-gray-500 border-b border-gray-400 pb-0.5">Ukupno</span>
+                        <span className="text-xs text-gray-500 border-b border-gray-400 pb-0.5">{t('Ukupno', locale)}</span>
                       </div>
                     </div>
                     <div className="flex flex-col gap-1 bg-yellow-100 rounded-md p-2" style={{ justifyContent: 'flex-end' }}>
@@ -1768,7 +1780,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                                 <p className="text-lg font-semibold text-black">{averageRating} / 10</p>
                               </div>
                               <div>
-                                <p className="text-[11px] uppercase tracking-[0.14em] text-black/60">Ukupno recenzija</p>
+                                <p className="text-[11px] uppercase tracking-[0.14em] text-black/60">{t('Ukupno recenzija', locale)}</p>
                                 <p className="text-lg font-semibold text-black">{totalReviews}</p>
                               </div>
                             </div>
