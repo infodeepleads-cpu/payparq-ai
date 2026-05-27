@@ -83,7 +83,6 @@ const TRANSLATIONS = {
   'Provjerite da li Vam vozilo podliježe ograničenjima i dodatnim naknadama.': { en: 'Check if your vehicle is subject to restrictions and additional fees.', hr: 'Provjerite da li Vam vozilo podliježe ograničenjima i dodatnim naknadama.' },
   'Zatvori': { en: 'Close', hr: 'Zatvori' },
   'Access Hours': { en: 'Access Hours', hr: 'Vremenske granice' },
-  'Kako radi': { en: 'How it works', hr: 'Kako radi' },
   'Getting There': { en: 'Getting There', hr: 'Kako doći' },
   'Free Cancellation Policy': { en: 'Free Cancellation Policy', hr: 'Politika besplatnog otkazivanja' },
   'Nema dostupnih informacija.': { en: 'No information available.', hr: 'Nema dostupnih informacija.' },
