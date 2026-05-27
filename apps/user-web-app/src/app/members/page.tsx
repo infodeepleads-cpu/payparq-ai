@@ -459,6 +459,9 @@ export default function MembersPage() {
   const [buyAddonFuelType, setBuyAddonFuelType] = useState<'diesel' | 'benzin'>('diesel');
   const [addonsBuyLoading, setAddonsBuyLoading] = useState(false);
   const [addonsBuyError, setAddonsBuyError] = useState('');
+  const [referralCodes, setReferralCodes] = useState<Array<{locationId: string; locationName: string; code: string; expiresAt: string}>>([]);
+  const [referralCodesLoading, setReferralCodesLoading] = useState(false);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   // Localhost bypass - force signed in state
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
@@ -1261,6 +1264,33 @@ export default function MembersPage() {
         setOwnerListingsLoading(false);
       });
   }, [user, supabase]);
+
+  // Fetch referral codes for all owner listings
+  useEffect(() => {
+    if (ownerListings.length === 0) {
+      setReferralCodes([]);
+      return;
+    }
+
+    setReferralCodesLoading(true);
+    Promise.all(
+      ownerListings.map(async (listing) => {
+        try {
+          const res = await fetch(`/api/promo/auto?location_id=${encodeURIComponent(listing.id)}`);
+          if (res.ok) {
+            const data = (await res.json()) as { code?: string; error?: string } | null;
+            if (data?.code) {
+              return { locationId: listing.id, locationName: listing.name, code: data.code, expiresAt: '' };
+            }
+          }
+        } catch {}
+        return null;
+      })
+    ).then((codes) => {
+      setReferralCodes(codes.filter((c) => c !== null) as Array<{locationId: string; locationName: string; code: string; expiresAt: string}>);
+      setReferralCodesLoading(false);
+    });
+  }, [ownerListings]);
 
   const refreshStripeConnectStatus = useCallback(async () => {
     if (!user || !supabase) return;
@@ -2626,18 +2656,53 @@ export default function MembersPage() {
         );
       }
       return (
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold tracking-tight text-black">
-            Promotions
-          </h2>
-          <p className="text-sm text-black/70">
-            Redeem and manage promotional codes connected to your profile.
-          </p>
-          <div className="rounded-xl border border-black/10 bg-white p-4">
-            <p className="text-sm text-black/80">
-              Promotions unlocked. Your account is verified.
-            </p>
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold tracking-tight text-black">Promotions</h2>
+            <p className="text-sm text-black/70">Share referral codes & earn 10% commission.</p>
           </div>
+
+          {referralCodesLoading ? (
+            <div className="rounded-xl border border-black/10 bg-white p-4">
+              <p className="text-sm text-black/50">Loading codes...</p>
+            </div>
+          ) : referralCodes.length === 0 ? (
+            <div className="rounded-xl border border-black/10 bg-white p-4">
+              <p className="text-sm text-black/80">No listings yet. Create one to get a shareable code.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {referralCodes.map((rc) => (
+                <div key={rc.locationId} className="rounded-xl border border-[#0F6E56]/30 bg-white overflow-hidden">
+                  <div className="bg-gradient-to-r from-[#0F6E56] to-[#1a9d7f] px-4 py-3">
+                    <p className="text-white font-semibold text-sm">{rc.locationName}</p>
+                  </div>
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={rc.code}
+                        className="flex-1 px-3 py-2 rounded-lg bg-[#E1F5EE] border border-[#0F6E56]/30 text-center font-mono font-bold text-[#0F6E56] text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(rc.code);
+                          setCopiedCode(rc.code);
+                          setTimeout(() => setCopiedCode(null), 1500);
+                        }}
+                        className="px-3 py-2 rounded-lg bg-[#0F6E56] text-white text-xs font-semibold hover:bg-[#0a5241] transition-colors"
+                      >
+                        {copiedCode === rc.code ? '✓' : 'Copy'}
+                      </button>
+                    </div>
+                    <p className="text-xs text-[#0F6E56]/70">10% off next stay • 10% commission</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       );
     }
