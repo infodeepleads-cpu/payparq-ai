@@ -80,6 +80,7 @@ const SUCCESS_TRANSLATIONS = {
   'Kopiraj kod': { en: 'Copy code', hr: 'Kopiraj kod' },
   'Kod kopiran': { en: 'Code copied', hr: 'Kod kopiran' },
   'Podijelite sa prijateljima': { en: 'Share with friends', hr: 'Podijelite sa prijateljima' },
+  '10% na sljedeću rezervaciju': { en: '10% off your next stay', hr: '10% na sljedeću rezervaciju' },
 } as const;
 
 const successT = (key: string, locale: 'en' | 'hr'): string => {
@@ -1346,7 +1347,7 @@ function SuccessContent() {
                 </div>
                 <div className="bg-[#0F6E56]/5 px-3 py-2.5 rounded-lg border border-[#0F6E56]/20">
                   <p className="text-[12px] text-[#0F6E56] font-medium">
-                    Prijatelji dobivaju <span className="font-bold">10% popusta</span>, a ti zarađuješ <span className="font-bold">10% komisije</span>
+                    {successT('10% na sljedeću rezervaciju', locale)}
                   </p>
                 </div>
               </div>

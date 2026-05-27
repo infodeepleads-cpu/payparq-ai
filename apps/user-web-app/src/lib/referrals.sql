@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS referrals (
   status VARCHAR(20) DEFAULT 'pending',
   paid_date TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
-  FOREIGN KEY (location_id) REFERENCES listings(id) ON DELETE CASCADE
+  FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE
 );
 
 -- Indexes for faster queries

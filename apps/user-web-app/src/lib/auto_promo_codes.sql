@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS auto_promo_codes (
   code VARCHAR(10) NOT NULL UNIQUE,
   created_at TIMESTAMP DEFAULT NOW(),
   expires_at TIMESTAMP NOT NULL,
-  FOREIGN KEY (location_id) REFERENCES listings(id) ON DELETE CASCADE
+  FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE
 );
 
 -- Index for faster lookups
