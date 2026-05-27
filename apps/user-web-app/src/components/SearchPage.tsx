@@ -86,6 +86,7 @@ const TRANSLATIONS = {
   'Getting There': { en: 'Getting There', hr: 'Kako doći' },
   'Free Cancellation Policy': { en: 'Free Cancellation Policy', hr: 'Politika besplatnog otkazivanja' },
   'Nema dostupnih informacija.': { en: 'No information available.', hr: 'Nema dostupnih informacija.' },
+  'Nema dostupnih informacija o radnom vremenu.': { en: 'No schedule information available.', hr: 'Nema dostupnih informacija o radnom vremenu.' },
   'Nema dostupnih uputa za dolazak.': { en: 'No directions available.', hr: 'Nema dostupnih uputa za dolazak.' },
   'Popis': { en: 'List', hr: 'Popis' },
   'Karta': { en: 'Map', hr: 'Karta' },
@@ -94,6 +95,14 @@ const TRANSLATIONS = {
   'Use current location': { en: 'Use current location', hr: 'Koristi trenutnu lokaciju' },
   'rezultata': { en: 'results', hr: 'rezultata' },
   'Lokacija': { en: 'Location', hr: 'Lokacija' },
+  'Guaranteed Parking by PayParq': { en: 'Guaranteed Parking by PayParq', hr: 'Garantirana parking sa PayParq-om' },
+  '365-Day Customer Support': { en: '365-Day Customer Support', hr: '365-dnevna podrška klijentima' },
+  'Pregled cijene': { en: 'Price Breakdown', hr: 'Pregled cijene' },
+  'Mjesečna tarifa': { en: 'Monthly Rate', hr: 'Mjesečna tarifa' },
+  'Cijena parkinga': { en: 'Parking Price', hr: 'Cijena parkinga' },
+  'Naknada za uslugu': { en: 'Service Fee', hr: 'Naknada za uslugu' },
+  'Naknada za uslugu uključuje: Jamstvo rezerviranog mjesta, prioritetnu podršku, rješavanje sporova i ostalo.': { en: 'Service Fee includes: Guaranteed parking space, priority support, dispute resolution and more.', hr: 'Naknada za uslugu uključuje: Jamstvo rezerviranog mjesta, prioritetnu podršku, rješavanje sporova i ostalo.' },
+  'Ukupno': { en: 'Total', hr: 'Ukupno' },
 };
 
 const t = (key: string, locale: 'en' | 'hr'): string => {
@@ -2196,7 +2205,7 @@ export function SearchPage() {
                   </div>
                   <div className="text-right flex flex-col items-end">
                     <p className="text-2xl font-bold text-gray-900">€{totalPrice.toFixed(2)}</p>
-                    <span className="text-sm text-gray-500 border-b border-gray-400 pb-0.5 -mt-1">Ukupno</span>
+                    <span className="text-sm text-gray-500 border-b border-gray-400 pb-0.5 -mt-1">{t('Ukupno', locale)}</span>
                   </div>
                 </button>
 
@@ -2307,7 +2316,7 @@ export function SearchPage() {
                     className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
                   >
                     <ChevronDown className="w-5 h-5 text-gray-600" />
-                    <p className="text-base font-bold text-gray-900">Access Hours</p>
+                    <p className="text-base font-bold text-gray-900">{t('Access Hours', locale)}</p>
                   </button>
                   {showAccessHours && (
                     <div className="space-y-2 mt-3 ml-7 text-sm text-gray-900 leading-relaxed">
@@ -2345,7 +2354,7 @@ export function SearchPage() {
                     className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
                   >
                     <ChevronDown className="w-5 h-5 text-gray-600" />
-                    <p className="text-base font-bold text-gray-900">Getting There</p>
+                    <p className="text-base font-bold text-gray-900">{t('Getting There', locale)}</p>
                   </button>
                   {showGettingThere && (
                     <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
@@ -2380,7 +2389,7 @@ export function SearchPage() {
                     className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
                   >
                     <ChevronDown className="w-5 h-5 text-gray-600" />
-                    <p className="text-base font-bold text-gray-900">Guaranteed Parking by PayParq</p>
+                    <p className="text-base font-bold text-gray-900">{t('Guaranteed Parking by PayParq', locale)}</p>
                   </button>
                   {showGuaranteedParking && (
                     <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
@@ -2398,7 +2407,7 @@ export function SearchPage() {
                     className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
                   >
                     <ChevronDown className="w-5 h-5 text-gray-600" />
-                    <p className="text-base font-bold text-gray-900">365-Day Customer Support</p>
+                    <p className="text-base font-bold text-gray-900">{t('365-Day Customer Support', locale)}</p>
                   </button>
                   {showCustomerSupport && (
                     <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
@@ -2425,27 +2434,27 @@ export function SearchPage() {
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
             <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4">
               <div className="space-y-4">
-                <p className="text-lg font-bold text-gray-900">Pregled cijene</p>
+                <p className="text-lg font-bold text-gray-900">{t('Pregled cijene', locale)}</p>
 
                 <div className="space-y-2 border-b border-gray-200 pb-4">
                   <div className="flex justify-between items-center">
                     <p className="text-sm text-gray-600">
                       {reservationType === 'Mjesečna'
-                        ? `Mjesečna tarifa`
-                        : `Cijena parkinga: €${subtotal.toFixed(2)}`
+                        ? t('Mjesečna tarifa', locale)
+                        : `${t('Cijena parkinga', locale)}: €${subtotal.toFixed(2)}`
                       }
                     </p>
                     <p className="text-sm font-semibold text-gray-900">€{subtotal.toFixed(2)}</p>
                   </div>
                   <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">Naknada za uslugu</p>
+                    <p className="text-sm text-gray-600">{t('Naknada za uslugu', locale)}</p>
                     <p className="text-sm font-semibold text-gray-900">€{serviceFee.toFixed(2)}</p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">Naknada za uslugu uključuje: Jamstvo rezerviranog mjesta, prioritetnu podršku, rješavanje sporova i ostalo.</p>
+                  <p className="text-xs text-gray-500 mt-2">{t('Naknada za uslugu uključuje: Jamstvo rezerviranog mjesta, prioritetnu podršku, rješavanje sporova i ostalo.', locale)}</p>
                 </div>
 
                 <div className="flex justify-between items-center pt-2">
-                  <p className="text-lg font-bold text-gray-900">Ukupno</p>
+                  <p className="text-lg font-bold text-gray-900">{t('Ukupno', locale)}</p>
                   <p className="text-lg font-bold text-gray-900">€{totalPrice.toFixed(2)}</p>
                 </div>
 

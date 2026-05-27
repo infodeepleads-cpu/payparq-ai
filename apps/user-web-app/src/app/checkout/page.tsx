@@ -8,6 +8,7 @@ import { Elements, PaymentElement, ExpressCheckoutElement, useStripe, useElement
 import Link from 'next/link';
 import { Star, CheckCircle, X, Phone, Lock } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import { useLocale } from '@/components/LocaleProvider';
 
 const supabaseCheckout = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -41,6 +42,49 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
 // Hardcoded footer text - NEVER translate Stripe branding
 const FOOTER_TEXT = 'Powered by Stripe';
 
+// ─── Translations ─────────────────────────────────────────────────────────────
+const CHECKOUT_TRANSLATIONS = {
+  'Promijeni': { en: 'Change', hr: 'Promijeni' },
+  'Odustani': { en: 'Cancel', hr: 'Odustani' },
+  'Promo kod': { en: 'Promo code', hr: 'Promo kod' },
+  'Unesite kod': { en: 'Enter code', hr: 'Unesite kod' },
+  'Primijeni': { en: 'Apply', hr: 'Primijeni' },
+  'Otkaži besplatno do vremena početka': { en: 'Cancel for free until start time', hr: 'Otkaži besplatno do vremena početka' },
+  'Jednostavno promijenite rezervaciju': { en: 'Simply change your reservation', hr: 'Jednostavno promijenite rezervaciju' },
+  'Raščlamba cijena': { en: 'Price breakdown', hr: 'Raščlamba cijena' },
+  'Telefon': { en: 'Phone', hr: 'Telefon' },
+  'Registarska pločica': { en: 'License plate', hr: 'Registarska pločica' },
+  'Način plaćanja': { en: 'Payment method', hr: 'Način plaćanja' },
+  'ili': { en: 'or', hr: 'ili' },
+  'Završetkom kupnje pristajete na naše': { en: 'By completing your purchase you agree to our', hr: 'Završetkom kupnje pristajete na naše' },
+  'uvjete': { en: 'terms', hr: 'uvjete' },
+  'Obrada...': { en: 'Processing...', hr: 'Obrada...' },
+  'Potvrdi - Besplatno': { en: 'Confirm - Free', hr: 'Potvrdi - Besplatno' },
+  'Plaćajte': { en: 'Pay', hr: 'Plaćajte' },
+  'Potvrđivanjem plaćanja dopuštate tvrtki INDIREKTNO da vas se tereti za ovo plaćanje i buduća plaćanja u skladu s njenim uvjetima.': { en: 'By confirming the payment you authorize INDIREKTNO to bill you for this payment and future payments in accordance with its terms.', hr: 'Potvrđivanjem plaćanja dopuštate tvrtki INDIREKTNO da vas se tereti za ovo plaćanje i buduća plaćanja u skladu s njenim uvjetima.' },
+  'ID Lokacije': { en: 'Location ID', hr: 'ID Lokacije' },
+  'Sesija parkiranja': { en: 'Parking session', hr: 'Sesija parkiranja' },
+  'sat': { en: 'hour', hr: 'sat' },
+  'sata': { en: 'hours', hr: 'sata' },
+  'sati': { en: 'hours', hr: 'sati' },
+  'Subtotal': { en: 'Subtotal', hr: 'Međuzbrojno' },
+  'Service Fee': { en: 'Service Fee', hr: 'Naknada za uslugu' },
+  'Total': { en: 'Total', hr: 'Ukupno' },
+  'Promo Discount': { en: 'Promo Discount', hr: 'Popust od promokoda' },
+  'Check-in → Check-out': { en: 'Check-in → Check-out', hr: 'Ulazak → Izlazak' },
+  'Change Reservation': { en: 'Change Reservation', hr: 'Promijeni rezervaciju' },
+  'Start Date': { en: 'Start Date', hr: 'Početni datum' },
+  'Start Time': { en: 'Start Time', hr: 'Vrijeme početka' },
+  'End Date': { en: 'End Date', hr: 'Završni datum' },
+  'End Time': { en: 'End Time', hr: 'Vrijeme završetka' },
+  'Price breakdown': { en: 'Price breakdown', hr: 'Raščlamba cijena' },
+} as const;
+
+const checkoutT = (key: string, locale: 'en' | 'hr'): string => {
+  const trans = CHECKOUT_TRANSLATIONS[key as keyof typeof CHECKOUT_TRANSLATIONS];
+  return trans ? trans[locale] : key;
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmt(iso: string) {
@@ -73,7 +117,7 @@ function SummaryPanel({
   promoStatus, promoInput, promoError, promoDiscountCents, promoDiscountPercent,
   onApplyPromo, onRemovePromo, onInputChange,
   onCheckInChange, onCheckOutChange, onDatePickerToggle, onAddHours, hourlyRateCents,
-  checkoutSlots,
+  checkoutSlots, locale,
 }: {
   locationName: string;
   locationId: string;
@@ -97,6 +141,7 @@ function SummaryPanel({
   onAddHours?: (hours: number, addCents: number) => void;
   hourlyRateCents?: number;
   checkoutSlots?: CheckoutSlot[];
+  locale: 'en' | 'hr';
 }) {
   const subtotalEur = originalAmountCents / 100;
   const serviceFeeEur = promoDiscountPercent === 100 ? 0 : 0.99 + (subtotalEur * 0.05);
@@ -219,18 +264,21 @@ function SummaryPanel({
       <div className="hidden lg:block">
         <p className="text-sm font-semibold text-gray-900 mb-1">{locationName}</p>
         <p className="text-xs text-gray-600 mb-2">{address || locationId}</p>
-        {displayId && <p className="text-xs text-gray-700">ID Lokacije: <span className="font-mono font-medium text-gray-900">{displayId}</span></p>}
+        {displayId && <p className="text-xs text-gray-700">{checkoutT('ID Lokacije', locale)}: <span className="font-mono font-medium text-gray-900">{displayId}</span></p>}
       </div>
 
       <div className="lg:hidden">
-        <p className="text-xs font-semibold text-gray-600 text-center">Sesija parkiranja ({durationHours} <span translate="no">{(() => {
+        <p className="text-xs font-semibold text-gray-600 text-center">{checkoutT('Sesija parkiranja', locale)} ({durationHours} <span translate="no">{(() => {
+          if (locale === 'en') {
+            return durationHours === 1 ? checkoutT('sat', locale) : checkoutT('sati', locale);
+          }
           const h = durationHours;
           const lastDigit = h % 10;
           const lastTwoDigits = h % 100;
-          if (lastTwoDigits >= 11 && lastTwoDigits <= 14) return 'sati';
-          if (h === 1) return 'sat';
-          if (lastDigit >= 2 && lastDigit <= 4) return 'sata';
-          return 'sati';
+          if (lastTwoDigits >= 11 && lastTwoDigits <= 14) return checkoutT('sati', locale);
+          if (h === 1) return checkoutT('sat', locale);
+          if (lastDigit >= 2 && lastDigit <= 4) return checkoutT('sata', locale);
+          return checkoutT('sati', locale);
         })()}</span>)</p>
         <p className="font-bold text-gray-900 text-3xl mt-2 text-center">€{amountEur.toFixed(2)}</p>
         <div className="mt-3 text-center">
@@ -240,7 +288,7 @@ function SummaryPanel({
 
       <div className="border-t border-gray-100 pt-2 md:pt-6">
         <div>
-          <p className="text-xs font-semibold text-gray-400 mb-2.5">Check-in → Check-out</p>
+          <p className="text-xs font-semibold text-gray-400 mb-2.5">{checkoutT('Check-in → Check-out', locale)}</p>
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <span className="text-sm font-medium text-gray-900 leading-tight truncate">
               {checkIn && checkOut
@@ -248,7 +296,7 @@ function SummaryPanel({
                 : '—'}
             </span>
             <button onClick={openDatePicker} className="px-3 py-1 text-xs font-bold text-gray-900 hover:text-gray-700 focus:outline-none whitespace-nowrap">
-              Promijeni
+              {checkoutT('Promijeni', locale)}
             </button>
           </div>
         </div>
@@ -257,11 +305,11 @@ function SummaryPanel({
       {showDatePicker && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 flex items-center justify-center" style={{background:'rgba(0,0,0,0.18)', zIndex: 2147483647}} onClick={() => { setShowDatePicker(false); onDatePickerToggle?.(false); }}>
           <div className="bg-white rounded-2xl shadow-2xl p-6 pb-6 w-96 mx-4 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-            <p className="text-sm font-bold text-gray-900 mb-4 text-center">Change Reservation</p>
+            <p className="text-sm font-bold text-gray-900 mb-4 text-center">{checkoutT('Change Reservation', locale)}</p>
             <div className="space-y-4 flex-1 overflow-visible">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Start Date</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">{checkoutT('Start Date', locale)}</label>
                   <select
                     value={tempCheckIn.split('T')[0]}
                     onChange={(e) => setTempCheckIn(fromDateTimeLocal(e.target.value, tempCheckIn.split('T')[1]?.slice(0, 5) || '00:00'))}
@@ -275,7 +323,7 @@ function SummaryPanel({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Start Time</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">{checkoutT('Start Time', locale)}</label>
                   <select
                     value={tempCheckIn.split('T')[1]?.slice(0, 5) || '00:00'}
                     onChange={(e) => setTempCheckIn(fromDateTimeLocal(tempCheckIn.split('T')[0], e.target.value))}
@@ -291,7 +339,7 @@ function SummaryPanel({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">End Date</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">{checkoutT('End Date', locale)}</label>
                   <select
                     value={tempCheckOut.split('T')[0]}
                     onChange={(e) => setTempCheckOut(fromDateTimeLocal(e.target.value, tempCheckOut.split('T')[1]?.slice(0, 5) || '00:00'))}
@@ -305,7 +353,7 @@ function SummaryPanel({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">End Time</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">{checkoutT('End Time', locale)}</label>
                   <select
                     value={tempCheckOut.split('T')[1]?.slice(0, 5) || '00:00'}
                     onChange={(e) => setTempCheckOut(fromDateTimeLocal(tempCheckOut.split('T')[0], e.target.value))}
@@ -325,13 +373,13 @@ function SummaryPanel({
                 onClick={handleApplyDateChanges}
                 className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors"
               >
-                Promijeni
+                {checkoutT('Promijeni', locale)}
               </button>
               <button
                 onClick={() => setShowDatePicker(false)}
                 className="w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors"
               >
-                Odustani
+                {checkoutT('Odustani', locale)}
               </button>
             </div>
           </div>
@@ -365,7 +413,7 @@ function SummaryPanel({
         <div className="space-y-2">
           <div className="flex justify-center">
             <button onClick={() => setShowPromoDropdown(!showPromoDropdown)} className="px-3 py-1.5 text-xs font-medium text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-              {promoStatus === 'valid' ? promoInput : 'Promo kod'}
+              {promoStatus === 'valid' ? promoInput : checkoutT('Promo kod', locale)}
             </button>
           </div>
 
@@ -382,9 +430,9 @@ function SummaryPanel({
               </div>
             ) : (
               <div className="flex gap-2">
-                <input autoFocus type="text" value={promoInput} onChange={(e) => onInputChange(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), onApplyPromo())} placeholder="Unesite kod" className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-600" />
+                <input autoFocus type="text" value={promoInput} onChange={(e) => onInputChange(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), onApplyPromo())} placeholder={checkoutT('Unesite kod', locale)} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-600" />
                 <button type="button" onClick={onApplyPromo} disabled={!promoInput.trim() || promoStatus === 'loading'} className="px-3 py-2 rounded-lg text-xs font-semibold text-white bg-gray-900 hover:bg-gray-800 disabled:opacity-40">
-                  {promoStatus === 'loading' ? '...' : 'Primijeni'}
+                  {promoStatus === 'loading' ? '...' : checkoutT('Primijeni', locale)}
                 </button>
               </div>
             )
@@ -397,13 +445,13 @@ function SummaryPanel({
             <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
               <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
             </span>
-            <span>Otkaži besplatno do vremena početka</span>
+            <span>{checkoutT('Otkaži besplatno do vremena početka', locale)}</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
             <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
               <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
             </span>
-            <span>Jednostavno promijenite rezervaciju</span>
+            <span>{checkoutT('Jednostavno promijenite rezervaciju', locale)}</span>
           </div>
         </div>
 
@@ -414,33 +462,33 @@ function SummaryPanel({
           </div>
         ) : (
           <div className="border-t border-gray-100 pt-4 hidden lg:block">
-            <p className="text-xs font-bold text-gray-900 mb-3">Raščlamba cijena</p>
+            <p className="text-xs font-bold text-gray-900 mb-3">{checkoutT('Raščlamba cijena', locale)}</p>
             <div className="space-y-2 text-xs">
               <div className="flex justify-between text-gray-700">
-                <span>Subtotal</span>
+                <span>{checkoutT('Subtotal', locale)}</span>
                 <span className="font-medium">€{subtotalEur.toFixed(2)}</span>
               </div>
               {promoDiscountCents > 0 && (
                 <div className="flex justify-between text-green-600 font-semibold">
-                  <span>Promo Discount (-{promoDiscountPercent}%)</span>
+                  <span>{checkoutT('Promo Discount', locale)} (-{promoDiscountPercent}%)</span>
                   <span>-€{(promoDiscountCents / 100).toFixed(2)}</span>
                 </div>
               )}
               {serviceFeeEur > 0 && (
                 <div className="flex justify-between text-gray-700">
-                  <span>Service Fee</span>
+                  <span>{checkoutT('Service Fee', locale)}</span>
                   <span className="font-medium">€{serviceFeeEur.toFixed(2)}</span>
                 </div>
               )}
               {amountEur > 0 && (
                 <div className="flex justify-between text-gray-900 font-bold pt-2 border-t border-gray-100">
-                  <span>Total</span>
+                  <span>{checkoutT('Total', locale)}</span>
                   <span>€{amountEur.toFixed(2)}</span>
                 </div>
               )}
               {amountEur <= 0 && (
                 <div className="flex justify-between text-green-600 font-bold pt-2 border-t border-gray-100">
-                  <span>Total</span>
+                  <span>{checkoutT('Total', locale)}</span>
                   <span>€0.00</span>
                 </div>
               )}
@@ -504,6 +552,7 @@ function PaidCheckoutForm({
   checkoutSlots?: CheckoutSlot[];
   onPaymentReady?: () => void;
 }) {
+  const { locale } = useLocale();
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
@@ -779,6 +828,7 @@ function PaidCheckoutForm({
             onAddHours={handleAddHours}
             hourlyRateCents={phCents || undefined}
             checkoutSlots={checkoutSlots}
+            locale={locale}
           />
 
           {/* ── Right: form ── */}
@@ -800,7 +850,7 @@ function PaidCheckoutForm({
                   />
                 </div>
                 <div>
-                  <label className="hidden md:block text-xs font-black text-gray-600 mb-1.5 block leading-none">Telefon</label>
+                  <label className="hidden md:block text-xs font-black text-gray-600 mb-1.5 block leading-none">{checkoutT('Telefon', locale)}</label>
                   <input
                     type="tel"
                     placeholder="+385 91 234 5678"
@@ -810,7 +860,7 @@ function PaidCheckoutForm({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-black text-gray-900 mb-1.5 block leading-none uppercase tracking-widest">Registarska pločica</label>
+                  <label className="text-xs font-black text-gray-900 mb-1.5 block leading-none uppercase tracking-widest">{checkoutT('Registarska pločica', locale)}</label>
                   <input
                     type="text"
                     placeholder="MA679XX"
@@ -832,7 +882,7 @@ function PaidCheckoutForm({
 
             {/* Payment Method Section */}
             <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6 space-y-4 overflow-hidden">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Način plaćanja</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">{checkoutT('Način plaćanja', locale)}</p>
               <ExpressCheckoutElement
                 options={{ wallets: { googlePay: 'always', applePay: 'always' } }}
                 onConfirm={async () => {
@@ -860,7 +910,7 @@ function PaidCheckoutForm({
               />
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-xs text-gray-400">ili</span>
+                <span className="text-xs text-gray-400">{checkoutT('ili', locale)}</span>
                 <div className="flex-1 h-px bg-gray-200" />
               </div>
               <PaymentElement
@@ -881,8 +931,8 @@ function PaidCheckoutForm({
             </div>
 
             <p className="text-center text-xs text-gray-400 mb-1 mt-1">
-              Završetkom kupnje pristajete na naše{' '}
-              <a href="/terms" className="underline hover:text-gray-600">uvjete</a>
+              {checkoutT('Završetkom kupnje pristajete na naše', locale)}{' '}
+              <a href="/terms" className="underline hover:text-gray-600">{checkoutT('uvjete', locale)}</a>
             </p>
 
             {/* CTA Button */}
@@ -891,12 +941,12 @@ function PaidCheckoutForm({
               disabled={!stripe || submitting}
               className="w-full py-4 rounded-lg font-bold text-base text-white disabled:opacity-60 transition-opacity shadow-sm bg-blue-600 hover:bg-blue-700"
             >
-              {submitting ? 'Obrada...' : isFree ? 'Potvrdi - Besplatno' : 'Plaćajte'}
+              {submitting ? checkoutT('Obrada...', locale) : isFree ? checkoutT('Potvrdi - Besplatno', locale) : checkoutT('Plaćajte', locale)}
             </button>
 
 
             <p className="hidden md:block text-center text-xs text-gray-500 pb-1 mt-1">
-              Potvrđivanjem plaćanja dopuštate tvrtki INDIREKTNO da vas se tereti za ovo plaćanje i buduća plaćanja u skladu s njenim uvjetima.
+              {checkoutT('Potvrđivanjem plaćanja dopuštate tvrtki INDIREKTNO da vas se tereti za ovo plaćanje i buduća plaćanja u skladu s njenim uvjetima.', locale)}
             </p>
           </form>
         </div>
