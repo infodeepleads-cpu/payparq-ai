@@ -87,6 +87,13 @@ const TRANSLATIONS = {
   'Free Cancellation Policy': { en: 'Free Cancellation Policy', hr: 'Politika besplatnog otkazivanja' },
   'Nema dostupnih informacija.': { en: 'No information available.', hr: 'Nema dostupnih informacija.' },
   'Nema dostupnih uputa za dolazak.': { en: 'No directions available.', hr: 'Nema dostupnih uputa za dolazak.' },
+  'Popis': { en: 'List', hr: 'Popis' },
+  'Karta': { en: 'Map', hr: 'Karta' },
+  'Uredi pretragu': { en: 'Edit search', hr: 'Uredi pretragu' },
+  'Vrsta rezervacije': { en: 'Reservation type', hr: 'Vrsta rezervacije' },
+  'Use current location': { en: 'Use current location', hr: 'Koristi trenutnu lokaciju' },
+  'rezultata': { en: 'results', hr: 'rezultata' },
+  'Lokacija': { en: 'Location', hr: 'Lokacija' },
 };
 
 const t = (key: string, locale: 'en' | 'hr'): string => {
@@ -1480,7 +1487,7 @@ export function SearchPage() {
             className="w-20 rounded-lg border border-gray-300 bg-white hover:border-gray-400 flex items-center justify-center gap-1.5 flex-shrink-0 px-2"
           >
             <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0" />
-            <div className="text-xs text-gray-600 font-semibold truncate">{showMobileMap ? 'Popis' : 'Karta'}</div>
+            <div className="text-xs text-gray-600 font-semibold truncate">{showMobileMap ? t('Popis', locale) : t('Karta', locale)}</div>
           </button>
         </div>
       </div>
@@ -1490,14 +1497,14 @@ export function SearchPage() {
         <div className="md:hidden fixed inset-0 bg-white z-50 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="flex-shrink-0 flex items-center justify-center px-4 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-bold text-gray-900">Uredi pretragu</h2>
+            <h2 className="text-lg font-bold text-gray-900">{t('Uredi pretragu', locale)}</h2>
           </div>
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
             {/* Reservation Type */}
             <div>
-              <label className="text-xs font-semibold text-gray-400 mb-2 block uppercase">Vrsta rezervacije</label>
+              <label className="text-xs font-semibold text-gray-400 mb-2 block uppercase">{t('Vrsta rezervacije', locale)}</label>
               <div className="border border-gray-300 rounded-lg bg-white px-3 py-2">
                 <ReservationTypeDropdown value={reservationType} onChange={setReservationType} />
               </div>
@@ -1536,7 +1543,7 @@ export function SearchPage() {
                       className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-900"
                     >
                       <MapPin className="w-4 h-4 text-gray-600" />
-                      Use current location
+                      {t('Use current location', locale)}
                     </button>
                   )}
 
@@ -2134,7 +2141,7 @@ export function SearchPage() {
             <div className="flex-shrink-0 w-full bg-white border-b border-gray-200 overflow-hidden">
               {/* Black Badge Header */}
               <div className="font-bold text-white bg-black px-2 flex items-center justify-start" style={{ fontSize: '12px', paddingRight: '24px', paddingTop: '6px', paddingBottom: '6px', borderRadius: '0 0 16px 0' }}>
-                Lokacija
+                {t('Lokacija', locale)}
               </div>
 
               {/* Location Content - Card Style */}
@@ -2631,7 +2638,7 @@ export function SearchPage() {
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
               </svg>
-              Filtri
+              {t('Filters', locale)}
             </button>
             {reservationType !== 'Mjesečna' && (
               <button
@@ -2671,7 +2678,7 @@ export function SearchPage() {
               onClick={() => setSortModalOpen(true)}
               className="flex items-center gap-1 px-3 py-1 rounded-full border border-gray-300 text-gray-700 text-xs font-medium hover:border-gray-400 flex-shrink-0 bg-white"
             >
-              Poredaj po
+              {t('Poredaj po', locale)}
             </button>
             <button
               onClick={() => setShowDestinationPicker(true)}
@@ -2685,7 +2692,7 @@ export function SearchPage() {
         {/* Results count */}
         {!showMobileDetails && (
           <div className="flex-shrink-0 px-4 py-2 border-b border-gray-200 relative">
-            <span className="text-xs text-gray-600">{filteredListings.length} rezultata</span>
+            <span className="text-xs text-gray-600">{filteredListings.length} {locale === 'en' ? 'results' : 'rezultata'}</span>
           </div>
         )}
 

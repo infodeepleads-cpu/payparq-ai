@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { FooterBrand } from '@/components/FooterBrand';
 import { SiteHeader } from '@/components/SiteHeader';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { useLocale } from '@/components/LocaleProvider';
 
 type AddonsConfigOption = { id: string; label: string; price_cents: number };
 type AddonsConfigEntry = { enabled?: boolean; price_cents?: number; options?: AddonsConfigOption[]; lot_zone?: string };
@@ -48,6 +49,39 @@ type SessionSummary = {
 };
 
 type Credits = number | '∞';
+
+// ─── Translations ─────────────────────────────────────────────────────────────
+const SUCCESS_TRANSLATIONS = {
+  'Lokacija': { en: 'Location', hr: 'Lokacija' },
+  'Tablica': { en: 'License Plate', hr: 'Tablica' },
+  'Ulaz': { en: 'Check-in', hr: 'Ulaz' },
+  'Izlaz': { en: 'Check-out', hr: 'Izlaz' },
+  'Scan / Prikaži': { en: 'Scan / Show', hr: 'Scan / Prikaži' },
+  'Ukupno plaćeno': { en: 'Total Paid', hr: 'Ukupno plaćeno' },
+  'VRIJEDI': { en: 'VALID', hr: 'VRIJEDI' },
+  'Kako doći': { en: 'How to get there', hr: 'Kako doći' },
+  'Ulaz parkinga': { en: 'Parking entrance', hr: 'Ulaz parkinga' },
+  'Upute za korištenje': { en: 'Instructions for use', hr: 'Upute za korištenje' },
+  'Dovezite se unutra': { en: 'Drive in', hr: 'Dovezite se unutra' },
+  'Uđite direktno na parking. Ako je rampa zatvorena, pritisnite gumb ili nazovite broj za hitne slučajeve.': { en: 'Drive directly onto the parking lot. If the gate is closed, press the button or call the emergency number.', hr: 'Uđite direktno na parking. Ako je rampa zatvorena, pritisnite gumb ili nazovite broj za hitne slučajeve.' },
+  'Parkirajte': { en: 'Park', hr: 'Parkirajte' },
+  'Pronađite slobodan spot i parkirajte. Ako je prisutan attendant, pokažite mu ovaj pass.': { en: 'Find an available spot and park. If an attendant is present, show them this pass.', hr: 'Pronađite slobodan spot i parkirajte. Ako je prisutan attendant, pokažite mu ovaj pass.' },
+  'Dovezite se van': { en: 'Drive out', hr: 'Dovezite se van' },
+  'Izađite s parkinga slobodno. Ako je rampa zatvorena, nazovite broj za hitne slučajeve.': { en: 'Exit the parking lot freely. If the gate is closed, call the emergency number.', hr: 'Izađite s parkinga slobodno. Ako je rampa zatvorena, nazovite broj za hitne slučajeve.' },
+  'Kontakt': { en: 'Contact', hr: 'Kontakt' },
+  'Prikazat će se pri dolasku': { en: 'Will be shown upon arrival', hr: 'Prikazat će se pri dolasku' },
+  'Preuzmi': { en: 'Download', hr: 'Preuzmi' },
+  'Members zona': { en: 'Members area', hr: 'Members zona' },
+  'Rezervirajte, i parkirajte bez problema.': { en: 'Book and park without issues.', hr: 'Rezervirajte, i parkirajte bez problema.' },
+  'Učitavanje...': { en: 'Loading...', hr: 'Učitavanje...' },
+  'VRIJEDI · VALID': { en: 'VALID · VALID', hr: 'VRIJEDI · VALID' },
+  'Adresa nije dostupna': { en: 'Address not available', hr: 'Adresa nije dostupna' },
+} as const;
+
+const successT = (key: string, locale: 'en' | 'hr'): string => {
+  const trans = SUCCESS_TRANSLATIONS[key as keyof typeof SUCCESS_TRANSLATIONS];
+  return trans ? trans[locale] : key;
+};
 
 function CreditBadge({ value }: { value: Credits }) {
   const label = value === '∞' ? '∞' : String(value);
@@ -104,6 +138,7 @@ function ShuttleTicket({
   trackUrl,
   formatDateTime,
   onSummon,
+  locale,
 }: {
   sessionId: string;
   locationName: string | null;
@@ -116,6 +151,7 @@ function ShuttleTicket({
   trackUrl?: string | null;
   formatDateTime: (v: string | null | undefined) => string;
   onSummon?: (() => void) | null;
+  locale: 'en' | 'hr';
 }) {
   const ticketNo = deriveShuttleCode(sessionId);
   return (
@@ -139,7 +175,7 @@ function ShuttleTicket({
       <div className="bg-[#E1F5EE] px-4 py-3 space-y-2 text-[12px]">
         {locationName && (
           <div className="flex justify-between">
-            <span className="text-black/50">Lokacija</span>
+            <span className="text-black/50">{locale === 'en' ? 'Location' : 'Lokacija'}</span>
             <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{locationName}</span>
           </div>
         )}
@@ -246,6 +282,7 @@ function ValetTicket({
   trackUrl,
   formatDateTime,
   onSummon,
+  locale,
 }: {
   sessionId: string;
   locationName: string | null;
@@ -259,6 +296,7 @@ function ValetTicket({
   trackUrl?: string | null;
   formatDateTime: (v: string | null | undefined) => string;
   onSummon?: (() => void) | null;
+  locale: 'en' | 'hr';
 }) {
   const ticketNo = deriveTicketNumber(sessionId);
   return (
@@ -281,7 +319,7 @@ function ValetTicket({
       <div className="bg-[#F5F2FF] px-4 py-3 space-y-2 text-[12px]">
         {locationName && (
           <div className="flex justify-between">
-            <span className="text-black/50">Lokacija</span>
+            <span className="text-black/50">{locale === 'en' ? 'Location' : 'Lokacija'}</span>
             <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{locationName}</span>
           </div>
         )}
@@ -394,6 +432,7 @@ type StoredBooking = {
 };
 
 function SuccessContent() {
+  const { locale } = useLocale();
   const searchParams = useSearchParams();
   const [storedPiId, setStoredPiId] = useState<string | null>(null);
   const [storedBooking, setStoredBooking] = useState<StoredBooking | null>(null);
@@ -990,8 +1029,8 @@ function SuccessContent() {
           <path d="M13 16v-1a2 2 0 1 1 4 0v1"/>
         </svg>
       ),
-      title: 'Dovezite se unutra',
-      desc: 'Uđite direktno na parking. Ako je rampa zatvorena, pritisnite gumb ili nazovite broj za hitne slučajeve.',
+      title: successT('Dovezite se unutra', locale),
+      desc: successT('Uđite direktno na parking. Ako je rampa zatvorena, pritisnite gumb ili nazovite broj za hitne slučajeve.', locale),
       phone: emergencyPhone,
     },
     {
@@ -1003,8 +1042,8 @@ function SuccessContent() {
           <circle cx="18.5" cy="18.5" r="2.5"/>
         </svg>
       ),
-      title: 'Parkirajte',
-      desc: 'Pronađite slobodan spot i parkirajte. Ako je prisutan attendant, pokažite mu ovaj pass.',
+      title: successT('Parkirajte', locale),
+      desc: successT('Pronađite slobodan spot i parkirajte. Ako je prisutan attendant, pokažite mu ovaj pass.', locale),
       phone: null,
     },
     {
@@ -1013,8 +1052,8 @@ function SuccessContent() {
           <path d="M5 12h14M12 5l7 7-7 7"/>
         </svg>
       ),
-      title: 'Dovezite se van',
-      desc: 'Izađite s parkinga slobodno. Ako je rampa zatvorena, nazovite broj za hitne slučajeve.',
+      title: successT('Dovezite se van', locale),
+      desc: successT('Izađite s parkinga slobodno. Ako je rampa zatvorena, nazovite broj za hitne slučajeve.', locale),
       phone: emergencyPhone,
     },
   ];
@@ -1071,7 +1110,7 @@ function SuccessContent() {
 
                 {/* Location */}
                 <div>
-                  <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Lokacija</p>
+                  <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>{successT('Lokacija', locale)}</p>
                   <p className="text-[17px] font-black text-black leading-tight">
                     {checkoutLocationName || checkoutLocationIdLabel || 'Parking'}
                   </p>
@@ -1083,7 +1122,7 @@ function SuccessContent() {
                 {/* Plate */}
                 {plate && (
                   <div>
-                    <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Tablica</p>
+                    <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>{successT('Tablica', locale)}</p>
                     <p className="text-[15px] font-black text-black font-mono tracking-widest">{plate}</p>
                   </div>
                 )}
@@ -1091,7 +1130,7 @@ function SuccessContent() {
                 {/* Times */}
                 <div className="flex items-start gap-2">
                   <div className="flex-1">
-                    <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Ulaz</p>
+                    <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>{successT('Ulaz', locale)}</p>
                     {passDate && <p className="text-[11px] font-medium capitalize mb-0.5" style={{ color: '#64748b' }}>{passDate}</p>}
                     <p className="text-[28px] font-black leading-none tabular-nums" style={{ color: '#1A3A6B' }}>{passTimeIn}</p>
                   </div>
@@ -1101,7 +1140,7 @@ function SuccessContent() {
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Izlaz</p>
+                    <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>{successT('Izlaz', locale)}</p>
                     <p className="text-[11px] font-medium capitalize mb-0.5" style={{ color: '#64748b' }}>{passDateOut || passDate || ' '}</p>
                     <p className="text-[28px] font-black leading-none tabular-nums" style={{ color: '#1A3A6B' }}>{passTimeOut}</p>
                   </div>
@@ -1114,7 +1153,7 @@ function SuccessContent() {
                 <div className="rounded-lg overflow-hidden p-1.5 bg-white" style={{ border: '2px solid #2451A0' }}>
                   <canvas ref={qrRef} width={112} height={112} className="block" />
                 </div>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-center" style={{ color: '#2451A0' }}>Scan / Prikaži</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-center" style={{ color: '#2451A0' }}>{successT('Scan / Prikaži', locale)}</p>
               </div>
 
             </div>
@@ -1129,7 +1168,7 @@ function SuccessContent() {
             {/* Price footer */}
             <div className="px-5 py-3 flex items-center justify-between" style={{ borderTop: '1px solid #CBD5E1' }}>
               <div>
-                <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Ukupno plaćeno</p>
+                <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>{successT('Ukupno plaćeno', locale)}</p>
                 <p className="text-[24px] font-black leading-none" style={{ color: '#1A3A6B' }}>
                   {formatAmount(summary?.amount_total ?? storedBooking?.amountCents ?? 0, summary?.currency ?? 'EUR')}
                 </p>
@@ -1138,14 +1177,14 @@ function SuccessContent() {
                 {summary?.email && (
                   <p className="text-[10px] font-mono" style={{ color: '#94a3b8' }}>{summary.email}</p>
                 )}
-                <p className="text-[9px] uppercase tracking-widest font-bold mt-1" style={{ color: '#2451A0' }}>VRIJEDI · VALID</p>
+                <p className="text-[9px] uppercase tracking-widest font-bold mt-1" style={{ color: '#2451A0' }}>{successT('VRIJEDI · VALID', locale)}</p>
               </div>
             </div>
 
 
             {/* ── Getting There ── */}
             <div style={{ borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>Kako doći · Getting There</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>{successT('Kako doći', locale)} · Getting There</p>
             </div>
             <div className="px-5 py-4 space-y-3">
               {(checkoutLocationName || storedBooking?.address) && (
@@ -1173,7 +1212,7 @@ function SuccessContent() {
                   </svg>
                 </a>
               ) : (
-                <p className="text-[12px] italic" style={{ color: '#94a3b8' }}>Adresa nije dostupna</p>
+                <p className="text-[12px] italic" style={{ color: '#94a3b8' }}>{successT('Adresa nije dostupna', locale)}</p>
               )}
               {(summary?.cover_photo || storedCoverPhoto) && (
                 <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #CBD5E1' }}>
@@ -1184,7 +1223,7 @@ function SuccessContent() {
 
             {/* ── Instructions ── */}
             <div style={{ borderTop: '1px solid #CBD5E1', borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>Upute za korištenje · Instructions</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>{successT('Upute za korištenje', locale)} · Instructions</p>
             </div>
             <div className="px-5 py-1 divide-y" style={{ borderColor: '#E2E8F0' }}>
               {howSteps.map((step, i) => (
@@ -1202,7 +1241,7 @@ function SuccessContent() {
 
             {/* ── Contact numbers ── */}
             <div style={{ borderTop: '1px solid #CBD5E1', borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>Kontakt · Support</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>{successT('Kontakt', locale)} · Support</p>
             </div>
             <div className="px-5 py-4 space-y-2.5">
               <a href="tel:+385915963139"
@@ -1222,7 +1261,7 @@ function SuccessContent() {
                 <div className="block rounded-xl px-4 py-3"
                   style={{ background: '#EBF0FA', border: '1px solid #CBD5E1' }}>
                   <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: '#2451A0' }}>Lot Emergency Number</p>
-                  <p className="text-[13px] font-medium mt-0.5" style={{ color: '#94a3b8' }}>Prikazat će se pri dolasku</p>
+                  <p className="text-[13px] font-medium mt-0.5" style={{ color: '#94a3b8' }}>{successT('Prikazat će se pri dolasku', locale)}</p>
                 </div>
               )}
             </div>
@@ -1238,7 +1277,7 @@ function SuccessContent() {
               className="flex-1 px-4 py-3 rounded-xl text-[13px] font-bold text-center"
               style={{ background: '#EBF0FA', color: '#2451A0', border: '1px solid #2451A0' }}
             >
-              ⬇ Preuzmi
+              ⬇ {successT('Preuzmi', locale)}
             </button>
             <button
               type="button"
@@ -1246,7 +1285,7 @@ function SuccessContent() {
               className="flex-1 px-4 py-3 rounded-xl text-[13px] font-bold text-center"
               style={{ background: '#EBF0FA', color: '#2451A0', border: '1px solid #2451A0' }}
             >
-              Members zona →
+              {successT('Members zona', locale)} →
             </button>
           </div>
 
@@ -1259,7 +1298,7 @@ function SuccessContent() {
           <div className="grid gap-12 md:grid-cols-[2fr,3fr] items-end">
             <div>
               <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-4">Parking · Made Simple</p>
-              <p className="text-sm text-white/70 max-w-md">Rezervirajte, i parkirajte bez problema.</p>
+              <p className="text-sm text-white/70 max-w-md">{successT('Rezervirajte, i parkirajte bez problema.', locale)}</p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
               <div className="space-y-3">
