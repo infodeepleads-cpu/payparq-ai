@@ -244,7 +244,6 @@ export function SearchPage() {
   const [filteredListings, setFilteredListings] = useState<Parking[]>([]);
   const [mapCenter, setMapCenter] = useState({ lat: 45.815, lng: 15.982 }); // Zagreb center
   const [selectedListing, setSelectedListing] = useState<Parking | null>(null);
-  const [autoPromoCode, setAutoPromoCode] = useState<string | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showMobileMap, setShowMobileMap] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -787,28 +786,6 @@ export function SearchPage() {
   // Reset photo index when listing selection changes
   useEffect(() => {
     setPhotoIndex(0);
-  }, [selectedListing?.id]);
-
-  // Fetch auto promo code when listing is selected
-  useEffect(() => {
-    if (!selectedListing) {
-      setAutoPromoCode(null);
-      return;
-    }
-
-    const fetchPromoCode = async () => {
-      try {
-        const response = await fetch(`/api/promo/auto?location_id=${selectedListing.id}`);
-        if (response.ok) {
-          const data = await response.json();
-          setAutoPromoCode(data.code);
-        }
-      } catch (error) {
-        console.error('Error fetching promo code:', error);
-      }
-    };
-
-    fetchPromoCode();
   }, [selectedListing?.id]);
 
   // Initialize Places service and handle location search - immediate, no debounce
@@ -2223,29 +2200,6 @@ export function SearchPage() {
                 </div>
               </div>
             </div>
-
-            {/* Auto Promo Code Widget */}
-            {autoPromoCode && (
-              <div className="flex-shrink-0 w-full bg-gradient-to-r from-blue-50 to-blue-100 border-b border-blue-200 overflow-hidden">
-                <div className="px-8 py-6 space-y-3">
-                  <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">{locale === 'en' ? 'Special Offer' : 'Posebna Ponuda'}</p>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-900">{locale === 'en' ? 'Use code for 10% discount:' : 'Koristite kod za 10% popusta:'}</p>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 bg-white border-2 border-blue-400 px-3 py-2 rounded text-center font-bold text-blue-600 text-lg">{autoPromoCode}</code>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(autoPromoCode);
-                        }}
-                        className="px-3 py-2 bg-blue-600 text-white text-xs font-semibold rounded hover:bg-blue-700 transition-colors"
-                      >
-                        {locale === 'en' ? 'Copy' : 'Kopiraj'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Reservation Details Widget */}
             <div className="flex-shrink-0 w-full bg-white border-b border-gray-200">

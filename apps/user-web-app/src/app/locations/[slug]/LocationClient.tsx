@@ -61,11 +61,50 @@ type SectionKey =
 const TRANSLATIONS = {
   'Ukupno': { en: 'Total', hr: 'Ukupno' },
   'Ukupno recenzija': { en: 'Total reviews', hr: 'Ukupno recenzija' },
+  'Natkriveno': { en: 'Covered', hr: 'Natkriveno' },
+  'Garaža': { en: 'Garage', hr: 'Garaža' },
+  'Valet': { en: 'Valet', hr: 'Valet' },
+  'Samoparkirani': { en: 'Self-Park', hr: 'Samoparkirani' },
+  'Parking uvijek otvoren.': { en: 'Parking always open.', hr: 'Parking uvijek otvoren.' },
+  'Access Hours': { en: 'Access Hours', hr: 'Vremenske granice' },
+  'How it works': { en: 'How it works', hr: 'Kako radi' },
+  'Getting There': { en: 'Getting There', hr: 'Kako doći' },
+  'Things You Should Know': { en: 'Things You Should Know', hr: 'Važne informacije' },
+  'Free Cancellation Policy': { en: 'Free Cancellation Policy', hr: 'Politika besplatnog otkazivanja' },
+  'Amenities': { en: 'Amenities', hr: 'Usluge' },
 } as const;
 
 const t = (key: string, locale: 'en' | 'hr'): string => {
   const trans = TRANSLATIONS[key as keyof typeof TRANSLATIONS];
   return trans ? trans[locale] : key;
+};
+
+const translateText = (text: string, locale: 'en' | 'hr'): string => {
+  if (locale === 'hr') return text;
+
+  const commonPhrases: Record<string, string> = {
+    'Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju': 'Show the attendant your PayParq parking pass, printed or on your mobile device',
+    'Samo uđite ako nema nikoga': 'Only enter if no one is there',
+    'Odvezite se kad budete spremni otići': 'Drive away when you\'re ready to leave',
+    'Pratite Google Maps': 'Follow Google Maps',
+    'U ovoj ustanovi imate vremena do trenutka kada vaša rezervacija počne otkazati svoje parkiranje za puni povrat novca': 'At this facility, you have until your reservation starts to cancel your parking for a full refund',
+    'Rezervaciju možete otkazati na web stranici ili aplikaciji PayParq': 'You can cancel your reservation on the PayParq website or app',
+    'Ako imate problema sa svojom rezervacijom': 'If you have problems with your reservation',
+    'obratite se našim PayParq timom koji će rado pomoći ispraviti svaku situaciju': 'contact our PayParq team who will be happy to help fix any situation',
+    'Vozila parkiraju lagano ukoso redom s lijeve strane od ulaza': 'Vehicles park slowly at an angle in a row from the left side of the entrance',
+    'Osoblje se nalazi u jutarnjoj smjeni, u špici sezone na licu mjesta': 'Staff is available during morning shifts, in peak season on-site',
+    'Parking uvijek otvoren': 'Parking always open',
+    'Pristup invalidskim kolicima': 'Wheelchair accessible',
+    'Prvi parking, skreni lijevo pored Ulaza u Restoran Burin': 'First parking, turn left next to the Restaurant Burin entrance',
+    'Odmah prvi se lijeve strane ulaz': 'Immediately first on the left side entrance',
+  };
+
+  let result = text;
+  Object.entries(commonPhrases).forEach(([hr, en]) => {
+    result = result.replace(new RegExp(hr, 'g'), en);
+  });
+
+  return result;
 };
 
 export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems, travelTime }: {
@@ -1879,9 +1918,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                                   ) : (
                                     <Plus className="w-4 h-4 text-[#5F3DFC] mt-0.5 shrink-0" />
                                   )}
-                                  <span className="text-left">{i.q}</span>
+                                  <span className="text-left">{translateText(i.q, locale)}</span>
                                 </button>
-                                {open ? <div className="pb-3 pl-7 text-sm text-black/75" dangerouslySetInnerHTML={{ __html: i.a }} /> : null}
+                                {open ? <div className="pb-3 pl-7 text-sm text-black/75" dangerouslySetInnerHTML={{ __html: translateText(i.a, locale) }} /> : null}
                               </div>
                             );
                           })}

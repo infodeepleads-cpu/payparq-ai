@@ -76,6 +76,10 @@ const SUCCESS_TRANSLATIONS = {
   'Učitavanje...': { en: 'Loading...', hr: 'Učitavanje...' },
   'VRIJEDI · VALID': { en: 'VALID · VALID', hr: 'VRIJEDI · VALID' },
   'Adresa nije dostupna': { en: 'Address not available', hr: 'Adresa nije dostupna' },
+  'Posebna ponuda': { en: 'Special Offer', hr: 'Posebna ponuda' },
+  'Kopiraj kod': { en: 'Copy code', hr: 'Kopiraj kod' },
+  'Kod kopiran': { en: 'Code copied', hr: 'Kod kopiran' },
+  'Podijelite sa prijateljima': { en: 'Share with friends', hr: 'Podijelite sa prijateljima' },
 } as const;
 
 const successT = (key: string, locale: 'en' | 'hr'): string => {
@@ -437,6 +441,9 @@ function SuccessContent() {
   const [storedPiId, setStoredPiId] = useState<string | null>(null);
   const [storedBooking, setStoredBooking] = useState<StoredBooking | null>(null);
   const [storedCoverPhoto, setStoredCoverPhoto] = useState<string | null>(null);
+  const [autoPromoCode, setAutoPromoCode] = useState<string | null>(null);
+  const [autoPromoLoading, setAutoPromoLoading] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('last_payment_intent');
@@ -616,6 +623,32 @@ function SuccessContent() {
     return () => { active = false; };
   }, [sessionId, hasRealSessionId, fallbackDisplayId, fallbackLocationId, fallbackCheckIn, fallbackCheckOut]);
 
+  // Fetch auto promo code for this location
+  useEffect(() => {
+    let active = true;
+    const locationId = summary?.location_id ?? fallbackLocationId;
+    if (!locationId) return;
+
+    const fetchPromoCode = async () => {
+      setAutoPromoLoading(true);
+      try {
+        const response = await fetch(`/api/promo/auto?location_id=${encodeURIComponent(locationId)}`);
+        if (!active) return;
+        const data = (await response.json().catch(() => null)) as { code?: string; error?: string } | null;
+        if (response.ok && data?.code) {
+          setAutoPromoCode(data.code);
+        }
+      } catch {
+        // Silently fail
+      } finally {
+        if (!active) return;
+        setAutoPromoLoading(false);
+      }
+    };
+    fetchPromoCode();
+    return () => { active = false; };
+  }, [summary?.location_id, fallbackLocationId]);
+
   const membersHref = useMemo(() => {
     if (!summary?.email) return '/members';
     return `/members?email=${encodeURIComponent(summary.email)}`;
@@ -771,6 +804,18 @@ function SuccessContent() {
         .save();
     } catch {
       window.print();
+    }
+  };
+
+  const handleCopyPromoCode = async () => {
+    if (!autoPromoCode) return;
+    try {
+      await navigator.clipboard.writeText(autoPromoCode);
+      setCopyFeedback(successT('Kod kopiran', locale));
+      setTimeout(() => setCopyFeedback(null), 2000);
+    } catch {
+      setCopyFeedback(successT('Kod kopiran', locale));
+      setTimeout(() => setCopyFeedback(null), 2000);
     }
   };
 
@@ -1268,6 +1313,45 @@ function SuccessContent() {
 
 
           </div>
+
+          {/* Auto Promo Code Widget */}
+          {autoPromoCode && (
+            <div className="bg-white rounded-2xl overflow-hidden shadow-lg border border-[#0F6E56]/30">
+              {/* Widget header */}
+              <div className="bg-gradient-to-r from-[#0F6E56] to-[#1a9d7f] px-5 py-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white text-[12px] font-semibold uppercase tracking-widest">✨ {successT('Posebna ponuda', locale)}</p>
+                    <p className="text-white/80 text-[11px] mt-0.5">{successT('Podijelite sa prijateljima', locale)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Widget body */}
+              <div className="px-5 py-4 space-y-3">
+                <div>
+                  <p className="text-[11px] font-semibold text-[#0F6E56] uppercase tracking-widest mb-2">Vaš referral kod</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 px-4 py-3 rounded-xl bg-[#E1F5EE] border border-[#0F6E56]/30 flex items-center justify-between">
+                      <p className="text-[18px] font-black text-[#0F6E56] font-mono tracking-wide">{autoPromoCode}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCopyPromoCode}
+                      className="px-4 py-3 rounded-xl bg-[#0F6E56] text-white font-semibold text-[13px] hover:bg-[#0a5241] transition-colors shrink-0 min-w-[80px]"
+                    >
+                      {copyFeedback ? '✓' : successT('Kopiraj kod', locale)}
+                    </button>
+                  </div>
+                </div>
+                <div className="bg-[#0F6E56]/5 px-3 py-2.5 rounded-lg border border-[#0F6E56]/20">
+                  <p className="text-[12px] text-[#0F6E56] font-medium">
+                    Prijatelji dobivaju <span className="font-bold">10% popusta</span>, a ti zarađuješ <span className="font-bold">10% komisije</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Download + Members — hidden from print/PDF */}
           <div className="flex items-center justify-center gap-3 py-3 print:hidden">

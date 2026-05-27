@@ -3,8 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
+import { useLocale } from "./LocaleProvider";
 
 export function SiteHeader({ hideAnnouncementBar = false }: { hideAnnouncementBar?: boolean }) {
+  const { locale, setLocale } = useLocale();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
@@ -171,6 +173,20 @@ export function SiteHeader({ hideAnnouncementBar = false }: { hideAnnouncementBa
                 >
                   Početna
                 </Link>
+                <div className="flex items-center justify-center gap-1 py-2">
+                  <button
+                    onClick={() => setLocale('hr')}
+                    className={`px-3 py-1 text-xs font-semibold rounded transition-colors ${locale === 'hr' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                  >
+                    HR
+                  </button>
+                  <button
+                    onClick={() => setLocale('en')}
+                    className={`px-3 py-1 text-xs font-semibold rounded transition-colors ${locale === 'en' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                  >
+                    EN
+                  </button>
+                </div>
                 <Link href="/vision" className="w-full py-3 text-center hover:bg-gray-100 transition-colors">
                   Experience
                 </Link>
