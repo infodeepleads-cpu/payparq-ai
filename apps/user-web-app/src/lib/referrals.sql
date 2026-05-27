@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS referrals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id TEXT NOT NULL UNIQUE,
-  location_id TEXT NOT NULL,
+  location_id UUID NOT NULL,
   promo_code_id UUID NOT NULL REFERENCES auto_promo_codes(id) ON DELETE CASCADE,
   referral_amount INTEGER NOT NULL,
   status VARCHAR(20) DEFAULT 'pending',

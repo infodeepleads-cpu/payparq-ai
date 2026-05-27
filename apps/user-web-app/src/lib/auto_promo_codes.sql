@@ -1,7 +1,7 @@
 -- Auto Promo Codes Table
 CREATE TABLE IF NOT EXISTS auto_promo_codes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  location_id TEXT NOT NULL UNIQUE,
+  location_id UUID NOT NULL UNIQUE,
   code VARCHAR(10) NOT NULL UNIQUE,
   created_at TIMESTAMP DEFAULT NOW(),
   expires_at TIMESTAMP NOT NULL,
