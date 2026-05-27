@@ -592,6 +592,7 @@ function PaidCheckoutForm({
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoDiscountCents, setPromoDiscountCents] = useState(0);
   const [promoDiscountPercent, setPromoDiscountPercent] = useState(0);
+  const [promoCodeId, setPromoCodeId] = useState<string | null>(null);
 
   // Mobile payment options toggle
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
@@ -668,17 +669,20 @@ function PaidCheckoutForm({
     setPromoStatus('loading');
     setPromoError(null);
     try {
-      const res = await fetch('/api/stripe/validate-promo', {
+      const res = await fetch('/api/promo/validate-auto', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, location_id: locationId, amount_cents: originalAmountCents }),
+        body: JSON.stringify({ code, location_id: locationId }),
       });
       const data = await res.json();
       if (data.valid) {
+        const discountCents = Math.round(originalAmountCents * (data.discount_percent / 100));
+        const finalAmountCents = originalAmountCents - discountCents;
         setPromoStatus('valid');
-        setPromoDiscountCents(data.discount_cents);
+        setPromoDiscountCents(discountCents);
         setPromoDiscountPercent(data.discount_percent);
-        onAmountChange(data.final_amount_cents, code);
+        setPromoCodeId(data.promo_code_id);
+        onAmountChange(finalAmountCents, code);
       } else {
         setPromoStatus('invalid');
         setPromoError(data.error || 'Invalid promo code');
@@ -695,6 +699,7 @@ function PaidCheckoutForm({
     setPromoError(null);
     setPromoDiscountCents(0);
     setPromoDiscountPercent(0);
+    setPromoCodeId(null);
     onAmountChange(originalAmountCents);
   };
 
@@ -745,7 +750,14 @@ function PaidCheckoutForm({
           await fetch('/api/stripe/payment-intent', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ payment_intent_id: piId, email, plate, phone }),
+            body: JSON.stringify({
+              payment_intent_id: piId,
+              email,
+              plate,
+              phone,
+              promoCodeId: promoCodeId || undefined,
+              discountAmount: promoDiscountCents || undefined,
+            }),
           });
         } catch { /* non-blocking */ }
       }
