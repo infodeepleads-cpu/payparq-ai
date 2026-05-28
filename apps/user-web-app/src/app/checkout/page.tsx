@@ -80,6 +80,8 @@ const CHECKOUT_TRANSLATIONS = {
   'Price breakdown': { en: 'Price breakdown', hr: 'Raščlamba cijena' },
   'COUPON APPLIED': { en: 'COUPON APPLIED', hr: 'KUPON PRIMIJENJEN' },
   'CHECKOUT FREE': { en: 'CHECKOUT FREE', hr: 'BESPLATNA KUPNJA' },
+  'Kod primijenjen': { en: 'Code applied', hr: 'Kod primijenjen' },
+  'Popust': { en: 'Discount', hr: 'Popust' },
 } as const;
 
 const checkoutT = (key: string, locale: 'en' | 'hr'): string => {
@@ -457,11 +459,31 @@ function SummaryPanel({
           </div>
         </div>
 
-        {promoDiscountPercent === 100 ? (
-          <div className="border-t border-gray-100 pt-4 text-center">
-            <div className="text-sm font-bold text-green-600 mb-2">{checkoutT('COUPON APPLIED', locale)}</div>
-            <div className="text-2xl font-bold text-green-600">{checkoutT('CHECKOUT FREE', locale)}</div>
+        {promoStatus === 'valid' && promoDiscountPercent > 0 && (
+          <div className="border-t border-gray-100 pt-4">
+            {promoDiscountPercent === 100 ? (
+              <div className="text-center">
+                <div className="text-sm font-bold text-green-600 mb-2">{checkoutT('COUPON APPLIED', locale)}</div>
+                <div className="text-2xl font-bold text-green-600">{checkoutT('CHECKOUT FREE', locale)}</div>
+              </div>
+            ) : (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-bold text-green-700">{checkoutT('Kod primijenjen', locale)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-green-700">
+                  <span>{promoInput}</span>
+                  <span>-{promoDiscountPercent}%</span>
+                </div>
+                <div className="flex justify-between text-sm font-bold text-green-700 pt-2 border-t border-green-200">
+                  <span>{checkoutT('Popust', locale)}</span>
+                  <span>-€{(promoDiscountCents / 100).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
           </div>
+        )}
         ) : (
           <div className="border-t border-gray-100 pt-4 hidden lg:block">
             <p className="text-xs font-bold text-gray-900 mb-3">{checkoutT('Raščlamba cijena', locale)}</p>
