@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 type Campaign = {
   id: string;
@@ -13,12 +13,32 @@ type Campaign = {
   clickRate: number;
 };
 
+type Template = {
+  id: string;
+  name: string;
+  subject: string;
+  htmlContent: string;
+  category?: string;
+  description?: string;
+};
+
 export function CampaignsPanel() {
-  const [tab, setTab] = useState<'list' | 'create' | 'analytics'>('list');
+  const [tab, setTab] = useState<'list' | 'create' | 'templates' | 'analytics'>('list');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Modal states
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [showEditTemplateModal, setShowEditTemplateModal] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [saveTemplateData, setSaveTemplateData] = useState({
+    name: '',
+    category: '',
+    description: '',
+  });
 
   const [formData, setFormData] = useState({
     name: '',
@@ -27,6 +47,13 @@ export function CampaignsPanel() {
     recipientList: 'all',
     scheduleTime: '',
   });
+
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+
+  useEffect(() => {
+    if (tab === 'list') fetchCampaigns();
+    if (tab === 'templates') fetchTemplates();
+  }, [tab]);
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,8 +72,9 @@ export function CampaignsPanel() {
       if (!response.ok) throw new Error(data.error || 'Failed to create campaign');
 
       setSuccess('Campaign created successfully');
+      setShowSaveTemplateModal(true);
       setFormData({ name: '', subject: '', htmlContent: '', recipientList: 'all', scheduleTime: '' });
-      setTab('list');
+      setSelectedTemplateId('');
       fetchCampaigns();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error creating campaign');
@@ -55,8 +83,107 @@ export function CampaignsPanel() {
     }
   };
 
-  const fetchCampaigns = async () => {
+  const handleSaveAsTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!saveTemplateData.name) {
+      setError('Template name is required');
+      return;
+    }
+
     setLoading(true);
+    try {
+      const response = await fetch('/api/templates/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: saveTemplateData.name,
+          subject: formData.subject,
+          htmlContent: formData.htmlContent,
+          category: saveTemplateData.category || null,
+          description: saveTemplateData.description || null,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to save template');
+
+      setSuccess('Template saved successfully!');
+      setShowSaveTemplateModal(false);
+      setSaveTemplateData({ name: '', category: '', description: '' });
+      fetchTemplates();
+      setTimeout(() => setTab('list'), 1000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error saving template');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTemplate) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/templates/${editingTemplate.id}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editingTemplate.name,
+          subject: editingTemplate.subject,
+          htmlContent: editingTemplate.htmlContent,
+          category: editingTemplate.category || null,
+          description: editingTemplate.description || null,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to update template');
+
+      setSuccess('Template updated successfully!');
+      setShowEditTemplateModal(false);
+      setEditingTemplate(null);
+      fetchTemplates();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error updating template');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    if (!confirm('Delete this template permanently?')) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/templates/${templateId}/delete`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete template');
+      }
+
+      setSuccess('Template deleted');
+      fetchTemplates();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error deleting template');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoadTemplate = (template: Template) => {
+    setFormData({
+      ...formData,
+      subject: template.subject,
+      htmlContent: template.htmlContent,
+    });
+    setSelectedTemplateId(template.id);
+  };
+
+  const fetchCampaigns = async () => {
     try {
       const response = await fetch('/api/campaigns/list');
       const data = await response.json();
@@ -64,8 +191,17 @@ export function CampaignsPanel() {
       setCampaigns(data.campaigns || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error fetching campaigns');
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const fetchTemplates = async () => {
+    try {
+      const response = await fetch('/api/templates/list');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to fetch templates');
+      setTemplates(data.templates || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error fetching templates');
     }
   };
 
@@ -112,6 +248,16 @@ export function CampaignsPanel() {
           }`}
         >
           Create
+        </button>
+        <button
+          onClick={() => setTab('templates')}
+          className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            tab === 'templates'
+              ? 'border-black text-black'
+              : 'border-transparent text-black/60 hover:text-black'
+          }`}
+        >
+          Templates
         </button>
         <button
           onClick={() => setTab('analytics')}
@@ -213,6 +359,28 @@ export function CampaignsPanel() {
       {tab === 'create' && (
         <form onSubmit={handleCreateCampaign} className="space-y-4">
           <div>
+            <label className="block text-sm font-semibold mb-2">Start from Template (Optional)</label>
+            <select
+              value={selectedTemplateId}
+              onChange={(e) => {
+                if (e.target.value) {
+                  const template = templates.find(t => t.id === e.target.value);
+                  if (template) handleLoadTemplate(template);
+                }
+              }}
+              className="w-full px-3 py-2 border border-black/10 rounded-lg outline-none focus:border-black/30"
+            >
+              <option value="">Select a template...</option>
+              {templates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-black/60 mt-1">Template will pre-fill subject and content below</p>
+          </div>
+
+          <div>
             <label className="block text-sm font-semibold mb-2">Campaign Name</label>
             <input
               type="text"
@@ -292,6 +460,57 @@ export function CampaignsPanel() {
         </form>
       )}
 
+      {tab === 'templates' && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Email Templates</h2>
+
+          {templates.length === 0 ? (
+            <div className="p-8 text-center border border-dashed border-black/20 rounded-lg">
+              <p className="text-black/60 text-sm">No templates yet. Save a campaign as template to create one.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {templates.map((template) => (
+                <div key={template.id} className="p-4 border border-black/10 rounded-lg hover:border-black/30 transition-colors">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-black">{template.name}</h3>
+                      <p className="text-sm text-black/60">{template.subject}</p>
+                      {template.description && (
+                        <p className="text-xs text-black/40 mt-1">{template.description}</p>
+                      )}
+                    </div>
+                    {template.category && (
+                      <span className="ml-3 px-2 py-1 bg-gray-100 text-gray-800 text-xs font-semibold rounded">
+                        {template.category}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={() => {
+                        setEditingTemplate(template);
+                        setShowEditTemplateModal(true);
+                      }}
+                      className="px-3 py-1 text-xs font-semibold text-black border border-black/20 rounded hover:bg-black/5"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTemplate(template.id)}
+                      className="px-3 py-1 text-xs font-semibold text-red-600 border border-red-200 rounded hover:bg-red-50"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {tab === 'analytics' && (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Campaign Analytics</h2>
@@ -312,6 +531,154 @@ export function CampaignsPanel() {
                   : '0'}%
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save as Template Modal */}
+      {showSaveTemplateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Save Campaign as Template</h2>
+            <form onSubmit={handleSaveAsTemplate} className="space-y-3">
+              <div>
+                <label className="block text-sm font-semibold mb-1">Template Name</label>
+                <input
+                  type="text"
+                  value={saveTemplateData.name}
+                  onChange={(e) => setSaveTemplateData({ ...saveTemplateData, name: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 border border-black/10 rounded-lg outline-none focus:border-black/30 text-sm"
+                  placeholder="Email 3 - Product Launch"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-1">Category (Optional)</label>
+                <input
+                  type="text"
+                  value={saveTemplateData.category}
+                  onChange={(e) => setSaveTemplateData({ ...saveTemplateData, category: e.target.value })}
+                  className="w-full px-3 py-2 border border-black/10 rounded-lg outline-none focus:border-black/30 text-sm"
+                  placeholder="hotel, general, promotional"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-1">Description (Optional)</label>
+                <input
+                  type="text"
+                  value={saveTemplateData.description}
+                  onChange={(e) => setSaveTemplateData({ ...saveTemplateData, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-black/10 rounded-lg outline-none focus:border-black/30 text-sm"
+                  placeholder="Brief description of this template"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 px-4 py-2 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-900 disabled:opacity-60"
+                >
+                  {loading ? 'Saving...' : 'Save Template'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSaveTemplateModal(false);
+                    setSaveTemplateData({ name: '', category: '', description: '' });
+                  }}
+                  className="flex-1 px-4 py-2 border border-black/10 text-black text-sm font-semibold rounded-lg hover:bg-black/5"
+                >
+                  Skip
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Template Modal */}
+      {showEditTemplateModal && editingTemplate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Edit Template</h2>
+            <form onSubmit={handleUpdateTemplate} className="space-y-3">
+              <div>
+                <label className="block text-sm font-semibold mb-1">Template Name</label>
+                <input
+                  type="text"
+                  value={editingTemplate.name}
+                  onChange={(e) => setEditingTemplate({ ...editingTemplate, name: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 border border-black/10 rounded-lg outline-none focus:border-black/30 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-1">Subject</label>
+                <input
+                  type="text"
+                  value={editingTemplate.subject}
+                  onChange={(e) => setEditingTemplate({ ...editingTemplate, subject: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 border border-black/10 rounded-lg outline-none focus:border-black/30 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-1">Category</label>
+                <input
+                  type="text"
+                  value={editingTemplate.category || ''}
+                  onChange={(e) => setEditingTemplate({ ...editingTemplate, category: e.target.value })}
+                  className="w-full px-3 py-2 border border-black/10 rounded-lg outline-none focus:border-black/30 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-1">Description</label>
+                <input
+                  type="text"
+                  value={editingTemplate.description || ''}
+                  onChange={(e) => setEditingTemplate({ ...editingTemplate, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-black/10 rounded-lg outline-none focus:border-black/30 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-1">HTML Content</label>
+                <textarea
+                  value={editingTemplate.htmlContent}
+                  onChange={(e) => setEditingTemplate({ ...editingTemplate, htmlContent: e.target.value })}
+                  required
+                  rows={10}
+                  className="w-full px-3 py-2 border border-black/10 rounded-lg outline-none focus:border-black/30 font-mono text-xs"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 px-4 py-2 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-900 disabled:opacity-60"
+                >
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditTemplateModal(false);
+                    setEditingTemplate(null);
+                  }}
+                  className="flex-1 px-4 py-2 border border-black/10 text-black text-sm font-semibold rounded-lg hover:bg-black/5"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
