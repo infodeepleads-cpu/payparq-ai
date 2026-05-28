@@ -669,6 +669,7 @@ function PaidCheckoutForm({
     setPromoStatus('loading');
     setPromoError(null);
     try {
+      // Try new auto referral code first
       const res = await fetch('/api/promo/validate-auto', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -683,10 +684,27 @@ function PaidCheckoutForm({
         setPromoDiscountPercent(data.discount_percent);
         setPromoCodeId(data.promo_code_id);
         onAmountChange(finalAmountCents, code);
-      } else {
-        setPromoStatus('invalid');
-        setPromoError(data.error || 'Invalid promo code');
+        return;
       }
+
+      // Fallback to old 100% free code validation
+      const stripeRes = await fetch('/api/stripe/validate-promo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, location_id: locationId, amount_cents: originalAmountCents }),
+      });
+      const stripeData = await stripeRes.json();
+      if (stripeData.valid) {
+        setPromoStatus('valid');
+        setPromoDiscountCents(stripeData.discount_cents);
+        setPromoDiscountPercent(stripeData.discount_percent);
+        onAmountChange(stripeData.final_amount_cents, code);
+        return;
+      }
+
+      // Both failed
+      setPromoStatus('invalid');
+      setPromoError(stripeData.error || data.error || 'Invalid promo code');
     } catch {
       setPromoStatus('invalid');
       setPromoError('Error. Please try again.');
