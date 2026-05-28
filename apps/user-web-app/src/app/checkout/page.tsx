@@ -459,7 +459,7 @@ function SummaryPanel({
           </div>
         </div>
 
-        {promoStatus === 'valid' && promoDiscountPercent > 0 && (
+        {promoStatus === 'valid' && promoDiscountPercent > 0 ? (
           <div className="border-t border-gray-100 pt-4">
             {promoDiscountPercent === 100 ? (
               <div className="text-center">
@@ -483,7 +483,6 @@ function SummaryPanel({
               </div>
             )}
           </div>
-        )}
         ) : (
           <div className="border-t border-gray-100 pt-4 hidden lg:block">
             <p className="text-xs font-bold text-gray-900 mb-3">{checkoutT('Raščlamba cijena', locale)}</p>

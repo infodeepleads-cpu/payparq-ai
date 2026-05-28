@@ -1323,7 +1323,7 @@ function SuccessContent() {
               <div className="bg-gradient-to-r from-[#0F6E56] to-[#1a9d7f] px-5 py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-white text-[12px] font-semibold uppercase tracking-widest">✨ {successT('Posebna ponuda', locale)}</p>
+                    <p className="text-white text-[12px] font-semibold uppercase tracking-widest">{successT('Posebna ponuda', locale)}</p>
                     <p className="text-white/80 text-[11px] mt-0.5">{successT('Podijelite sa prijateljima', locale)}</p>
                   </div>
                 </div>
