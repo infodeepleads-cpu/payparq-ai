@@ -85,6 +85,9 @@ const CHECKOUT_TRANSLATIONS = {
   'CHECKOUT FREE': { en: 'CHECKOUT FREE', hr: 'BESPLATNA KUPNJA' },
   'Kod primijenjen': { en: 'Code applied', hr: 'Kod primijenjen' },
   'Popust': { en: 'Discount', hr: 'Popust' },
+  'Secure Checkout': { en: 'Secure Checkout', hr: 'Sigurna kupnja' },
+  'Contact Info': { en: 'Contact Info', hr: 'Kontaktni podaci' },
+  'Email Address': { en: 'Email Address', hr: 'Email adresa' },
 } as const;
 
 const checkoutT = (key: string, locale: 'en' | 'hr'): string => {
@@ -854,7 +857,7 @@ function PaidCheckoutForm({
           </Link>
           <div className="flex items-center gap-1.5 text-xs text-gray-600">
             <Lock className="w-3 h-3" />
-            <span className="font-medium">Secure Checkout</span>
+            <span className="font-medium">{checkoutT('Secure Checkout', locale)}</span>
           </div>
         </div>
       </header>
@@ -895,10 +898,10 @@ function PaidCheckoutForm({
 
             {/* Contact Info Display Widget */}
             <div className="bg-white rounded-none md:rounded-lg border-0 md:border md:border-gray-200 p-2 md:p-6 space-y-2 md:space-y-5">
-              <p className="text-xs font-black text-gray-900 uppercase tracking-widest">Contact Info</p>
+              <p className="text-xs font-black text-gray-900 uppercase tracking-widest">{checkoutT('Contact Info', locale)}</p>
               <div className="space-y-3">
                 <div>
-                  <label className="hidden md:block text-xs font-black text-gray-600 mb-1.5 block leading-none">Email Address</label>
+                  <label className="hidden md:block text-xs font-black text-gray-600 mb-1.5 block leading-none">{checkoutT('Email Address', locale)}</label>
                   <input
                     type="email"
                     placeholder="you@example.com"
