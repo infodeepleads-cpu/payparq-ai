@@ -166,7 +166,7 @@ export default function ListYourSpace() {
           <div className="relative max-w-6xl mx-auto px-4 md:px-12">
             <div className="flex flex-col md:grid md:grid-cols-2 gap-1 md:gap-12 items-center justify-center px-4 md:px-0">
               <div className="flex justify-center md:justify-end md:order-2 md:col-span-1 order-1 w-full md:w-auto md:mr-[-60px] md:mt-[-90px] -mt-4">
-                <form id="register-form" onSubmit={handleRegisterSubmit} className="rounded-2xl bg-white px-6 md:px-8 pt-14 md:pt-10 pb-10 md:pb-12 shadow-lg flex flex-col justify-start w-full max-w-sm md:max-w-md">
+                <form id="register-form" onSubmit={handleRegisterSubmit} className="rounded-2xl bg-white px-6 md:px-8 pt-7 md:pt-5 pb-10 md:pb-12 shadow-lg flex flex-col justify-start w-full max-w-sm md:max-w-md">
                   <h3 className="text-3xl font-bold text-black mb-6">Postani PayParq Host</h3>
 
                   <div className="space-y-4 flex flex-col">
