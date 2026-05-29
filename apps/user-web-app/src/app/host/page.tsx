@@ -58,6 +58,7 @@ const HOST_TRANSLATIONS = {
   'Washing': { en: 'Washing', hr: 'Pranje' },
   'EV charging': { en: 'EV charging', hr: 'EV punjenje' },
   'Valet': { en: 'Valet', hr: 'Valet' },
+  'Valet service': { en: 'Valet service', hr: 'Valet usluga' },
   'Tranfer': { en: 'Transfer', hr: 'Pretakanje' },
   'Reception': { en: 'Reception/Guard', hr: 'Recepcija/Čuvar' },
   'Staff': { en: 'Staff', hr: 'Osoblje' },
