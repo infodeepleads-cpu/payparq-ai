@@ -73,6 +73,23 @@ const HOST_TRANSLATIONS = {
   'Error sending request': { en: 'Error sending request.', hr: 'Greška pri slanju zahtjeva.' },
   'We are reviewing the listing': { en: 'We are reviewing the listing', hr: 'Pregledavamo oglas' },
   'Your lot is now active and drivers can book': { en: 'Your lot is now active and drivers can book', hr: 'Vaš lot je sada aktivan i vozači mogu rezervirati.' },
+  'Shuttle': { en: 'Shuttle', hr: 'Shuttle' },
+  'Kamper': { en: 'Kamper', hr: 'Kamper' },
+  'Premium': { en: 'Premium (Shade, Entrance, Garage)', hr: 'Premium (Sjena, Ulaz, Garaža)' },
+  'VIP Valet': { en: 'VIP Valet (All-inclusive)', hr: 'VIP Valet (All-inclusive)' },
+  'Unlimited charging/washing, Red Carpet': { en: 'Unlimited charging/washing, Red Carpet', hr: 'Unlimited punjenje/pranje, Red Carpet' },
+  'Late Checkout': { en: 'Late Checkout', hr: 'Late Checkout' },
+  'Mon': { en: 'Mon', hr: 'Pon' },
+  'Tue': { en: 'Tue', hr: 'Uto' },
+  'Wed': { en: 'Wed', hr: 'Sri' },
+  'Thu': { en: 'Thu', hr: 'Čet' },
+  'Fri': { en: 'Fri', hr: 'Pet' },
+  'Sat': { en: 'Sat', hr: 'Sub' },
+  'Sun': { en: 'Sun', hr: 'Ned' },
+  'Parking': { en: 'Parking', hr: 'Parking' },
+  'Access type': { en: 'Access type', hr: 'Vrsta Pristupa' },
+  'Working Hours': { en: 'Working Hours (Access time)', hr: 'Radno Vrijeme (Pristupno vrijeme)' },
+  'Spot types': { en: 'Spot types', hr: 'Vrste mjesta' },
 } as const;
 
 const hostT = (key: string, locale: string): string => {
@@ -654,7 +671,19 @@ export default function HostPage() {
   const [accessInstructions, setAccessInstructions] = useState('');
 
   // Section 3 — Dodaci
-  const ADDONS = ['Valet', 'EV punjenje', 'Pretakanje', 'Pranje', 'Natkriveno', 'Rampa/Brana', 'CCTV', 'Pristup invalidima', 'Osoblje', 'Garaža', 'Shuttle'];
+  const ADDONS = useMemo(() => [
+    hostT('Valet', locale),
+    hostT('EV charging', locale),
+    hostT('Tranfer', locale),
+    hostT('Washing', locale),
+    hostT('Covered', locale),
+    hostT('Ramp/Gate', locale),
+    hostT('CCTV', locale),
+    hostT('Disabled access', locale),
+    hostT('Staff', locale),
+    hostT('Garage', locale),
+    hostT('Shuttle', locale)
+  ], [locale]);
   const [addons, setAddons] = useState<string[]>([]);
   const toggleAddon = (a: string) => setAddons((prev) => prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]);
 
@@ -662,7 +691,8 @@ export default function HostPage() {
   const [is247, setIs247] = useState(true);
   const [hoursFrom, setHoursFrom] = useState('');
   const [hoursTo, setHoursTo] = useState('');
-  const [openDays, setOpenDays] = useState<string[]>(['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned']);
+  const DAY_OPTIONS = useMemo(() => [hostT('Mon', locale), hostT('Tue', locale), hostT('Wed', locale), hostT('Thu', locale), hostT('Fri', locale), hostT('Sat', locale), hostT('Sun', locale)], [locale]);
+  const [openDays, setOpenDays] = useState<string[]>(DAY_OPTIONS);
   const toggleDay = (d: string) => setOpenDays((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]);
 
   // Section 3 — Kapacitet
@@ -671,15 +701,15 @@ export default function HostPage() {
 
   // Section 3 — Vrsta mjesta
   const [useSpotTypes, setUseSpotTypes] = useState(true);
-  const SPOT_TYPES = [
-    { key: 'standard_xxl', label: 'Oversized Vehicle (XXL)', mult: '1.25×' },
-    { key: 'premium', label: 'Premium (Sjena, Ulaz, Garaža)', mult: '1.5×' },
-    { key: 'kamper', label: 'Kamper', mult: '2×' },
-    { key: 'bus', label: 'Bus', mult: '5×' },
-    { key: 'valet', label: 'Valet', mult: '2×' },
-    { key: 'vip_valet', label: 'VIP Valet (All-inclusive)', mult: '2.5–5×', desc: 'Unlimited punjenje/pranje, Red Carpet' },
-    { key: 'late_checkout', label: 'Late Checkout', mult: '½ dana' },
-  ];
+  const SPOT_TYPES = useMemo(() => [
+    { key: 'standard_xxl', label: hostT('Large vehicles', locale), mult: '1.25×' },
+    { key: 'premium', label: hostT('Premium', locale), mult: '1.5×' },
+    { key: 'kamper', label: hostT('Kamper', locale), mult: '2×' },
+    { key: 'bus', label: hostT('Bus', locale), mult: '5×' },
+    { key: 'valet', label: hostT('Valet service', locale), mult: '2×' },
+    { key: 'vip_valet', label: hostT('VIP Valet', locale), mult: '2.5–5×', desc: hostT('Unlimited charging/washing, Red Carpet', locale) },
+    { key: 'late_checkout', label: hostT('Late Checkout', locale), mult: '½ dana' },
+  ], [locale]);
   const [activeSpotTypes, setActiveSpotTypes] = useState<string[]>([]);
   const toggleSpotType = (k: string) => setActiveSpotTypes((prev) => prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]);
 
@@ -924,16 +954,16 @@ export default function HostPage() {
               <CollapsibleSection title="Stvari koje biste trebali znati" defaultOpen={false}>
                 {/* Access Type */}
                 <div>
-                  <label className={labelClass}>Vrsta Pristupa</label>
+                  <label className={labelClass}>{hostT('Access type', locale)}</label>
                   <div className="flex gap-2 flex-wrap">
-                    {['Rampa/Brana', 'Bez Rampe', 'Recepcija/Čuvar'].map((t) => (
+                    {[hostT('Ramp/Gate', locale), hostT('No ramp', locale), hostT('Reception', locale)].map((t) => (
                       <button key={t} type="button" onClick={() => setAccessType(t)}
                         className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ${accessType === t ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
                         {t}
                       </button>
                     ))}
                   </div>
-                  {accessType === 'Rampa/Brana' && (
+                  {accessType === hostT('Ramp/Gate', locale) && (
                     <div className="mt-2">
                       <label className={subLabelClass}>Telefon (hitni slučaj / rezervacija)</label>
                       <input type="tel" placeholder="+385 91 000 0000" value={gatedPhone} onChange={(e) => setGatedPhone(e.target.value)} className={inputClass} />
@@ -943,9 +973,9 @@ export default function HostPage() {
 
                 {/* Parking Type */}
                 <div>
-                  <label className={labelClass}>Vrsta parkinga</label>
+                  <label className={labelClass}>{hostT('Spot types', locale)}</label>
                   <div className="flex gap-2 flex-wrap">
-                    {['Parcela', 'Garaža', 'Valet', 'Parking'].map((t) => (
+                    {[hostT('Open lot', locale), hostT('Garage', locale), hostT('Valet service', locale), hostT('Parking', locale)].map((t) => (
                       <button key={t} type="button" onClick={() => setParkingType(t)}
                         className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ${parkingType === t ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
                         {t}
@@ -1019,7 +1049,7 @@ export default function HostPage() {
               </CollapsibleSection>
 
               {/* 3.3 Radno Vrijeme */}
-              <CollapsibleSection title="Radno Vrijeme (Pristupno vrijeme)" defaultOpen={false}>
+              <CollapsibleSection title={hostT('Working Hours', locale)} defaultOpen={false}>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold text-gray-800">24/7</p>
