@@ -157,8 +157,8 @@ export default function ListYourSpace() {
       <SiteHeader />
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative pt-40 pb-32 md:pt-56 md:pb-40" style={{
-          backgroundImage: 'url("https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=2000&h=1200&fit=crop")',
+        <section className="relative pt-40 pb-32 md:pt-56 md:pb-40 bg-black" style={{
+          backgroundImage: 'linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(30,30,30,0.6) 100%), url("https://images.unsplash.com/photo-1552820728-8ac41f1ce891?w=2000&h=1200&fit=crop")',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundAttachment: 'auto',
