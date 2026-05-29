@@ -166,27 +166,6 @@ export function SiteHeader({ hideAnnouncementBar = false }: { hideAnnouncementBa
           {mobileOpen && (
             <div className="md:hidden border-t border-black/5 bg-white px-0 pb-3">
               <div className="flex flex-col gap-2 pt-2 text-[12px] font-medium text-black w-full max-w-xs mx-auto">
-                <Link
-                  href="/main"
-                  className="w-full block py-3 text-center hover:bg-gray-100 transition-colors text-[12px] font-medium text-black"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  Početna
-                </Link>
-                <div className="flex items-center justify-center gap-1 py-2">
-                  <button
-                    onClick={() => setLocale('hr')}
-                    className={`px-3 py-1 text-xs font-semibold rounded transition-colors ${locale === 'hr' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                  >
-                    HR
-                  </button>
-                  <button
-                    onClick={() => setLocale('en')}
-                    className={`px-3 py-1 text-xs font-semibold rounded transition-colors ${locale === 'en' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                  >
-                    EN
-                  </button>
-                </div>
                 <Link href="/vision" className="w-full py-3 text-center hover:bg-gray-100 transition-colors">
                   Experience
                 </Link>
