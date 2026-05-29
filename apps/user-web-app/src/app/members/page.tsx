@@ -271,7 +271,7 @@ function readMemberPlates(currentUser: User | null) {
   return [];
 }
 
-function PayoutsPanel({ user }: { user: User | null }) {
+function PayoutsPanel({ user, locale }: { user: User | null; locale: string }) {
   const [earnings, setEarnings] = useState<{ pending_cents: number; total_earned_cents: number; ledger: any[]; payouts: any[] } | null>(null);
   const [bankDetails, setBankDetails] = useState<{ bank_iban: string | null; bank_account_holder: string | null; bank_country: string; configured: boolean } | null>(null);
   const [editingBank, setEditingBank] = useState(false);
@@ -2968,7 +2968,7 @@ export default function MembersPage() {
     }
 
     if (activeItem === "payouts" && (user || devSignedIn)) {
-      return <PayoutsPanel user={user} />;
+      return <PayoutsPanel user={user} locale={locale} />;
     }
 
     if (activeItem === "calendars" && (user || devSignedIn)) {
