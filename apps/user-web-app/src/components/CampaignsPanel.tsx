@@ -56,10 +56,44 @@ export function CampaignsPanel() {
   const [enrollEmails, setEnrollEmails] = useState('');
   const [enrolling, setEnrolling] = useState(false);
   const [enrollResult, setEnrollResult] = useState('');
+  const [seqStats, setSeqStats] = useState<{
+    total: number;
+    active: number;
+    completed: number;
+    unsubscribed: number;
+    onEmail1: number;
+    onEmail2: number;
+    onEmail3: number;
+    sentToday: number;
+    enrollments: {
+      id: string;
+      email: string;
+      name: string | null;
+      status: string;
+      nextEmailNumber: number;
+      lastSentAt: string | null;
+      nextSendAt: string | null;
+      createdAt: string;
+    }[];
+  } | null>(null);
+  const [seqStatsLoading, setSeqStatsLoading] = useState(false);
+  const [seqSearch, setSeqSearch] = useState('');
+
+  const fetchSeqStats = async () => {
+    setSeqStatsLoading(true);
+    try {
+      const res = await fetch('/api/sequences/stats');
+      const data = await res.json();
+      setSeqStats(data);
+    } catch { /* ignore */ } finally {
+      setSeqStatsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (tab === 'list') fetchCampaigns();
     if (tab === 'templates') fetchTemplates();
+    if (tab === 'sequences') fetchSeqStats();
   }, [tab]);
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
@@ -614,26 +648,13 @@ export function CampaignsPanel() {
             >
               {enrolling ? 'Enrolling...' : 'Enroll Recipients'}
             </button>
-            {enrollResult && <p className="text-sm">{enrollResult}</p>}
+            {enrollResult && (
+              <p className="text-sm">{enrollResult}</p>
+            )}
           </div>
 
-          {/* Auto-send setup instructions */}
-          <div className="border border-blue-100 bg-blue-50 rounded-lg p-4 space-y-3">
-            <p className="text-sm font-semibold text-blue-900">⚡ Auto-send Setup (free, 2 min)</p>
-            <p className="text-xs text-blue-700">Set up cron-job.org to send automatically every day at 09:00 — no manual clicking needed.</p>
-            <ol className="text-xs text-blue-800 space-y-1 list-decimal list-inside">
-              <li>Go to <a href="https://cron-job.org" target="_blank" rel="noreferrer" className="underline font-semibold">cron-job.org</a> → free account</li>
-              <li>Create new cron job</li>
-              <li>URL: <code className="bg-blue-100 px-1 rounded font-mono text-[11px]">https://payparq.ai/api/cron/sequence-sender?token=YOUR_CRON_SECRET</code></li>
-              <li>Schedule: <strong>Every day at 09:00</strong></li>
-              <li>Add env var <code className="bg-blue-100 px-1 rounded font-mono text-[11px]">CRON_SECRET</code> in Vercel → same value as token</li>
-            </ol>
-          </div>
-
-          {/* Send 10 today button */}
-          <div className="border border-black/10 rounded-lg p-4 space-y-3">
-            <p className="text-sm font-semibold">Send Today&apos;s Batch (manual)</p>
-            <p className="text-xs text-black/50">Sends up to 10 emails to next recipients in queue. Click once per day.</p>
+          {/* Send batch + refresh */}
+          <div className="flex gap-2">
             <button
               onClick={async () => {
                 setSeqSending(true);
@@ -642,6 +663,7 @@ export function CampaignsPanel() {
                   const res = await fetch('/api/cron/sequence-sender');
                   const data = await res.json();
                   setSeqResult(data);
+                  await fetchSeqStats();
                 } catch {
                   setSeqResult({ sent: 0 });
                 } finally {
@@ -649,16 +671,166 @@ export function CampaignsPanel() {
                 }
               }}
               disabled={seqSending}
-              className="px-6 py-2.5 bg-black text-white text-sm font-semibold rounded-full hover:bg-gray-900 disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-black text-white text-sm font-semibold rounded-full hover:bg-gray-900 disabled:opacity-50"
             >
-              {seqSending ? 'Sending...' : '🚀 Send 10 Today'}
+              {seqSending ? 'Sending...' : 'Send 10 Today'}
             </button>
-            {seqResult && (
-              <p className="text-sm text-green-700 font-medium">
-                ✅ Sent {seqResult.sent} of {seqResult.checked} queued emails
-              </p>
-            )}
+            <button
+              onClick={fetchSeqStats}
+              disabled={seqStatsLoading}
+              className="px-4 py-2.5 border border-black/20 text-sm font-semibold rounded-full hover:border-black/40 disabled:opacity-50"
+            >
+              {seqStatsLoading ? '...' : 'Refresh'}
+            </button>
           </div>
+          {seqResult && (
+            <p className="text-sm text-green-700 font-medium">
+              Sent {seqResult.sent} of {seqResult.checked} queued emails
+            </p>
+          )}
+
+          {/* Stats overview */}
+          {seqStats && (
+            <>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: 'Total', value: seqStats.total, color: 'bg-gray-50' },
+                  { label: 'Active', value: seqStats.active, color: 'bg-blue-50' },
+                  { label: 'Completed', value: seqStats.completed, color: 'bg-green-50' },
+                  { label: 'Sent Today', value: seqStats.sentToday, color: 'bg-yellow-50' },
+                ].map(s => (
+                  <div key={s.label} className={`${s.color} rounded-lg p-3 text-center`}>
+                    <p className="text-2xl font-bold text-black">{s.value}</p>
+                    <p className="text-xs text-black/50 mt-0.5">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Pipeline bar */}
+              <div className="border border-black/10 rounded-lg p-4 space-y-2">
+                <p className="text-xs font-semibold text-black/60 uppercase tracking-wide">Pipeline</p>
+                <div className="space-y-1.5">
+                  {[
+                    { label: 'Awaiting Email 1', count: seqStats.onEmail1, color: 'bg-gray-400' },
+                    { label: 'Awaiting Email 2', count: seqStats.onEmail2, color: 'bg-blue-400' },
+                    { label: 'Awaiting Email 3', count: seqStats.onEmail3, color: 'bg-purple-400' },
+                    { label: 'Unsubscribed', count: seqStats.unsubscribed, color: 'bg-red-300' },
+                  ].map(p => (
+                    <div key={p.label} className="flex items-center gap-2">
+                      <span className="text-xs text-black/60 w-36 flex-shrink-0">{p.label}</span>
+                      <div className="flex-1 bg-black/5 rounded-full h-2">
+                        <div
+                          className={`${p.color} h-2 rounded-full`}
+                          style={{ width: seqStats.total > 0 ? `${Math.round((p.count / seqStats.total) * 100)}%` : '0%' }}
+                        />
+                      </div>
+                      <span className="text-xs font-semibold w-6 text-right">{p.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Suggestions */}
+              {seqStats.total > 0 && (
+                <div className="border border-amber-100 bg-amber-50 rounded-lg p-4 space-y-1.5">
+                  <p className="text-xs font-semibold text-amber-900">Suggestions</p>
+                  {seqStats.completed > 0 && (
+                    <p className="text-xs text-amber-800">• {seqStats.completed} recipients finished all 3 emails — consider a follow-up call or offer.</p>
+                  )}
+                  {seqStats.onEmail1 > 5 && (
+                    <p className="text-xs text-amber-800">• {seqStats.onEmail1} people haven&apos;t received Email 1 yet — click Send 10 Today.</p>
+                  )}
+                  {seqStats.unsubscribed > 0 && (
+                    <p className="text-xs text-amber-800">• {seqStats.unsubscribed} bounced/unsubscribed — remove from future campaigns.</p>
+                  )}
+                  {seqStats.active === 0 && seqStats.total > 0 && (
+                    <p className="text-xs text-amber-800">• No active recipients — enroll new leads to keep the pipeline moving.</p>
+                  )}
+                  {seqStats.total < 10 && (
+                    <p className="text-xs text-amber-800">• You have fewer than 10 leads — add more to fill your daily send quota.</p>
+                  )}
+                </div>
+              )}
+
+              {/* Recipients table */}
+              <div className="border border-black/10 rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-black/5">
+                  <p className="text-xs font-semibold">All Recipients</p>
+                  <input
+                    type="text"
+                    placeholder="Search email..."
+                    value={seqSearch}
+                    onChange={e => setSeqSearch(e.target.value)}
+                    className="text-xs border border-black/10 rounded-full px-3 py-1 outline-none focus:border-black/30 w-40"
+                  />
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-black/10 bg-black/5">
+                        <th className="text-left px-4 py-2 font-semibold text-black/60">Email</th>
+                        <th className="text-left px-4 py-2 font-semibold text-black/60">Status</th>
+                        <th className="text-left px-4 py-2 font-semibold text-black/60">Next Email</th>
+                        <th className="text-left px-4 py-2 font-semibold text-black/60">Last Sent</th>
+                        <th className="text-left px-4 py-2 font-semibold text-black/60">Next Send</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {seqStats.enrollments
+                        .filter(e => !seqSearch || e.email.includes(seqSearch))
+                        .map(e => (
+                          <tr key={e.id} className="border-b border-black/5 hover:bg-black/5">
+                            <td className="px-4 py-2 font-mono">{e.email}</td>
+                            <td className="px-4 py-2">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                e.status === 'active' ? 'bg-blue-100 text-blue-700' :
+                                e.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                'bg-red-100 text-red-700'
+                              }`}>
+                                {e.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2 text-black/60">
+                              {e.status === 'completed' ? '—' : `Email ${e.nextEmailNumber}`}
+                            </td>
+                            <td className="px-4 py-2 text-black/60">
+                              {e.lastSentAt ? new Date(e.lastSentAt).toLocaleDateString() : '—'}
+                            </td>
+                            <td className="px-4 py-2 text-black/60">
+                              {e.status === 'active' && e.nextSendAt
+                                ? new Date(e.nextSendAt) <= new Date()
+                                  ? <span className="text-orange-600 font-semibold">Due now</span>
+                                  : new Date(e.nextSendAt).toLocaleDateString()
+                                : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                  {seqStats.enrollments.length === 0 && (
+                    <p className="text-center text-xs text-black/40 py-6">No recipients yet</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Resend webhook setup */}
+              <div className="border border-blue-100 bg-blue-50 rounded-lg p-4 space-y-2">
+                <p className="text-xs font-semibold text-blue-900">Track Opens & Clicks (optional)</p>
+                <p className="text-xs text-blue-700">Set up Resend webhook to track bounces and auto-unsubscribe.</p>
+                <p className="text-xs text-blue-800 font-mono bg-blue-100 px-2 py-1 rounded">
+                  https://payparq.com/api/webhooks/resend
+                </p>
+                <p className="text-xs text-blue-600">Resend dashboard → Webhooks → Add endpoint above → Events: email.bounced, email.complained</p>
+              </div>
+            </>
+          )}
+
+          {!seqStats && !seqStatsLoading && (
+            <p className="text-sm text-black/40 text-center py-4">Click Refresh to load stats</p>
+          )}
+          {seqStatsLoading && (
+            <p className="text-sm text-black/40 text-center py-4">Loading...</p>
+          )}
         </div>
       )}
 
