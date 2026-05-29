@@ -65,6 +65,14 @@ export function CampaignsPanel() {
     onEmail2: number;
     onEmail3: number;
     sentToday: number;
+    delivered: number;
+    deliveryRate: number;
+    opened: number;
+    openRate: number;
+    clicked: number;
+    clickRate: number;
+    bounced: number;
+    complained: number;
     enrollments: {
       id: string;
       email: string;
@@ -74,6 +82,9 @@ export function CampaignsPanel() {
       lastSentAt: string | null;
       nextSendAt: string | null;
       createdAt: string;
+      hasOpened?: boolean;
+      hasClicked?: boolean;
+      isBounced?: boolean;
     }[];
   } | null>(null);
   const [seqStatsLoading, setSeqStatsLoading] = useState(false);
@@ -706,6 +717,22 @@ export function CampaignsPanel() {
                 ))}
               </div>
 
+              {/* Engagement metrics */}
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: 'Delivered', value: seqStats.delivered, rate: seqStats.deliveryRate, color: 'bg-emerald-50' },
+                  { label: 'Opened', value: seqStats.opened, rate: seqStats.openRate, color: 'bg-sky-50' },
+                  { label: 'Clicked', value: seqStats.clicked, rate: seqStats.clickRate, color: 'bg-violet-50' },
+                  { label: 'Bounced', value: seqStats.bounced, rate: null, color: 'bg-red-50' },
+                ].map(s => (
+                  <div key={s.label} className={`${s.color} rounded-lg p-3 text-center`}>
+                    <p className="text-2xl font-bold text-black">{s.value}</p>
+                    {s.rate !== null && <p className="text-xs text-black/50 mt-0.5">{s.rate}%</p>}
+                    <p className="text-xs text-black/50 mt-0.5">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+
               {/* Pipeline bar */}
               <div className="border border-black/10 rounded-lg p-4 space-y-2">
                 <p className="text-xs font-semibold text-black/60 uppercase tracking-wide">Pipeline</p>
@@ -770,8 +797,8 @@ export function CampaignsPanel() {
                       <tr className="border-b border-black/10 bg-black/5">
                         <th className="text-left px-4 py-2 font-semibold text-black/60">Email</th>
                         <th className="text-left px-4 py-2 font-semibold text-black/60">Status</th>
-                        <th className="text-left px-4 py-2 font-semibold text-black/60">Next Email</th>
-                        <th className="text-left px-4 py-2 font-semibold text-black/60">Last Sent</th>
+                        <th className="text-left px-4 py-2 font-semibold text-black/60">Opened</th>
+                        <th className="text-left px-4 py-2 font-semibold text-black/60">Clicked</th>
                         <th className="text-left px-4 py-2 font-semibold text-black/60">Next Send</th>
                       </tr>
                     </thead>
@@ -780,7 +807,7 @@ export function CampaignsPanel() {
                         .filter(e => !seqSearch || e.email.includes(seqSearch))
                         .map(e => (
                           <tr key={e.id} className="border-b border-black/5 hover:bg-black/5">
-                            <td className="px-4 py-2 font-mono">{e.email}</td>
+                            <td className="px-4 py-2 font-mono text-black/80">{e.email}</td>
                             <td className="px-4 py-2">
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                                 e.status === 'active' ? 'bg-blue-100 text-blue-700' :
@@ -791,10 +818,10 @@ export function CampaignsPanel() {
                               </span>
                             </td>
                             <td className="px-4 py-2 text-black/60">
-                              {e.status === 'completed' ? '—' : `Email ${e.nextEmailNumber}`}
+                              {e.hasOpened ? <span className="text-emerald-600 font-semibold">✓ Yes</span> : '—'}
                             </td>
                             <td className="px-4 py-2 text-black/60">
-                              {e.lastSentAt ? new Date(e.lastSentAt).toLocaleDateString() : '—'}
+                              {e.hasClicked ? <span className="text-violet-600 font-semibold">✓ Yes</span> : '—'}
                             </td>
                             <td className="px-4 py-2 text-black/60">
                               {e.status === 'active' && e.nextSendAt
@@ -815,12 +842,13 @@ export function CampaignsPanel() {
 
               {/* Resend webhook setup */}
               <div className="border border-blue-100 bg-blue-50 rounded-lg p-4 space-y-2">
-                <p className="text-xs font-semibold text-blue-900">Track Opens & Clicks (optional)</p>
-                <p className="text-xs text-blue-700">Set up Resend webhook to track bounces and auto-unsubscribe.</p>
-                <p className="text-xs text-blue-800 font-mono bg-blue-100 px-2 py-1 rounded">
+                <p className="text-xs font-semibold text-blue-900">Track Deliveries, Opens & Clicks</p>
+                <p className="text-xs text-blue-700">Configure Resend webhook to track deliveries, opens, clicks, bounces, and auto-unsubscribe.</p>
+                <p className="text-xs text-blue-800 font-mono bg-blue-100 px-2 py-1 rounded break-all">
                   https://payparq.com/api/webhooks/resend
                 </p>
-                <p className="text-xs text-blue-600">Resend dashboard → Webhooks → Add endpoint above → Events: email.bounced, email.complained</p>
+                <p className="text-xs text-blue-600">Resend dashboard → Webhooks → Add endpoint above</p>
+                <p className="text-xs text-blue-600">Events: email.sent, email.opened, email.clicked, email.bounced, email.complained</p>
               </div>
             </>
           )}
