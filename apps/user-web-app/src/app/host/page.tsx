@@ -336,7 +336,7 @@ interface DateConfig {
   priceMonthly: number | null;
 }
 
-function CalendarScheduler({ baseSpots, onConfigsChange }: { baseSpots: string; onConfigsChange?: (configs: Record<string, DateConfig>) => void }) {
+function CalendarScheduler({ baseSpots, onConfigsChange, locale }: { baseSpots: string; onConfigsChange?: (configs: Record<string, DateConfig>) => void; locale: string }) {
   const [calendarDate, setCalendarDate] = useState(new Date(2026, 4, 1));
   const [dateConfigs, setDateConfigs] = useState<Record<string, DateConfig>>({});
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
@@ -1095,7 +1095,7 @@ export default function HostPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <CalendarScheduler baseSpots={baseSpots} onConfigsChange={setCalendarConfigs} />
+                  <CalendarScheduler baseSpots={baseSpots} onConfigsChange={setCalendarConfigs} locale={locale} />
                 </div>
               </CollapsibleSection>
 
