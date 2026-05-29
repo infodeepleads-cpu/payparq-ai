@@ -392,7 +392,9 @@ const MEMBERS_TRANSLATIONS = {
   'Korisnik': { en: 'Account', hr: 'Korisnik' },
   'Aktivnost': { en: 'Activity', hr: 'Aktivnost' },
   'Vozila': { en: 'Vehicles', hr: 'Vozila' },
+  'Plaćanje': { en: 'Payment', hr: 'Plaćanje' },
   'Pomoć': { en: 'Help', hr: 'Pomoć' },
+  'Promocije': { en: 'Promotions', hr: 'Promocije' },
   'Nemaš verificiranih prostora. Provjeri status u Moji prostori.': { en: 'No verified spaces. Check status in My Spaces.', hr: 'Nemaš verificiranih prostora. Provjeri status u Moji prostori.' },
   'Nemaš objavljenih prostora. Klikni': { en: 'No listings yet. Click', hr: 'Nemaš objavljenih prostora. Klikni' },
   'za početak': { en: 'to get started', hr: 'za početak' },
@@ -405,6 +407,17 @@ const MEMBERS_TRANSLATIONS = {
   'Dolasci': { en: 'Arrivals', hr: 'Dolasci' },
   'Upravljanje': { en: 'Management', hr: 'Upravljanje' },
   'Upravljaj kalendarima': { en: 'Manage calendars', hr: 'Upravljaj kalendarima' },
+  'Signed in as': { en: 'Signed in as', hr: 'Prijavljeni ste kao' },
+  'ACTIVE': { en: 'ACTIVE', hr: 'AKTIVNA' },
+  'EXPIRED': { en: 'EXPIRED', hr: 'ISTEKLA' },
+  'Home': { en: 'Home', hr: 'Početna' },
+  'Instant listing': { en: 'Instant listing', hr: 'Trenutna objava' },
+  'Arrivals': { en: 'Arrivals', hr: 'Dolasci' },
+  'Reviews you gave for parking on PayParq locations': { en: 'Reviews you gave for parking on PayParq locations', hr: 'Recenzije koje ste dali za parkiranje na PayParq lokacijama.' },
+  'Arrivals panel': { en: 'Arrivals panel', hr: 'Panel dolazaka' },
+  'Manage your parking lots': { en: 'Manage your parking lots', hr: 'Upravljaj svojim parkiralištima.' },
+  'Driver scans code': { en: 'Driver scans code', hr: 'Vozač skenira kod' },
+  'Shuttle drives directly — no stops': { en: 'Shuttle drives directly — no stops', hr: 'Shuttle vozi izravno — bez zaustavljanja.' },
 } as const;
 
 const membersT = (key: string, locale: 'en' | 'hr'): string => {
@@ -1774,7 +1787,7 @@ export default function MembersPage() {
                 Profile
               </p>
               <p className="text-sm text-black/80">
-                Signed in as <span className="font-semibold">{displayEmail}</span>
+                {membersT('Signed in as', locale)} <span className="font-semibold">{displayEmail}</span>
               </p>
               <div className="flex flex-wrap gap-2 pt-2">
                 {!isEmailVerified && (
@@ -1929,7 +1942,7 @@ export default function MembersPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-black">Ukrcaj i vožnja</p>
-                      <p className="text-black/60 mt-0.5">Vozač skenira kod <span className="font-mono font-bold text-[#0F6E56]">{shtCode}</span>. Shuttle vozi izravno — bez zaustavljanja.</p>
+                      <p className="text-black/60 mt-0.5">{membersT('Driver scans code', locale)} <span className="font-mono font-bold text-[#0F6E56]">{shtCode}</span>. {membersT('Shuttle drives directly — no stops', locale)}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-2.5">
@@ -2410,7 +2423,7 @@ export default function MembersPage() {
                     </div>
                     <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
                       <span>{Number(row.price ?? 0).toFixed(2)} {parseCurrency(row.currency)}</span>
-                      <span>ACTIVE</span>
+                      <span>{membersT('ACTIVE', locale)}</span>
                     </div>
                     <div className="mt-1 text-[11px] text-black/70">
                       Vrijedi: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
@@ -2464,7 +2477,7 @@ export default function MembersPage() {
                     </div>
                     <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
                       <span>{Number(row.price ?? 0).toFixed(2)} {parseCurrency(row.currency)}</span>
-                      <span>EXPIRED</span>
+                      <span>{membersT('EXPIRED', locale)}</span>
                     </div>
                     <div className="mt-1 text-[11px] text-black/70">
                       Vrijedi: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
@@ -2814,7 +2827,7 @@ export default function MembersPage() {
       return (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold tracking-tight text-black">Moje recenzije</h2>
-          <p className="text-sm text-black/70">Recenzije koje ste dali za parkiranje na PayParq lokacijama.</p>
+          <p className="text-sm text-black/70">{membersT('Reviews you gave for parking on PayParq locations', locale)}</p>
           {reviewsLoading && (
             <div className="flex items-center gap-2 text-sm text-black/50">
               <div className="w-4 h-4 border-2 border-[black] border-t-transparent rounded-full animate-spin" />
@@ -2875,7 +2888,7 @@ export default function MembersPage() {
     }
 
     if (activeItem === "arrivals" && (user || devSignedIn)) {
-      return user ? <ArrivalsPanel userId={user.id} /> : <div className="text-sm text-black/70">Arrivals panel</div>;
+      return user ? <ArrivalsPanel userId={user.id} /> : <div className="text-sm text-black/70">{membersT('Arrivals panel', locale)}</div>;
     }
 
     if (activeItem === "payouts" && (user || devSignedIn)) {
@@ -2951,7 +2964,7 @@ export default function MembersPage() {
             <h2 className="text-lg font-semibold tracking-tight text-black">
               {membersT('Moji prostori', locale)}
             </h2>
-            <p className="text-sm text-black/70">Upravljaj svojim parkiralištima.</p>
+            <p className="text-sm text-black/70">{membersT('Manage your parking lots', locale)}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -3300,7 +3313,7 @@ export default function MembersPage() {
                 <div className="text-[11px] text-white/80 text-right flex items-center gap-0 md:gap-3 flex-shrink-0">
                   <NotificationCenter userId={user?.id ?? null} />
                   <div className="hidden md:flex flex-col items-end gap-1">
-                    <p>Signed in as</p>
+                    <p>{membersT('Signed in as', locale)}</p>
                     <p className="font-semibold truncate max-w-[180px]">
                       {displayEmail}
                     </p>
@@ -3345,7 +3358,7 @@ export default function MembersPage() {
                       <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[black]/90 text-[11px]">
                         H
                       </span>
-                      <span>Home</span>
+                      <span>{membersT('Home', locale)}</span>
                     </button>
 
                     {/* HOST SECTION */}
@@ -3372,7 +3385,7 @@ export default function MembersPage() {
                           <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                             +
                           </span>
-                          <span>Instant listing</span>
+                          <span>{membersT('Instant listing', locale)}</span>
                         </Link>
                         <button
                           type="button"
@@ -3386,7 +3399,7 @@ export default function MembersPage() {
                           <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                             A
                           </span>
-                          <span>Arrivals</span>
+                          <span>{membersT('Arrivals', locale)}</span>
                         </button>
                         <button
                           type="button"
@@ -3429,7 +3442,7 @@ export default function MembersPage() {
                             <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                               O
                             </span>
-                            <span>Operacije</span>
+                            <span>{membersT('Operacije', locale)}</span>
                           </button>
                         )}
                         {isAdmin && (
@@ -3530,7 +3543,7 @@ export default function MembersPage() {
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                           ★
                         </span>
-                        <span>Recenzije</span>
+                        <span>{membersT('Recenzije', locale)}</span>
                       </button>
                       <button
                         type="button"
