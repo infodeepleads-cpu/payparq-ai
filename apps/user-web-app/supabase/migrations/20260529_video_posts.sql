@@ -31,3 +31,18 @@ CREATE TABLE IF NOT EXISTS youtube_accounts (
 );
 
 CREATE INDEX idx_youtube_accounts_channel_id ON youtube_accounts(channel_id);
+
+-- TikTok accounts table
+CREATE TABLE IF NOT EXISTS tiktok_accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id VARCHAR(255) NOT NULL UNIQUE,
+  username VARCHAR(255),
+  access_token TEXT NOT NULL,
+  refresh_token TEXT,
+  token_expires_at TIMESTAMP,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_tiktok_accounts_user_id ON tiktok_accounts(user_id);
