@@ -4,12 +4,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 export const dynamic = 'force-dynamic';
 
 // Test endpoint - enrolls 10 sample leads for testing the sequence system
-export async function POST(req: Request) {
-  const secret = req.headers.get('x-test-secret');
-  if (secret !== process.env.TEST_SECRET && process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
+export async function POST() {
   if (!supabaseAdmin) {
     return NextResponse.json({ error: 'db_unavailable' }, { status: 500 });
   }
