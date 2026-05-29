@@ -15,6 +15,7 @@ export async function POST(req: Request) {
   }
 
   const testLeads = [
+    { email: 'kzamic@gmail.com', name: 'Karlo - Test' },
     { email: 'marko.apartment@gmail.com', name: 'Marko - 1 spot Airbnb' },
     { email: 'jasna.villa@gmail.com', name: 'Jasna - 3 spot Villa' },
     { email: 'ivan.property@gmail.com', name: 'Ivan - 5 spot Property' },
@@ -24,7 +25,6 @@ export async function POST(req: Request) {
     { email: 'reservations@splitpalace.hr', name: 'Split Palace Hotel - 40 spots' },
     { email: 'dubrovnik@hoteldeluxe.hr', name: 'Dubrovnik Deluxe - 60 spots' },
     { email: 'zagreb.central@hotelgroup.hr', name: 'Zagreb Central Hotel - 100 spots' },
-    { email: 'marina@premiumhotel.hr', name: 'Premium Marina Hotel - 150 spots' },
   ];
 
   const rows = testLeads.map(lead => ({
