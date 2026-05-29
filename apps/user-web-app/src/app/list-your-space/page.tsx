@@ -283,7 +283,7 @@ export default function ListYourSpace() {
         </section>
 
         {/* List Your Space Form - Mobile Mockup */}
-        <section className="bg-white py-16 md:py-20">
+        <section className="bg-white py-8 md:py-20">
           <div className="max-w-6xl mx-auto px-6 md:px-12">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div>
@@ -410,7 +410,7 @@ export default function ListYourSpace() {
         </section>
 
         {/* How Booking Works */}
-        <section className="bg-white py-16 md:py-24">
+        <section className="bg-white py-8 md:py-24">
           <div className="max-w-6xl mx-auto px-6 md:px-12">
             <h2 className="text-4xl md:text-5xl font-bold text-black mb-16 text-center">Kako funkcionira PayParq?</h2>
 
@@ -483,7 +483,7 @@ export default function ListYourSpace() {
         </section>
 
         {/* How It Works */}
-        <section className="bg-[#F5F5F7] py-16 md:py-20">
+        <section className="bg-[#F5F5F7] py-8 md:py-20">
           <div className="max-w-6xl mx-auto px-6 md:px-12">
             <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-2">
               Kako do zarade?
@@ -537,7 +537,7 @@ export default function ListYourSpace() {
         </section>
 
         {/* FAQ */}
-        <section className="bg-white py-16 md:py-20">
+        <section className="bg-white py-8 md:py-20">
           <div className="max-w-4xl mx-auto px-6 md:px-12">
             <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-2">
               FAQ
@@ -575,7 +575,7 @@ export default function ListYourSpace() {
         {/* CTA Banner */}
         <section
           id="get-started"
-          className="relative py-16 md:py-20"
+          className="relative py-8 md:py-20"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-white to-[#5F3DFC]"></div>
           <div className="relative max-w-4xl mx-auto px-6 md:px-12 text-center">
@@ -597,7 +597,7 @@ export default function ListYourSpace() {
 
         {/* Footer */}
         <section className="bg-[#05020A] border-t border-white/10">
-          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
+          <div className="max-w-6xl mx-auto px-6 md:px-12 py-8 md:py-20">
             <div className="grid gap-12 md:grid-cols-[2fr,3fr] items-end mb-12">
               <div>
                 <h2 className="text-2xl md:text-3xl font-semibold text-white mb-4">
