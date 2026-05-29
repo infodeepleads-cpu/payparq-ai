@@ -14,6 +14,7 @@ import { NotificationCenter } from "@/components/NotificationCenter";
 import { ArrivalsPanel } from "@/components/ArrivalsPanel";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { useDeviceToken } from "@/hooks/useDeviceToken";
+import { useLocale } from "@/components/LocaleProvider";
 import type { User } from "@supabase/supabase-js";
 
 type NavItemId =
@@ -383,9 +384,21 @@ function PayoutsPanel({ user }: { user: User | null }) {
   );
 }
 
+const MEMBERS_TRANSLATIONS = {
+  'Brza rezervacija': { en: 'Quick Reservation', hr: 'Brza rezervacija' },
+  'Kopiraj link': { en: 'Copy link', hr: 'Kopiraj link' },
+  'Link kopiran': { en: 'Link copied', hr: 'Link kopiran' },
+} as const;
+
+const membersT = (key: string, locale: 'en' | 'hr'): string => {
+  const trans = MEMBERS_TRANSLATIONS[key as keyof typeof MEMBERS_TRANSLATIONS];
+  return trans ? trans[locale] : key;
+};
+
 export default function MembersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { locale } = useLocale();
 
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -3011,11 +3024,11 @@ export default function MembersPage() {
                           href={`/search?hubId=${loc.id}`}
                           className="text-xs font-semibold text-black hover:text-black/70 transition-colors"
                         >
-                          Brza rezervacija
+                          {membersT('Brza rezervacija', locale)}
                         </Link>
                         <button
                           type="button"
-                          title="Kopiraj link"
+                          title={membersT('Kopiraj link', locale)}
                           onClick={(e) => {
                             e.stopPropagation();
                             const url = `${window.location.origin}/search?hubId=${loc.id}`;
