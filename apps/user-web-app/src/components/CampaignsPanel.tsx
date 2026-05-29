@@ -617,9 +617,22 @@ export function CampaignsPanel() {
             {enrollResult && <p className="text-sm">{enrollResult}</p>}
           </div>
 
+          {/* Auto-send setup instructions */}
+          <div className="border border-blue-100 bg-blue-50 rounded-lg p-4 space-y-3">
+            <p className="text-sm font-semibold text-blue-900">⚡ Auto-send Setup (free, 2 min)</p>
+            <p className="text-xs text-blue-700">Set up cron-job.org to send automatically every day at 09:00 — no manual clicking needed.</p>
+            <ol className="text-xs text-blue-800 space-y-1 list-decimal list-inside">
+              <li>Go to <a href="https://cron-job.org" target="_blank" rel="noreferrer" className="underline font-semibold">cron-job.org</a> → free account</li>
+              <li>Create new cron job</li>
+              <li>URL: <code className="bg-blue-100 px-1 rounded font-mono text-[11px]">https://payparq.ai/api/cron/sequence-sender?token=YOUR_CRON_SECRET</code></li>
+              <li>Schedule: <strong>Every day at 09:00</strong></li>
+              <li>Add env var <code className="bg-blue-100 px-1 rounded font-mono text-[11px]">CRON_SECRET</code> in Vercel → same value as token</li>
+            </ol>
+          </div>
+
           {/* Send 10 today button */}
           <div className="border border-black/10 rounded-lg p-4 space-y-3">
-            <p className="text-sm font-semibold">Send Today&apos;s Batch</p>
+            <p className="text-sm font-semibold">Send Today&apos;s Batch (manual)</p>
             <p className="text-xs text-black/50">Sends up to 10 emails to next recipients in queue. Click once per day.</p>
             <button
               onClick={async () => {

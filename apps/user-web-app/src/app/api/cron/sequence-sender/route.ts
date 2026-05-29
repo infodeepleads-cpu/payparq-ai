@@ -7,7 +7,18 @@ export const dynamic = 'force-dynamic';
 const FROM = process.env.EMAIL_FROM || 'Payparq <team@info.payparq.com>';
 const DAILY_LIMIT = 10;
 
-export async function GET() {
+export async function GET(req: Request) {
+  // Allow Vercel cron (no auth header) OR external cron with secret token
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const authHeader = req.headers.get('authorization');
+    const tokenParam = new URL(req.url).searchParams.get('token');
+    const provided = authHeader?.replace('Bearer ', '') || tokenParam;
+    if (provided !== cronSecret) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+  }
+
   const client = supabaseAdmin;
   if (!client) return NextResponse.json({ error: 'db_unavailable' }, { status: 500 });
 

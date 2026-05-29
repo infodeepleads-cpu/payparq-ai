@@ -492,6 +492,7 @@ function CalendarScheduler({ baseSpots, onConfigsChange, locale }: { baseSpots: 
               onSave={(config) => handleSaveDate(config)}
               onDelete={() => { handleCloseDate(selectedDate!); setSelectedDates((prev) => prev.filter((d) => d !== selectedDate)); }}
               onCancel={() => setSelectedDates([])}
+              locale={locale}
             />
           </div>
         </div>
@@ -502,12 +503,13 @@ function CalendarScheduler({ baseSpots, onConfigsChange, locale }: { baseSpots: 
 
 // ─── Date config widget ───────────────────────────────────────────────────────
 
-function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: {
+function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel, locale }: {
   config: DateConfig;
   lotCapacity: number;
   onSave: (config: DateConfig) => void;
   onDelete: () => void;
   onCancel: () => void;
+  locale: string;
 }) {
   const [capacity, setCapacity] = useState(config.capacity ? String(config.capacity) : '');
   const [isOpen, setIsOpen] = useState(config.isOpen);
