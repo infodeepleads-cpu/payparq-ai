@@ -32,8 +32,28 @@ const STATUS_COLORS: Record<string, string> = {
   failed: 'bg-red-100 text-red-700',
 };
 
+type BlogPost = {
+  id: string;
+  slug: string;
+  title_hr: string;
+  city: string;
+  status: string;
+  published_at: string | null;
+};
+
+type BlogGenerateResult = {
+  ok?: boolean;
+  city?: string;
+  slug?: string;
+  title?: string;
+  message?: string;
+  source?: string;
+  indexed?: boolean;
+  error?: string;
+};
+
 export function SocialPanel() {
-  const [tab, setTab] = useState<'generate' | 'compose' | 'queue'>('generate');
+  const [tab, setTab] = useState<'generate' | 'compose' | 'queue' | 'blog'>('generate');
 
   // Generator state
   const [genTopic, setGenTopic] = useState('host_parking');
@@ -56,9 +76,45 @@ export function SocialPanel() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
 
+  // Blog state
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [blogLoading, setBlogLoading] = useState(false);
+  const [blogGenerating, setBlogGenerating] = useState(false);
+  const [blogResult, setBlogResult] = useState<BlogGenerateResult | null>(null);
+  const [blogCity, setBlogCity] = useState('');
+
   useEffect(() => {
     if (tab === 'queue') fetchPosts();
+    if (tab === 'blog') fetchBlogPosts();
   }, [tab]);
+
+  const fetchBlogPosts = async () => {
+    setBlogLoading(true);
+    try {
+      const res = await fetch('/api/blog/list');
+      const data = await res.json();
+      setBlogPosts(data.posts || []);
+    } catch { /* ignore */ } finally {
+      setBlogLoading(false);
+    }
+  };
+
+  const handleGenerateBlog = async () => {
+    setBlogGenerating(true);
+    setBlogResult(null);
+    try {
+      const res = await fetch('/api/blog/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ city: blogCity || undefined, publish: true }),
+      });
+      const data = await res.json();
+      setBlogResult(data);
+      if (data.ok) fetchBlogPosts();
+    } catch { /* ignore */ } finally {
+      setBlogGenerating(false);
+    }
+  };
 
   const fetchPosts = async () => {
     setLoadingPosts(true);
@@ -152,7 +208,7 @@ export function SocialPanel() {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-black/10">
-        {(['generate', 'compose', 'queue'] as const).map(t => (
+        {(['generate', 'compose', 'queue', 'blog'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -160,7 +216,7 @@ export function SocialPanel() {
               tab === t ? 'border-black text-black' : 'border-transparent text-black/40 hover:text-black/60'
             }`}
           >
-            {t === 'generate' ? '✨ Generate' : t === 'compose' ? '✏️ Compose' : '📅 Queue'}
+            {t === 'generate' ? '✨ Generate' : t === 'compose' ? '✏️ Compose' : t === 'queue' ? '📅 Queue' : '📝 SEO Blog'}
           </button>
         ))}
       </div>
@@ -376,6 +432,94 @@ export function SocialPanel() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* BLOG TAB */}
+      {tab === 'blog' && (
+        <div className="space-y-4">
+          {/* Info */}
+          <div className="border border-black/10 rounded-lg p-4 bg-black/5 space-y-1">
+            <p className="text-xs font-semibold text-black">SEO Geo Blog — automatski</p>
+            <p className="text-xs text-black/60">Generira blog post za svaki grad u Hrvatskoj. Objavljuje na <span className="font-mono">/blog/parking-split</span> itd. Automatski šalje URL Googleu via IndexNow.</p>
+          </div>
+
+          {/* Generate */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-black/60">Grad (opcionalno — preskače ako je već pokriven)</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={blogCity}
+                onChange={e => setBlogCity(e.target.value)}
+                placeholder="Split, Zagreb, Dubrovnik..."
+                className="flex-1 text-sm border border-black/10 rounded-lg px-3 py-2 bg-white outline-none focus:border-black/30"
+              />
+              <button
+                onClick={handleGenerateBlog}
+                disabled={blogGenerating}
+                className="px-4 py-2 rounded-full bg-black text-white text-sm font-semibold hover:bg-gray-900 transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {blogGenerating ? 'Generating...' : '✨ Generate + Publish'}
+              </button>
+            </div>
+          </div>
+
+          {blogResult && (
+            <div className={`rounded-lg p-3 text-sm space-y-1 ${blogResult.ok ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+              {blogResult.ok ? (
+                <>
+                  <p className="font-semibold text-green-800">✓ Published: {blogResult.city}</p>
+                  <p className="text-green-700 text-xs">{blogResult.title}</p>
+                  <div className="flex gap-3 text-xs text-green-600 mt-1">
+                    <span>Source: {blogResult.source}</span>
+                    <span>{blogResult.indexed ? '✓ IndexNow sent' : '⚠ IndexNow not configured'}</span>
+                  </div>
+                  <a href={`/blog/${blogResult.slug}`} target="_blank" rel="noreferrer" className="text-xs text-green-700 underline">
+                    /blog/{blogResult.slug} →
+                  </a>
+                </>
+              ) : (
+                <p className="text-red-700">{blogResult.message || blogResult.error}</p>
+              )}
+            </div>
+          )}
+
+          {/* Published posts */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-black/60 uppercase tracking-wide">
+                Published Posts ({blogPosts.length})
+              </p>
+              <button onClick={fetchBlogPosts} className="text-xs text-black/40 hover:text-black underline">Refresh</button>
+            </div>
+
+            {blogLoading && <p className="text-sm text-black/40 text-center py-4">Loading...</p>}
+
+            {!blogLoading && blogPosts.length === 0 && (
+              <p className="text-xs text-black/40 text-center py-6">No posts yet — generate your first one above.</p>
+            )}
+
+            {blogPosts.map(post => (
+              <div key={post.id} className="flex items-center justify-between border border-black/10 rounded-lg px-4 py-2.5 bg-white">
+                <div>
+                  <p className="text-sm font-semibold text-black">{post.title_hr}</p>
+                  <p className="text-xs text-black/40">{post.city} · {post.published_at ? new Date(post.published_at).toLocaleDateString('hr-HR') : 'draft'}</p>
+                </div>
+                <a href={`/blog/${post.slug}`} target="_blank" rel="noreferrer" className="text-xs text-black/40 hover:text-black underline ml-4 flex-shrink-0">
+                  View →
+                </a>
+              </div>
+            ))}
+          </div>
+
+          {/* Setup guide */}
+          <div className="border border-amber-100 bg-amber-50 rounded-lg p-4 space-y-2">
+            <p className="text-xs font-semibold text-amber-900">Setup za automatsko objavljivanje</p>
+            <p className="text-xs text-amber-800">1. <span className="font-mono">GROQ_API_KEY</span> — za AI generiranje sadržaja</p>
+            <p className="text-xs text-amber-800">2. <span className="font-mono">INDEXNOW_KEY</span> — za automatski Google/Bing indeks</p>
+            <p className="text-xs text-amber-800">3. cron-job.org → GET <span className="font-mono">payparq.com/api/cron/blog-publisher?token=CRON_SECRET</span> — dnevno</p>
+          </div>
         </div>
       )}
     </div>
