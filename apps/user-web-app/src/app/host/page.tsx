@@ -841,8 +841,8 @@ export default function HostPage() {
         <div className="flex-1 flex items-center justify-center px-6">
           <div className="text-center max-w-sm space-y-4">
             <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
-            <h2 className="text-xl font-black text-gray-900">Lot je kreiran!</h2>
-            <p className="text-sm text-gray-600">Vaš parking je vidljiv u pretrazi. Poslali smo vam link na <span className="font-semibold text-gray-900">{email}</span> za pristup vašem računu i upravljanje lotom.</p>
+            <h2 className="text-xl font-black text-gray-900">{hostT('Lot created!', locale)}</h2>
+            <p className="text-sm text-gray-600">{hostT('Your parking is visible in the search. We sent you a link to', locale)} <span className="font-semibold text-gray-900">{email}</span> {hostT('to access your account and manage the lot', locale)}</p>
             <div className="flex flex-col gap-2 pt-2">
               <Link href="/members?tab=moji-prostori" className="inline-block px-6 py-3 rounded-lg bg-gray-900 text-white text-sm font-bold hover:bg-gray-800 transition-colors">
                 Moji prostori
@@ -1232,7 +1232,7 @@ export default function HostPage() {
             )}
             <button type="submit" disabled={submitting}
               className="w-full py-4 rounded-lg font-bold text-base text-white disabled:opacity-60 transition-opacity shadow-sm bg-gray-900 hover:bg-gray-800">
-              {submitting ? 'Slanje...' : 'Pošalji zahtjev'}
+              {submitting ? hostT('Sending...', locale) : hostT('Submit request', locale)}
             </button>
             <p className="text-center text-xs text-gray-400 pb-4">
               Slanjem se slažete s našim{' '}
