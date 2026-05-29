@@ -5,8 +5,80 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Lock, CheckCircle, MapPin, Navigation, ChevronDown, ChevronUp, Clock, X, Info } from 'lucide-react';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import { useLocale } from '@/components/LocaleProvider';
 
 const GMAPS_LIBS: ('places')[] = ['places'];
+
+const HOST_TRANSLATIONS = {
+  'List your parking space': { en: 'List your parking space', hr: 'Oglasi svoje parkirno mjesto' },
+  'List your space for free and start earning today': { en: 'List your space for free and start earning today', hr: 'Oglasite Vaše parkirno mjesto potpuno besplatno i zarađujte već danas.' },
+  'Complete': { en: 'Complete', hr: 'Dovrši' },
+  'more steps to start earning': { en: 'more steps to start earning', hr: 'koraka do početka zarađivanja' },
+  'How it works': { en: 'How it works', hr: 'Kako funkcionira' },
+  'Enter information': { en: 'Enter information', hr: 'Unesite podatke' },
+  'Fill in contact and lot information': { en: 'Fill in contact and lot information', hr: 'Ispunite kontakt podatke i informacije o lotu.' },
+  'We review your listing': { en: 'We review your listing', hr: 'Pregledavamo oglas' },
+  'Our team verifies your space within 24 hours': { en: 'Our team verifies your space within 24 hours', hr: 'Naš tim verificira vaš prostor unutar 24 sata.' },
+  'Start earning': { en: 'Start earning', hr: 'Počnite zarađivati' },
+  'Your lot becomes active and drivers can book': { en: 'Your lot becomes active and drivers can book', hr: 'Vaš lot postaje aktivan i vozači mogu rezervirati.' },
+  'Earnings estimate': { en: 'Earnings estimate', hr: 'Procjena zarade' },
+  'Average hourly rate': { en: 'Average hourly rate', hr: 'Prosj. raspon satne cijene' },
+  'Average daily rate': { en: 'Average daily rate', hr: 'Prosj. raspon dnevne cijene' },
+  'Average monthly rate': { en: 'Average monthly rate', hr: 'Prosj. raspon mjesečne cijene' },
+  'Loading map...': { en: 'Loading map...', hr: 'Učitavanje karte...' },
+  'Availability': { en: 'Availability', hr: 'Dostupnost' },
+  'Capacity': { en: 'Capacity (spots)', hr: 'Kapacitet (mjesta)' },
+  'From': { en: 'From', hr: 'Od' },
+  'To': { en: 'To', hr: 'Do' },
+  'Price': { en: 'Price', hr: 'Cijena' },
+  'Auto': { en: 'Auto', hr: 'Auto' },
+  'Manual': { en: 'Manual', hr: 'Ručno' },
+  'Note': { en: 'Note', hr: 'Napomena' },
+  'Click on any date to close it or change capacity, time, and price. Later you can access the calendar and modify the data.': { en: 'Click on any date to close it or change capacity, time, and price. Later you can access the calendar and modify the data.', hr: 'Kliknite na bilo koji datum da biste zatvorili datum ili promijenili kapacitet, vrijeme i cijene. Senare ćete moći pristupiti kalendaru i promijeniti podatke.' },
+  'Lot created!': { en: 'Lot created!', hr: 'Lot je kreiran!' },
+  'Your parking is visible in the search. We sent you a link to': { en: 'Your parking is visible in the search. We sent you a link to', hr: 'Vaš parking je vidljiv u pretrazi. Poslali smo vam link na' },
+  'to access your account and manage the lot': { en: 'to access your account and manage the lot', hr: 'za pristup vašem računu i upravljanje lotom.' },
+  '1 — Contact details': { en: '1 — Contact details', hr: '1 — Kontakt podaci' },
+  'Full name': { en: 'Full name', hr: 'Ime i prezime' },
+  'Email': { en: 'Email', hr: 'Email adresa' },
+  'Phone': { en: 'Phone', hr: 'Telefon' },
+  '2 — Lot information': { en: '2 — Lot information', hr: '2 — Podaci o lotu' },
+  'Name': { en: 'Name', hr: 'Naziv' },
+  'Address': { en: 'Address', hr: 'Adresa' },
+  '3 — Lot specifics': { en: '3 — Lot specifics', hr: '3 — Specifičnosti lota' },
+  'Spot types': { en: 'Spot types', hr: 'Vrste mjesta' },
+  'Garage': { en: 'Garage', hr: 'Garaža' },
+  'Open lot': { en: 'Open lot', hr: 'Parcela' },
+  'Covered': { en: 'Covered', hr: 'Natkriveno' },
+  'Access': { en: 'Access', hr: 'Dostup' },
+  'Disabled access': { en: 'Disabled access', hr: 'Pristup invalidima' },
+  'Ramp/Gate': { en: 'Ramp/Gate', hr: 'Rampa/Brana' },
+  'No ramp': { en: 'No ramp', hr: 'Bez Rampe' },
+  'Services': { en: 'Services', hr: 'Usluge' },
+  'Washing': { en: 'Washing', hr: 'Pranje' },
+  'EV charging': { en: 'EV charging', hr: 'EV punjenje' },
+  'Valet': { en: 'Valet', hr: 'Valet' },
+  'Tranfer': { en: 'Transfer', hr: 'Pretakanje' },
+  'Reception': { en: 'Reception/Guard', hr: 'Recepcija/Čuvar' },
+  'Staff': { en: 'Staff', hr: 'Osoblje' },
+  'CCTV': { en: 'CCTV', hr: 'CCTV' },
+  'Bus': { en: 'Bus', hr: 'Bus' },
+  'Large vehicles': { en: 'Oversized Vehicle (XXL)', hr: 'Oversized Vehicle (XXL)' },
+  'Amenities': { en: 'Amenities', hr: 'Pogodnosti' },
+  'Submit request': { en: 'Submit request', hr: 'Pošalji zahtjev' },
+  'Sending...': { en: 'Sending...', hr: 'Slanje...' },
+  'Yes': { en: 'Yes', hr: 'Da' },
+  'No': { en: 'No', hr: 'Ne' },
+  'Network error': { en: 'Network error: ', hr: 'Mrežna greška: ' },
+  'Error sending request': { en: 'Error sending request.', hr: 'Greška pri slanju zahtjeva.' },
+  'We are reviewing the listing': { en: 'We are reviewing the listing', hr: 'Pregledavamo oglas' },
+  'Your lot is now active and drivers can book': { en: 'Your lot is now active and drivers can book', hr: 'Vaš lot je sada aktivan i vozači mogu rezervirati.' },
+} as const;
+
+const hostT = (key: string, locale: string): string => {
+  const trans = HOST_TRANSLATIONS[key as keyof typeof HOST_TRANSLATIONS];
+  return trans ? (locale === 'en' ? trans.en : trans.hr) : key;
+};
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
 
@@ -45,17 +117,17 @@ function CollapsibleSection({ title, children, defaultOpen = true }: { title: st
 
 // ─── Left info panel ──────────────────────────────────────────────────────────
 
-function InfoPanel({ completedSteps }: { completedSteps: number }) {
+function InfoPanel({ completedSteps, locale }: { completedSteps: number; locale: string }) {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-3 md:p-6 space-y-4 sm:space-y-6 w-full overflow-x-hidden text-xs sm:text-sm">
       <div>
-        <p className="text-sm font-semibold text-gray-900 mb-1">Oglasi svoje parkirno mjesto</p>
-        <p className="text-xs text-gray-500">Oglasite Vaše parkirno mjesto potpuno besplatno i zarađujte već danas.</p>
+        <p className="text-sm font-semibold text-gray-900 mb-1">{hostT('List your parking space', locale)}</p>
+        <p className="text-xs text-gray-500">{hostT('List your space for free and start earning today', locale)}</p>
       </div>
 
       {/* Progress indicator - desktop only */}
       <div className="hidden md:block border-t border-gray-100 pt-6 space-y-3">
-        <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Dovrši još {Math.max(0, 3 - completedSteps)} koraka do početka zarađivanja</p>
+        <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest">{hostT('Complete', locale)} {Math.max(0, 3 - completedSteps)} {hostT('more steps to start earning', locale)}</p>
         <div className="flex items-center gap-2">
           {[0, 1, 2].map((stepIdx) => (
             <div
@@ -69,12 +141,12 @@ function InfoPanel({ completedSteps }: { completedSteps: number }) {
       </div>
 
       <div className="border-t border-gray-100 pt-6 space-y-4">
-        <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Kako funkcionira</p>
+        <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest">{hostT('How it works', locale)}</p>
         <div className="space-y-3">
           {[
-            { n: '1', title: 'Unesite podatke', desc: 'Ispunite kontakt podatke i informacije o lotu.' },
-            { n: '2', title: 'Pregledavamo oglas', desc: 'Naš tim verificira vaš prostor unutar 24 sata.' },
-            { n: '3', title: 'Počnite zarađivati', desc: 'Vaš lot postaje aktivan i vozači mogu rezervirati.' },
+            { n: '1', title: hostT('Enter information', locale), desc: hostT('Fill in contact and lot information', locale) },
+            { n: '2', title: hostT('We review your listing', locale), desc: hostT('Our team verifies your space within 24 hours', locale) },
+            { n: '3', title: hostT('Start earning', locale), desc: hostT('Your lot becomes active and drivers can book', locale) },
           ].map((step) => (
             <div key={step.n} className="flex items-start gap-3">
               <div className="w-6 h-6 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -89,17 +161,17 @@ function InfoPanel({ completedSteps }: { completedSteps: number }) {
         </div>
       </div>
       <div className="border-t border-gray-100 pt-6">
-        <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">Procjena zarade</p>
+        <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">{hostT('Earnings estimate', locale)}</p>
         <div className="space-y-2 text-xs">
-          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-gray-700"><span>Prosj. raspon satne cijene</span><span className="font-medium flex-shrink-0">€0.5 – €4.00</span></div>
-          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-gray-700"><span>Prosj. raspon dnevne cijene</span><span className="font-medium flex-shrink-0">€5 – €30</span></div>
-          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-gray-900 font-bold pt-2 border-t border-gray-100"><span>Prosj. raspon mjesečne cijene</span><span className="flex-shrink-0">€29 – €440</span></div>
+          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-gray-700"><span>{hostT('Average hourly rate', locale)}</span><span className="font-medium flex-shrink-0">€0.5 – €4.00</span></div>
+          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-gray-700"><span>{hostT('Average daily rate', locale)}</span><span className="font-medium flex-shrink-0">€5 – €30</span></div>
+          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-gray-900 font-bold pt-2 border-t border-gray-100"><span>{hostT('Average monthly rate', locale)}</span><span className="flex-shrink-0">€29 – €440</span></div>
         </div>
       </div>
 
       {/* Progress indicator - mobile only */}
       <div className="md:hidden border-t border-gray-100 pt-6 space-y-3">
-        <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Dovrši još {Math.max(0, 3 - completedSteps)} koraka do početka zarađivanja</p>
+        <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest">{hostT('Complete', locale)} {Math.max(0, 3 - completedSteps)} {hostT('more steps to start earning', locale)}</p>
         <div className="flex items-center gap-2">
           {[0, 1, 2].map((stepIdx) => (
             <div
@@ -219,7 +291,7 @@ function AddressMapField({ address, onAddressChange, pin, onPinChange, onRegionD
           </GoogleMap>
         ) : (
           <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-            <span className="text-xs text-gray-400">Učitavanje karte...</span>
+            <span className="text-xs text-gray-400">{hostT('Loading map...', locale)}</span>
           </div>
         )}
       </div>
@@ -378,8 +450,8 @@ function CalendarScheduler({ baseSpots, onConfigsChange }: { baseSpots: string; 
 
       {/* Info note */}
       <div className="bg-violet-50 border border-violet-200 rounded-lg p-3.5 space-y-1">
-        <p className="text-xs text-black font-medium flex items-center gap-2" translate="no"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> Napomena</p>
-        <p className="text-xs text-black" translate="no">Kliknite na bilo koji datum da biste zatvorili datum ili promijenili kapacitet, vrijeme i cijene. Kasnije ćete moći pristupiti kalendaru i promijeniti podatke.</p>
+        <p className="text-xs text-black font-medium flex items-center gap-2" translate="no"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> {hostT('Note', locale)}</p>
+        <p className="text-xs text-black" translate="no">{hostT('Click on any date to close it or change capacity, time, and price. Later you can access the calendar and modify the data.', locale)}</p>
       </div>
 
       {/* Modal */}
@@ -431,7 +503,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: {
     <div className="space-y-4">
       {/* Open/Close */}
       <div className="space-y-2">
-        <label className="block text-sm font-semibold text-gray-900" translate="no">Dostupnost</label>
+        <label className="block text-sm font-semibold text-gray-900" translate="no">{hostT('Availability', locale)}</label>
         <div className="flex gap-2">
           {[true, false].map((v) => (
             <button
@@ -453,7 +525,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: {
 
       {/* Capacity */}
       <div className="space-y-2">
-        <label className="block text-sm font-semibold text-gray-900" translate="no">Kapacitet (mjesta)</label>
+        <label className="block text-sm font-semibold text-gray-900" translate="no">{hostT('Capacity', locale)}</label>
         <input
           type="number"
           min="1"
@@ -468,11 +540,11 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: {
       {isOpen && (
         <div className="space-y-3">
           <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-900" translate="no">Od</label>
+            <label className="block text-sm font-semibold text-gray-900" translate="no">{hostT('From', locale)}</label>
             <input type="time" value={openTime} onChange={(e) => setOpenTime(e.target.value)} className={inputClass} />
           </div>
           <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-900" translate="no">Do</label>
+            <label className="block text-sm font-semibold text-gray-900" translate="no">{hostT('To', locale)}</label>
             <input type="time" value={closeTime} onChange={(e) => setCloseTime(e.target.value)} className={inputClass} />
           </div>
         </div>
@@ -482,9 +554,9 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: {
       {isOpen && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="block text-sm font-semibold text-gray-900" translate="no">Cijena</label>
+            <label className="block text-sm font-semibold text-gray-900" translate="no">{hostT('Price', locale)}</label>
             <div className="flex items-center gap-2">
-              <span className={`text-xs font-medium ${priceMode === 'auto' ? 'text-gray-900' : 'text-gray-400'}`} translate="no">Auto</span>
+              <span className={`text-xs font-medium ${priceMode === 'auto' ? 'text-gray-900' : 'text-gray-400'}`} translate="no">{hostT('Auto', locale)}</span>
               <button
                 type="button"
                 onClick={() => setPriceMode(priceMode === 'auto' ? 'manual' : 'auto')}
@@ -496,7 +568,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: {
                   style={{ transform: priceMode === 'manual' ? 'translateX(22px)' : 'translateX(2px)' }}
                 />
               </button>
-              <span className={`text-xs font-medium ${priceMode === 'manual' ? 'text-gray-900' : 'text-gray-400'}`} translate="no">Ručno</span>
+              <span className={`text-xs font-medium ${priceMode === 'manual' ? 'text-gray-900' : 'text-gray-400'}`} translate="no">{hostT('Manual', locale)}</span>
             </div>
           </div>
           {priceMode === 'manual' && (
@@ -540,6 +612,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: {
 
 export default function HostPage() {
   const searchParams = useSearchParams();
+  const { locale } = useLocale();
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
@@ -804,25 +877,25 @@ export default function HostPage() {
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8">
           <div>
-            <InfoPanel completedSteps={completedSteps} />
+            <InfoPanel completedSteps={completedSteps} locale={locale} />
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 lg:col-start-2">
 
             {/* ── Section 1: Contact Info ── */}
             <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-5">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-widest">1 — Kontakt podaci</p>
+              <p className="text-xs font-black text-gray-500 uppercase tracking-widest">{hostT('1 — Contact details', locale)}</p>
               <div className="space-y-3">
                 <div>
-                  <label className={labelClass}>Ime i prezime</label>
+                  <label className={labelClass}>{hostT('Full name', locale)}</label>
                   <input type="text" placeholder="Ivan Horvat" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} required />
                 </div>
                 <div>
-                  <label className={labelClass}>Email adresa</label>
+                  <label className={labelClass}>{hostT('Email', locale)}</label>
                   <input type="email" placeholder="vi@primjer.com" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} required />
                 </div>
                 <div>
-                  <label className={labelClass}>Telefon</label>
+                  <label className={labelClass}>{hostT('Phone', locale)}</label>
                   <input type="tel" placeholder="+385 91 234 5678" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} />
                 </div>
               </div>
@@ -830,14 +903,14 @@ export default function HostPage() {
 
             {/* ── Section 2: Lot Info ── */}
             <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-5">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-widest">2 — Podaci o lotu</p>
+              <p className="text-xs font-black text-gray-500 uppercase tracking-widest">{hostT('2 — Lot information', locale)}</p>
               <div className="space-y-3">
                 <div>
-                  <label className={labelClass}>Naziv</label>
+                  <label className={labelClass}>{hostT('Name', locale)}</label>
                   <input type="text" placeholder="npr. Parking Centar Zagreb" value={lotName} onChange={(e) => setLotName(e.target.value)} className={inputClass} required />
                 </div>
                 <div>
-                  <label className={labelClass}>Adresa</label>
+                  <label className={labelClass}>{hostT('Address', locale)}</label>
                   <AddressMapField address={address} onAddressChange={setAddress} pin={pin} onPinChange={setPin} onRegionDetect={(r) => r && setRegion(r)} isLoaded={isLoaded} />
                 </div>
               </div>
@@ -845,7 +918,7 @@ export default function HostPage() {
 
             {/* ── Section 3: Lot Specifics ── */}
             <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-5">
-              <p className="text-xs font-black text-gray-500 uppercase tracking-widest">3 — Specifičnosti lota</p>
+              <p className="text-xs font-black text-gray-500 uppercase tracking-widest">{hostT('3 — Lot specifics', locale)}</p>
 
               {/* 3.1 Stvari koje biste trebali znati */}
               <CollapsibleSection title="Stvari koje biste trebali znati" defaultOpen={false}>
@@ -1015,7 +1088,7 @@ export default function HostPage() {
               </CollapsibleSection>
 
               {/* 3.6 Cijena */}
-              <CollapsibleSection title="Cijena" defaultOpen={false}>
+              <CollapsibleSection title={hostT('Price', locale)} defaultOpen={false}>
                 {/* Info box */}
                 <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
                   <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> Napomena</p>
