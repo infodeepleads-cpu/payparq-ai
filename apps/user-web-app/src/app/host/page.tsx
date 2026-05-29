@@ -214,11 +214,12 @@ function extractCountryCode(results: google.maps.GeocoderResult[]): string | nul
 
 // ─── Address field with mini map ──────────────────────────────────────────────
 
-function AddressMapField({ address, onAddressChange, pin, onPinChange, onRegionDetect, isLoaded }: {
+function AddressMapField({ address, onAddressChange, pin, onPinChange, onRegionDetect, isLoaded, locale }: {
   address: string; onAddressChange: (v: string) => void;
   pin: { lat: number; lng: number } | null; onPinChange: (p: { lat: number; lng: number }) => void;
   onRegionDetect?: (region: string | null) => void;
   isLoaded: boolean;
+  locale: string;
 }) {
   const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [showPredictions, setShowPredictions] = useState(false);
@@ -941,7 +942,7 @@ export default function HostPage() {
                 </div>
                 <div>
                   <label className={labelClass}>{hostT('Address', locale)}</label>
-                  <AddressMapField address={address} onAddressChange={setAddress} pin={pin} onPinChange={setPin} onRegionDetect={(r) => r && setRegion(r)} isLoaded={isLoaded} />
+                  <AddressMapField address={address} onAddressChange={setAddress} pin={pin} onPinChange={setPin} onRegionDetect={(r) => r && setRegion(r)} isLoaded={isLoaded} locale={locale} />
                 </div>
               </div>
             </div>
