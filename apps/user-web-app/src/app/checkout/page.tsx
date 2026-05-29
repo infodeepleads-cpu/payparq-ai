@@ -275,7 +275,7 @@ function SummaryPanel({
       </div>
 
       <div className="lg:hidden">
-        <p className="text-xs font-semibold text-gray-600 text-center">{checkoutT('Sesija parkiranja', locale)} ({(() => {
+        <p className="text-xs font-semibold text-gray-600 text-center" translate="no">{checkoutT('Sesija parkiranja', locale)} ({(() => {
           if (durationHours >= 24) {
             const days = Math.round(durationHours / 24);
             return `${days} ${locale === 'en' ? (days === 1 ? checkoutT('dan', locale) : checkoutT('dana', locale)) : (days === 1 ? checkoutT('dan', locale) : checkoutT('dana', locale))}`;
@@ -289,7 +289,7 @@ function SummaryPanel({
             if (lastDigit >= 2 && lastDigit <= 4) return checkoutT('sata', locale);
             return checkoutT('sati', locale);
           })()}`;
-        })()}</span>)</p>
+        })()}</p>
         <p className="font-bold text-gray-900 text-3xl mt-2 text-center">€{amountEur.toFixed(2)}</p>
         <div className="mt-3 text-center">
           <p className="text-xs text-gray-600">{locationName} {displayId && <span className="text-gray-700">ID: <span className="font-mono font-medium">{displayId}</span></span>}</p>
