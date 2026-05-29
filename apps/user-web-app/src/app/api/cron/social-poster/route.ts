@@ -22,7 +22,7 @@ Make it unique and different from typical parking ads.`;
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'llama3-8b-8192',
+      model: 'llama-3.1-8b-instant',
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 200,
       temperature: 0.8,
