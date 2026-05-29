@@ -388,6 +388,22 @@ const MEMBERS_TRANSLATIONS = {
   'Brza rezervacija': { en: 'Quick Reservation', hr: 'Brza rezervacija' },
   'Kopiraj link': { en: 'Copy link', hr: 'Kopiraj link' },
   'Link kopiran': { en: 'Link copied', hr: 'Link kopiran' },
+  'Moji prostori': { en: 'My Spaces', hr: 'Moji prostori' },
+  'Korisnik': { en: 'Account', hr: 'Korisnik' },
+  'Aktivnost': { en: 'Activity', hr: 'Aktivnost' },
+  'Vozila': { en: 'Vehicles', hr: 'Vozila' },
+  'Pomoć': { en: 'Help', hr: 'Pomoć' },
+  'Nemaš verificiranih prostora. Provjeri status u Moji prostori.': { en: 'No verified spaces. Check status in My Spaces.', hr: 'Nemaš verificiranih prostora. Provjeri status u Moji prostori.' },
+  'Nemaš objavljenih prostora. Klikni': { en: 'No listings yet. Click', hr: 'Nemaš objavljenih prostora. Klikni' },
+  'za početak': { en: 'to get started', hr: 'za početak' },
+  'Operacije': { en: 'Operations', hr: 'Operacije' },
+  'Plaćanja': { en: 'Payments', hr: 'Plaćanja' },
+  'Dozvole': { en: 'Permits', hr: 'Dozvole' },
+  'Recenzije': { en: 'Reviews', hr: 'Recenzije' },
+  'Promidžba': { en: 'Promotions', hr: 'Promidžba' },
+  'Kampanje': { en: 'Campaigns', hr: 'Kampanje' },
+  'Dolasci': { en: 'Arrivals', hr: 'Dolasci' },
+  'Upravljanje': { en: 'Management', hr: 'Upravljanje' },
 } as const;
 
 const membersT = (key: string, locale: 'en' | 'hr'): string => {
@@ -2892,7 +2908,7 @@ export default function MembersPage() {
               {ownerListingsLoading ? (
                 <p className="text-xs text-black/50">Učitavanje...</p>
               ) : ownerListings.filter(l => l.verification_status === 'verified').length === 0 ? (
-                <p className="text-xs text-black/50">Nemaš verificiranih prostora. Provjeri status u Moji prostori.</p>
+                <p className="text-xs text-black/50">{membersT('Nemaš verificiranih prostora. Provjeri status u Moji prostori.', locale)}</p>
               ) : (
                 <div className="space-y-2">
                   {ownerListings
@@ -2932,7 +2948,7 @@ export default function MembersPage() {
         <div className="space-y-6">
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-black">
-              Moji prostori
+              {membersT('Moji prostori', locale)}
             </h2>
             <p className="text-sm text-black/70">Upravljaj svojim parkiralištima.</p>
           </div>
@@ -2941,7 +2957,7 @@ export default function MembersPage() {
             <div className="md:col-span-2">
               <div className="rounded-xl border border-black/10 bg-white p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">Moji prostori</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">{membersT('Moji prostori', locale)}</p>
                   <button
                     type="button"
                     onClick={() => router.push('/host')}
@@ -3346,7 +3362,7 @@ export default function MembersPage() {
                           <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                             M
                           </span>
-                          <span>Moji prostori</span>
+                          <span>{membersT('Moji prostori', locale)}</span>
                         </button>
                         <Link
                           href="/host"
@@ -3430,7 +3446,7 @@ export default function MembersPage() {
 
                     {/* KORISNIK SECTION */}
                     <div className="space-y-0.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 px-3 pt-2">Korisnik</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 px-3 pt-2">{membersT('Korisnik', locale)}</p>
                       <button
                         type="button"
                         onClick={() => setActiveItem("permits")}
@@ -3457,7 +3473,7 @@ export default function MembersPage() {
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                           A
                         </span>
-                        <span>Aktivnost</span>
+                        <span>{membersT('Aktivnost', locale)}</span>
                       </button>
                       <button
                         type="button"
@@ -3471,7 +3487,7 @@ export default function MembersPage() {
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                           $
                         </span>
-                        <span>Plaćanje</span>
+                        <span>{membersT('Plaćanje', locale)}</span>
                       </button>
                       <button
                         type="button"
@@ -3485,7 +3501,7 @@ export default function MembersPage() {
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                           V
                         </span>
-                        <span>Vozila</span>
+                        <span>{membersT('Vozila', locale)}</span>
                       </button>
                       <button
                         type="button"
@@ -3499,7 +3515,7 @@ export default function MembersPage() {
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                           %
                         </span>
-                        <span>Promocije</span>
+                        <span>{membersT('Promocije', locale)}</span>
                       </button>
                       <button
                         type="button"
@@ -3527,7 +3543,7 @@ export default function MembersPage() {
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                           ?
                         </span>
-                        <span>Pomoć</span>
+                        <span>{membersT('Pomoć', locale)}</span>
                       </button>
                     </div>
                     <div className="flex-1" />
