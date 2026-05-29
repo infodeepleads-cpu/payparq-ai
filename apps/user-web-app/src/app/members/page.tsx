@@ -8,6 +8,7 @@ import { FooterBrand } from "@/components/FooterBrand";
 import { OperationsPanel } from "@/components/OperationsPanel";
 import { ManagementPanel } from "@/components/ManagementPanel";
 import { CampaignsPanel } from "@/components/CampaignsPanel";
+import { SocialPanel } from "@/components/SocialPanel";
 import { ShuttleReservationCard } from "@/components/ShuttleReservationCard";
 import { LotCalendarPricing } from "@/components/LotCalendarPricing";
 import { NotificationCenter } from "@/components/NotificationCenter";
@@ -31,6 +32,7 @@ type NavItemId =
   | "operations"
   | "management"
   | "campaigns"
+  | "social"
   | "arrivals"
   | "moji-prostori"
   | "payouts"
@@ -404,6 +406,7 @@ const MEMBERS_TRANSLATIONS = {
   'Recenzije': { en: 'Reviews', hr: 'Recenzije' },
   'Promidžba': { en: 'Promotions', hr: 'Promidžba' },
   'Kampanje': { en: 'Campaigns', hr: 'Kampanje' },
+  'Društvene mreže': { en: 'Social Media', hr: 'Društvene mreže' },
   'Dolasci': { en: 'Arrivals', hr: 'Dolasci' },
   'Upravljanje': { en: 'Management', hr: 'Upravljanje' },
   'Upravljaj kalendarima': { en: 'Manage calendars', hr: 'Upravljaj kalendarima' },
@@ -2956,6 +2959,10 @@ export default function MembersPage() {
       return <CampaignsPanel />;
     }
 
+    if (activeItem === "social" && role === "super_admin") {
+      return <SocialPanel />;
+    }
+
     if (activeItem === "arrivals" && (user || devSignedIn)) {
       return user ? <ArrivalsPanel userId={user.id} /> : <div className="text-sm text-black/70">{membersT('Arrivals panel', locale)}</div>;
     }
@@ -3512,6 +3519,38 @@ export default function MembersPage() {
                               O
                             </span>
                             <span>{membersT('Operacije', locale)}</span>
+                          </button>
+                        )}
+                        {role === 'super_admin' && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveItem("campaigns")}
+                            className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
+                              activeItem === "campaigns"
+                                ? "bg-white text-black"
+                                : "text-white/70 hover:bg-white/5"
+                            }`}
+                          >
+                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                              ✉
+                            </span>
+                            <span>{membersT('Kampanje', locale)}</span>
+                          </button>
+                        )}
+                        {role === 'super_admin' && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveItem("social")}
+                            className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
+                              activeItem === "social"
+                                ? "bg-white text-black"
+                                : "text-white/70 hover:bg-white/5"
+                            }`}
+                          >
+                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                              📱
+                            </span>
+                            <span>{membersT('Društvene mreže', locale)}</span>
                           </button>
                         )}
                         {isAdmin && (
