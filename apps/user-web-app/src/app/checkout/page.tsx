@@ -67,6 +67,9 @@ const CHECKOUT_TRANSLATIONS = {
   'sat': { en: 'hour', hr: 'sat' },
   'sata': { en: 'hours', hr: 'sata' },
   'sati': { en: 'hours', hr: 'sati' },
+  'dan': { en: 'day', hr: 'dan' },
+  'dana': { en: 'days', hr: 'dana' },
+  'danu': { en: 'days', hr: 'danu' },
   'Subtotal': { en: 'Subtotal', hr: 'Međuzbrojno' },
   'Service Fee': { en: 'Service Fee', hr: 'Naknada za uslugu' },
   'Total': { en: 'Total', hr: 'Ukupno' },
@@ -272,17 +275,20 @@ function SummaryPanel({
       </div>
 
       <div className="lg:hidden">
-        <p className="text-xs font-semibold text-gray-600 text-center">{checkoutT('Sesija parkiranja', locale)} ({durationHours} <span translate="no">{(() => {
-          if (locale === 'en') {
-            return durationHours === 1 ? checkoutT('sat', locale) : checkoutT('sati', locale);
+        <p className="text-xs font-semibold text-gray-600 text-center">{checkoutT('Sesija parkiranja', locale)} ({(() => {
+          if (durationHours >= 24) {
+            const days = Math.round(durationHours / 24);
+            return `${days} ${locale === 'en' ? (days === 1 ? checkoutT('dan', locale) : checkoutT('dana', locale)) : (days === 1 ? checkoutT('dan', locale) : checkoutT('dana', locale))}`;
           }
-          const h = durationHours;
-          const lastDigit = h % 10;
-          const lastTwoDigits = h % 100;
-          if (lastTwoDigits >= 11 && lastTwoDigits <= 14) return checkoutT('sati', locale);
-          if (h === 1) return checkoutT('sat', locale);
-          if (lastDigit >= 2 && lastDigit <= 4) return checkoutT('sata', locale);
-          return checkoutT('sati', locale);
+          return `${durationHours} ${locale === 'en' ? (durationHours === 1 ? checkoutT('sat', locale) : checkoutT('sati', locale)) : (() => {
+            const h = durationHours;
+            const lastDigit = h % 10;
+            const lastTwoDigits = h % 100;
+            if (lastTwoDigits >= 11 && lastTwoDigits <= 14) return checkoutT('sati', locale);
+            if (h === 1) return checkoutT('sat', locale);
+            if (lastDigit >= 2 && lastDigit <= 4) return checkoutT('sata', locale);
+            return checkoutT('sati', locale);
+          })()}`;
         })()}</span>)</p>
         <p className="font-bold text-gray-900 text-3xl mt-2 text-center">€{amountEur.toFixed(2)}</p>
         <div className="mt-3 text-center">
