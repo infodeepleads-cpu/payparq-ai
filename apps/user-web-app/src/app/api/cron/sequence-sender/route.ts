@@ -53,7 +53,6 @@ export async function GET(req: Request) {
       .single();
 
     if (!template) {
-      // No more emails in sequence — mark completed
       await client
         .from('email_sequence_enrollments')
         .update({ status: 'completed' })
@@ -61,7 +60,6 @@ export async function GET(req: Request) {
       continue;
     }
 
-    // Send the email
     const { error } = await resend.emails.send({
       from: FROM,
       to: enrollment.recipient_email,
@@ -69,7 +67,10 @@ export async function GET(req: Request) {
       html: template.html_content,
     });
 
-    if (error) continue;
+    if (error) {
+      console.error(`Resend error for ${enrollment.recipient_email}:`, error);
+      continue;
+    }
 
     sent++;
 
