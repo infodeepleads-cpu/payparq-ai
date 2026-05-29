@@ -292,7 +292,7 @@ function SummaryPanel({
             if (lastDigit >= 2 && lastDigit <= 4) return checkoutT('sata', locale);
             return checkoutT('sati', locale);
           })()}`;
-        })()}</p>
+        })()})</p>
         <p className="font-bold text-gray-900 text-3xl mt-2 text-center">€{amountEur.toFixed(2)}</p>
         <div className="mt-3 text-center">
           <p className="text-xs text-gray-600">{locationName} {displayId && <span className="text-gray-700">ID: <span className="font-mono font-medium">{displayId}</span></span>}</p>
