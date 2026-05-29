@@ -404,6 +404,7 @@ const MEMBERS_TRANSLATIONS = {
   'Kampanje': { en: 'Campaigns', hr: 'Kampanje' },
   'Dolasci': { en: 'Arrivals', hr: 'Dolasci' },
   'Upravljanje': { en: 'Management', hr: 'Upravljanje' },
+  'Upravljaj kalendarima': { en: 'Manage calendars', hr: 'Upravljaj kalendarima' },
 } as const;
 
 const membersT = (key: string, locale: 'en' | 'hr'): string => {
@@ -3399,7 +3400,7 @@ export default function MembersPage() {
                           <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                             C
                           </span>
-                          <span>Upravljaj kalendarima</span>
+                          <span>{membersT('Upravljaj kalendarima', locale)}</span>
                         </button>
                         <button
                           type="button"
