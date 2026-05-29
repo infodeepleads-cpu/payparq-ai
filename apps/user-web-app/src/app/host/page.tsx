@@ -89,7 +89,6 @@ const HOST_TRANSLATIONS = {
   'Parking': { en: 'Parking', hr: 'Parking' },
   'Access type': { en: 'Access type', hr: 'Vrsta Pristupa' },
   'Working Hours': { en: 'Working Hours (Access time)', hr: 'Radno Vrijeme (Pristupno vrijeme)' },
-  'Spot types': { en: 'Spot types', hr: 'Vrste mjesta' },
 } as const;
 
 const hostT = (key: string, locale: string): string => {
