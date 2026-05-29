@@ -83,6 +83,11 @@ export function SocialPanel() {
   const [blogResult, setBlogResult] = useState<BlogGenerateResult | null>(null);
   const [blogCity, setBlogCity] = useState('');
 
+  // Meta state
+  const [connectedAccounts, setConnectedAccounts] = useState<{ platform: string; account_name: string }[]>([]);
+  const [posting, setPosting] = useState(false);
+  const [postToMeta, setPostToMeta] = useState(false);
+
   useEffect(() => {
     if (tab === 'queue') fetchPosts();
     if (tab === 'blog') fetchBlogPosts();
@@ -171,11 +176,19 @@ export function SocialPanel() {
         }),
       });
       if (res.ok) {
-        setSaveMsg(scheduledAt ? 'Scheduled!' : 'Saved as draft!');
+        const data = await res.json();
+
+        // Post to Meta if checkbox is checked
+        if (postToMeta && connectedAccounts.length > 0) {
+          await handlePostToMeta(data.post.id);
+        }
+
+        setSaveMsg(postToMeta ? '✓ Posted to Instagram & Facebook!' : (scheduledAt ? 'Scheduled!' : 'Saved as draft!'));
         setCaption('');
         setImageUrl('');
         setScheduledAt('');
         setSelectedAd('');
+        setPostToMeta(false);
         setTimeout(() => { setSaveMsg(''); setTab('queue'); }, 1200);
       }
     } catch { /* ignore */ } finally {
@@ -190,6 +203,35 @@ export function SocialPanel() {
       body: JSON.stringify({ id }),
     });
     setPosts(posts.filter(p => p.id !== id));
+  };
+
+  const handleConnectMeta = () => {
+    const META_APP_ID = '2976478279413016';
+    const REDIRECT_URI = 'https://payparq.com/api/social/meta/oauth';
+    const scope = 'instagram_business_management,pages_manage_posts,pages_read_engagement';
+    const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${REDIRECT_URI}&scope=${scope}&response_type=code`;
+    window.location.href = authUrl;
+  };
+
+  const handlePostToMeta = async (postId: string) => {
+    setPosting(true);
+    try {
+      const res = await fetch('/api/social/post-meta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId,
+          platforms: connectedAccounts.map(a => a.platform),
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setSaveMsg('Posted to ' + connectedAccounts.map(a => a.platform).join(', '));
+        fetchPosts();
+      }
+    } catch { /* ignore */ } finally {
+      setPosting(false);
+    }
   };
 
   return (
@@ -358,6 +400,38 @@ export function SocialPanel() {
               onChange={e => setScheduledAt(e.target.value)}
               className="w-full text-sm border border-black/10 rounded-lg px-3 py-2 bg-white outline-none focus:border-black/30"
             />
+          </div>
+
+          {/* Meta posting option */}
+          <div className="space-y-2 border border-blue-100 rounded-lg bg-blue-50 p-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={postToMeta}
+                onChange={e => setPostToMeta(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <span className="text-xs font-semibold text-blue-900">Post to Instagram & Facebook immediately</span>
+            </label>
+            {connectedAccounts.length === 0 && (
+              <>
+                <p className="text-xs text-blue-700">No Meta accounts connected yet.</p>
+                <button
+                  onClick={handleConnectMeta}
+                  className="w-full py-1.5 text-xs font-semibold text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors"
+                >
+                  Connect Meta Account
+                </button>
+              </>
+            )}
+            {connectedAccounts.length > 0 && (
+              <div className="text-xs text-blue-700">
+                <p className="font-semibold">Connected:</p>
+                {connectedAccounts.map(acc => (
+                  <p key={acc.platform}>• {acc.platform}: {acc.account_name}</p>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2">

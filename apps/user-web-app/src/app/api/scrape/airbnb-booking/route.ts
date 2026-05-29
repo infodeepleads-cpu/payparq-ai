@@ -51,7 +51,7 @@ export async function GET(req: Request) {
 
     const { data, error } = await supabaseAdmin
       .from('email_sequence_enrollments')
-      .upsert(rows, { onConflict: 'recipient_email,sequence_name', ignoreDuplicates: true })
+      .upsert(rows, { onConflict: 'recipient_email,sequence_name' })
       .select();
 
     if (error) {
@@ -59,9 +59,13 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Count newly inserted (not updated)
+    const newCount = data?.filter(d => d.created_at === d.updated_at).length ?? 0;
+
     return NextResponse.json({
       ok: true,
-      enrolled: data?.length ?? 0,
+      enrolled: newCount,
+      total_touched: data?.length ?? 0,
       leads: dailyLeads.map(l => l.email),
       source: 'google-scraper',
     });
