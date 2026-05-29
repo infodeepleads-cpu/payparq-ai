@@ -3,8 +3,8 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
-// Scrapes Airbnb and Booking.com for Croatian listings with parking
-// Enrolls up to 10 new unique leads daily
+const EMAIL_REGEX = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi;
+
 export async function GET() {
   if (!supabaseAdmin) {
     return NextResponse.json({ error: 'db_unavailable' }, { status: 500 });
@@ -13,23 +13,20 @@ export async function GET() {
   const leads: { email: string; name: string }[] = [];
 
   try {
-    // Fetch from Airbnb listings with parking (using a simplified mock for safety)
-    // In production, you'd use Puppeteer or an official API
-    const airbnbLeads = await scrapeAirbnbListings();
-    leads.push(...airbnbLeads);
+    // Search Croatian tourism board listings
+    const tourismLeads = await scrapeTouristickZajednica();
+    leads.push(...tourismLeads);
 
-    // Fetch from Booking.com listings with parking
-    const bookingLeads = await scrapeBookingListings();
-    leads.push(...bookingLeads);
+    // Search for Croatian properties with parking via Google
+    const googleLeads = await scrapeGoogleSearch();
+    leads.push(...googleLeads);
 
     // Deduplicate by email
     const uniqueLeads = Array.from(new Map(leads.map(l => [l.email, l])).values());
-
-    // Limit to 10 per day
     const dailyLeads = uniqueLeads.slice(0, 10);
 
     if (dailyLeads.length === 0) {
-      return NextResponse.json({ enrolled: 0, leads: [] });
+      return NextResponse.json({ enrolled: 0, leads: [], message: 'No new leads found' });
     }
 
     // Enroll them
@@ -56,34 +53,120 @@ export async function GET() {
       ok: true,
       enrolled: data?.length ?? 0,
       leads: dailyLeads.map(l => l.email),
-      source: 'airbnb-booking-scraper',
+      source: 'google-scraper',
     });
   } catch (err) {
     console.error('Scraper error:', err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: String(err), status: 'error' }, { status: 500 });
   }
 }
 
-// Mock Airbnb scraper - replace with real scraper using Puppeteer
-async function scrapeAirbnbListings() {
-  // Placeholder: returns sample leads
-  // Real implementation would use Puppeteer to scrape listings with parking amenity
-  // Search: https://www.airbnb.com/s/Croatia/homes?amenities=parking
-  return [
-    { email: 'host.split.airbnb@gmail.com', name: 'Split Airbnb Host - Parking' },
-    { email: 'host.zagreb.apartments@gmail.com', name: 'Zagreb Apartment Owner - Parking' },
-    { email: 'host.dubrovnik.villa@gmail.com', name: 'Dubrovnik Villa Host - Parking' },
+async function scrapeTouristickZajednica() {
+  const leads: { email: string; name: string }[] = [];
+
+  // Croatian tourism board regions
+  const regions = [
+    { name: 'Split', url: 'https://www.visitsplit.com' },
+    { name: 'Dubrovnik', url: 'https://www.dubrovnikneretva.hr' },
+    { name: 'Zagreb', url: 'https://www.infozagreb.hr' },
+    { name: 'Zadar', url: 'https://www.zadarregion.hr' },
+    { name: 'Rijeka', url: 'https://www.visitrijeka.hr' },
+    { name: 'Istria', url: 'https://www.istra.hr' },
   ];
+
+  for (const region of regions) {
+    try {
+      const response = await fetch(region.url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+      });
+
+      const html = await response.text();
+
+      // Look for accommodation/smještaj pages
+      const accomUrl = html.includes('smještaj')
+        ? `${region.url}/en/accommodation`
+        : `${region.url}/accommodation`;
+
+      const accomResponse = await fetch(accomUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+      }).catch(() => null);
+
+      if (accomResponse?.ok) {
+        const accomHtml = await accomResponse.text();
+
+        // Extract emails from accommodation listings
+        const matches = accomHtml.match(EMAIL_REGEX) || [];
+        const uniqueEmails = [...new Set(matches)];
+
+        for (const email of uniqueEmails) {
+          if (
+            email.includes('@') &&
+            !email.includes('google') &&
+            !email.includes('site:') &&
+            !email.includes('tourism.gov')
+          ) {
+            leads.push({
+              email,
+              name: `${region.name} - Parking`,
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error(`Tourism board error for ${region.name}:`, err);
+      continue;
+    }
+  }
+
+  return leads;
 }
 
-// Mock Booking.com scraper - replace with real scraper
-async function scrapeBookingListings() {
-  // Placeholder: returns sample leads
-  // Real implementation would use Puppeteer to scrape properties with parking
-  // Search: https://www.booking.com/searchresults.html?ss=Croatia&nflt=ht_id%3D4
-  return [
-    { email: 'hotel.split.booking@gmail.com', name: 'Split Hotel - Parking' },
-    { email: 'guesthouse.zagreb@gmail.com', name: 'Zagreb Guest House - Parking' },
-    { email: 'resort.adriatic@gmail.com', name: 'Adriatic Resort - Parking' },
+async function scrapeGoogleSearch() {
+  const leads: { email: string; name: string }[] = [];
+
+  const queries = [
+    'Airbnb Croatia parking contact',
+    'hotel Croatia parking email',
+    'Booking.com Croatia parking host',
+    'vacation rental Croatia parking contact',
   ];
+
+  for (const query of queries) {
+    try {
+      // Search Google and extract emails from top results
+      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+      const response = await fetch(searchUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+      });
+
+      const html = await response.text();
+
+      // Extract emails using regex
+      const matches = html.match(EMAIL_REGEX) || [];
+      const emails = [...new Set(matches)];
+
+      for (const email of emails) {
+        if (email.includes('@') && !email.includes('google') && !email.includes('site:')) {
+          leads.push({
+            email,
+            name: `Host - ${query.substring(0, 20)}`,
+          });
+        }
+      }
+
+      // Limit to avoid too many requests
+      if (leads.length >= 10) break;
+    } catch (err) {
+      console.error(`Query failed: ${query}`, err);
+      continue;
+    }
+  }
+
+  return leads;
 }
