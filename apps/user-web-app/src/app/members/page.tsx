@@ -315,20 +315,20 @@ function PayoutsPanel({ user }: { user: User | null }) {
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold tracking-tight text-black">Payouts</h2>
-        <p className="text-sm text-black/70">Your earnings and bank account for payouts.</p>
+        <h2 className="text-lg font-semibold tracking-tight text-black">{membersT('Payouts', locale)}</h2>
+        <p className="text-sm text-black/70">{membersT('Your earnings and bank account for payouts.', locale)}</p>
       </div>
 
       {/* Earnings summary */}
       <div className="rounded-lg border border-black/10 p-4 space-y-3">
-        <p className="text-xs font-semibold text-black/50 uppercase">Earnings</p>
+        <p className="text-xs font-semibold text-black/50 uppercase">{membersT('Earnings', locale)}</p>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <p className="text-[11px] text-black/50 uppercase font-semibold">Pending</p>
+            <p className="text-[11px] text-black/50 uppercase font-semibold">{membersT('Pending', locale)}</p>
             <p className="text-xl font-bold text-black">€{((earnings?.pending_cents ?? 0) / 100).toFixed(2)}</p>
           </div>
           <div>
-            <p className="text-[11px] text-black/50 uppercase font-semibold">Total Earned</p>
+            <p className="text-[11px] text-black/50 uppercase font-semibold">{membersT('Total Earned', locale)}</p>
             <p className="text-xl font-bold text-black">€{((earnings?.total_earned_cents ?? 0) / 100).toFixed(2)}</p>
           </div>
         </div>
@@ -337,9 +337,9 @@ function PayoutsPanel({ user }: { user: User | null }) {
       {/* Bank details */}
       <div className="rounded-lg border border-black/10 p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-black/50 uppercase">Bank Account</p>
+          <p className="text-xs font-semibold text-black/50 uppercase">{membersT('Bank Account', locale)}</p>
           <button type="button" onClick={() => { setEditingBank(!editingBank); setIbanInput(''); setHolderInput(''); }} className="text-xs text-blue-600 underline">
-            {editingBank ? 'Cancel' : bankDetails?.configured ? 'Edit' : 'Add'}
+            {editingBank ? membersT('Cancel', locale) : bankDetails?.configured ? membersT('Edit', locale) : membersT('Add', locale)}
           </button>
         </div>
         {!editingBank && bankDetails?.configured && (
@@ -349,14 +349,14 @@ function PayoutsPanel({ user }: { user: User | null }) {
           </div>
         )}
         {!editingBank && !bankDetails?.configured && (
-          <p className="text-sm text-black/50">No bank account added. Add your IBAN to receive payouts.</p>
+          <p className="text-sm text-black/50">{membersT('No bank account added. Add your IBAN to receive payouts.', locale)}</p>
         )}
         {editingBank && (
           <div className="space-y-2">
             <input type="text" placeholder="IBAN (e.g. HR1210010051863000160)" value={ibanInput} onChange={e => setIbanInput(e.target.value)} className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm font-mono" />
-            <input type="text" placeholder="Account Holder Name" value={holderInput} onChange={e => setHolderInput(e.target.value)} className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm" />
+            <input type="text" placeholder={locale === 'en' ? 'Account Holder Name' : 'Ime vlasnika računa'} value={holderInput} onChange={e => setHolderInput(e.target.value)} className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm" />
             <button type="button" onClick={saveBank} disabled={saving} className="w-full px-3 py-2 rounded-lg bg-black text-white text-sm font-semibold disabled:opacity-50">
-              {saving ? 'Saving...' : 'Save Bank Details'}
+              {saving ? membersT('Saving...', locale) : membersT('Save Bank Details', locale)}
             </button>
             {saveMsg && <p className="text-xs text-center text-black/60">{saveMsg}</p>}
           </div>
@@ -366,7 +366,7 @@ function PayoutsPanel({ user }: { user: User | null }) {
       {/* Payout history */}
       {(earnings?.payouts?.length ?? 0) > 0 && (
         <div className="rounded-lg border border-black/10 p-4 space-y-2">
-          <p className="text-xs font-semibold text-black/50 uppercase">Payout History</p>
+          <p className="text-xs font-semibold text-black/50 uppercase">{membersT('Payout History', locale)}</p>
           {earnings!.payouts.map((p: any) => (
             <div key={p.id} className="flex items-center justify-between py-1.5 border-b border-black/5 last:border-0">
               <div>
@@ -418,6 +418,76 @@ const MEMBERS_TRANSLATIONS = {
   'Manage your parking lots': { en: 'Manage your parking lots', hr: 'Upravljaj svojim parkiralištima.' },
   'Driver scans code': { en: 'Driver scans code', hr: 'Vozač skenira kod' },
   'Shuttle drives directly — no stops': { en: 'Shuttle drives directly — no stops', hr: 'Shuttle vozi izravno — bez zaustavljanja.' },
+  // Payouts
+  'Payouts': { en: 'Payouts', hr: 'Isplate' },
+  'Your earnings and bank account for payouts.': { en: 'Your earnings and bank account for payouts.', hr: 'Vaša zarada i bankovni račun za isplate.' },
+  'Earnings': { en: 'Earnings', hr: 'Zarada' },
+  'Pending': { en: 'Pending', hr: 'Na čekanju' },
+  'Total Earned': { en: 'Total Earned', hr: 'Ukupno zarađeno' },
+  'Bank Account': { en: 'Bank Account', hr: 'Bankovni račun' },
+  'Cancel': { en: 'Cancel', hr: 'Odustani' },
+  'Edit': { en: 'Edit', hr: 'Uredi' },
+  'Add': { en: 'Add', hr: 'Dodaj' },
+  'No bank account added. Add your IBAN to receive payouts.': { en: 'No bank account added. Add your IBAN to receive payouts.', hr: 'Nema dodanog bankovnog računa. Dodajte IBAN za primanje isplata.' },
+  'Saving...': { en: 'Saving...', hr: 'Spremanje...' },
+  'Save Bank Details': { en: 'Save Bank Details', hr: 'Spremi podatke o banci' },
+  'Payout History': { en: 'Payout History', hr: 'Povijest isplata' },
+  // Permits
+  'Permits & Subs': { en: 'Permits & Subs', hr: 'Dozvole i pretplate' },
+  'All permits and subscriptions linked to your member account.': { en: 'All permits and subscriptions linked to your member account.', hr: 'Sve dozvole i pretplate vezane uz vaš članski račun.' },
+  'Loading permits...': { en: 'Loading permits...', hr: 'Učitavanje dozvola...' },
+  'No permits or subscriptions found for this account yet.': { en: 'No permits or subscriptions found for this account yet.', hr: 'Za ovaj račun još nema dozvola ili pretplata.' },
+  'Unknown plate': { en: 'Unknown plate', hr: 'Nepoznata tablica' },
+  'Unknown location': { en: 'Unknown location', hr: 'Nepoznata lokacija' },
+  'Member permit': { en: 'Member permit', hr: 'Članska dozvola' },
+  'Vrijedi': { en: 'Valid', hr: 'Vrijedi' },
+  // Activity
+  'Activity': { en: 'Activity', hr: 'Aktivnost' },
+  'A timeline of upcoming, active, and expired parking sessions.': { en: 'A timeline of upcoming, active, and expired parking sessions.', hr: 'Pregled nadolazećih, aktivnih i isteklih parkirnih sesija.' },
+  'Loading live activity...': { en: 'Loading live activity...', hr: 'Učitavanje aktivnosti...' },
+  'No sessions yet. Complete a checkout and this list updates automatically.': { en: 'No sessions yet. Complete a checkout and this list updates automatically.', hr: 'Još nema sesija. Završite naplatu i ovaj popis se automatski ažurira.' },
+  'Active': { en: 'Active', hr: 'Aktivne' },
+  'No active reservations.': { en: 'No active reservations.', hr: 'Nema aktivnih rezervacija.' },
+  'UPCOMING': { en: 'UPCOMING', hr: 'NADOLAZEĆI' },
+  'No upcoming reservations.': { en: 'No upcoming reservations.', hr: 'Nema nadolazećih rezervacija.' },
+  'Expired': { en: 'Expired', hr: 'Istekle' },
+  'No expired reservations.': { en: 'No expired reservations.', hr: 'Nema isteklih rezervacija.' },
+  'Unknown email': { en: 'Unknown email', hr: 'Nepoznati email' },
+  // Payment
+  'Payment': { en: 'Payment', hr: 'Plaćanje' },
+  'Manage saved cards that can be charged for future sessions.': { en: 'Manage saved cards that can be charged for future sessions.', hr: 'Upravljajte spremljenim karticama za buduće sesije.' },
+  'Payments': { en: 'Payments', hr: 'Plaćanja' },
+  'Saved payment methods': { en: 'Saved payment methods', hr: 'Spremljeni načini plaćanja' },
+  'Loading payment methods...': { en: 'Loading payment methods...', hr: 'Učitavanje načina plaćanja...' },
+  'No payment methods added yet.': { en: 'No payment methods added yet.', hr: 'Još nema dodanih načina plaćanja.' },
+  'Default card': { en: 'Default card', hr: 'Zadana kartica' },
+  'Card on file': { en: 'Card on file', hr: 'Kartica na računu' },
+  'Remove': { en: 'Remove', hr: 'Ukloni' },
+  'Add a payment method': { en: 'Add a payment method', hr: 'Dodaj način plaćanja' },
+  'Add payment method': { en: 'Add payment method', hr: 'Dodaj način plaćanja' },
+  'Opens secure Stripe setup and stores cards on your customer profile.': { en: 'Opens secure Stripe setup and stores cards on your customer profile.', hr: 'Otvara sigurno Stripe postavljanje i sprema kartice na vaš profil.' },
+  // Vehicles
+  'Vehicles': { en: 'Vehicles', hr: 'Vozila' },
+  'Add license plates you use for work so Payparq can recognise your arrivals.': { en: 'Add license plates you use for work so Payparq can recognise your arrivals.', hr: 'Dodajte tablice koje koristite kako bi Payparq prepoznao vaše dolaske.' },
+  'Saved plates': { en: 'Saved plates', hr: 'Spremljene tablice' },
+  'No plates added yet. Add your first plate below.': { en: 'No plates added yet. Add your first plate below.', hr: 'Još nema dodanih tablica. Dodajte svoju prvu tablicu ispod.' },
+  'Add a license plate': { en: 'Add a license plate', hr: 'Dodaj tablicu' },
+  'Add plate': { en: 'Add plate', hr: 'Dodaj tablicu' },
+  'Saved plates sync to your account and are available on next sign-in.': { en: 'Saved plates sync to your account and are available on next sign-in.', hr: 'Tablice se sinkroniziraju s vašim računom i dostupne su pri sljedećoj prijavi.' },
+  // Promotions
+  'Promotions are locked until your email is verified.': { en: 'Promotions are locked until your email is verified.', hr: 'Promocije su zaključane dok ne verificirate email.' },
+  'Before verifying, check Inbox and Junk/Spam folders.': { en: 'Before verifying, check Inbox and Junk/Spam folders.', hr: 'Prije provjere, provjerite Inbox i mapu Spam.' },
+  'Verify email': { en: 'Verify email', hr: 'Verificiraj email' },
+  'Resend email': { en: 'Resend email', hr: 'Pošalji ponovo' },
+  'Sending...': { en: 'Sending...', hr: 'Slanje...' },
+  // Navigation
+  'Account overview': { en: 'Account overview', hr: 'Pregled računa' },
+  'Account Settings': { en: 'Account Settings', hr: 'Postavke računa' },
+  'Help': { en: 'Help', hr: 'Pomoć' },
+  'Resources': { en: 'Resources', hr: 'Resursi' },
+  'For Hosts': { en: 'For Hosts', hr: 'Za domaćine' },
+  'Support': { en: 'Support', hr: 'Podrška' },
+  'Log out': { en: 'Log out', hr: 'Odjava' },
 } as const;
 
 const membersT = (key: string, locale: 'en' | 'hr'): string => {
@@ -2328,17 +2398,17 @@ export default function MembersPage() {
       return (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold tracking-tight text-black">
-            Permits & Subs
+            {membersT('Permits & Subs', locale)}
           </h2>
           <p className="text-sm text-black/70">
-            All permits and subscriptions linked to your member account.
+            {membersT('All permits and subscriptions linked to your member account.', locale)}
           </p>
           {permitsLoading && (
-            <p className="text-xs text-black/60">Loading permits...</p>
+            <p className="text-xs text-black/60">{membersT('Loading permits...', locale)}</p>
           )}
           {!permitsLoading && permitsRows.length === 0 && (
             <p className="text-xs text-black/60">
-              No permits or subscriptions found for this account yet.
+              {membersT('No permits or subscriptions found for this account yet.', locale)}
             </p>
           )}
           {!permitsLoading && permitsRows.length > 0 && (
@@ -2357,16 +2427,16 @@ export default function MembersPage() {
                   <div key={row.id} className="rounded-lg border border-black/10 px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs font-semibold text-black">
-                        {row.plate || "Unknown plate"} · {row.location_display_id || row.location_id || "Unknown location"}
+                        {row.plate || membersT('Unknown plate', locale)} · {row.location_display_id || row.location_id || membersT('Unknown location', locale)}
                       </p>
                       <p className="text-[11px] text-black/60">{statusValue}</p>
                     </div>
                     <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
                       <span>{sourceType}</span>
-                      <span>{row.contact_name || row.contact_email || "Member permit"}</span>
+                      <span>{row.contact_name || row.contact_email || membersT('Member permit', locale)}</span>
                     </div>
                     <div className="mt-1 text-[11px] text-black/70">
-                      Vrijedi: {accessWindow}
+                      {membersT('Vrijedi', locale)}: {accessWindow}
                     </div>
                   </div>
                 );
@@ -2394,30 +2464,30 @@ export default function MembersPage() {
       return (
         <div className="space-y-3">
           <h2 className="text-lg font-semibold tracking-tight text-black">
-            Activity
+            {membersT('Activity', locale)}
           </h2>
           <p className="text-sm text-black/70">
-            A timeline of upcoming, active, and expired parking sessions.
+            {membersT('A timeline of upcoming, active, and expired parking sessions.', locale)}
           </p>
           {activityLoading && (
-            <p className="text-xs text-black/60">Loading live activity...</p>
+            <p className="text-xs text-black/60">{membersT('Loading live activity...', locale)}</p>
           )}
           {!activityLoading && activityRows.length === 0 && (
             <p className="text-xs text-black/60">
-              No sessions yet. Complete a checkout and this list updates automatically.
+              {membersT('No sessions yet. Complete a checkout and this list updates automatically.', locale)}
             </p>
           )}
           {!activityLoading && (
             <div className="rounded-xl border border-black/10 bg-white p-3 space-y-2">
-              <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-black/60">Active ({activeRows.length})</p>
-              {activeRows.length === 0 && <p className="text-[11px] text-black/50">No active reservations.</p>}
+              <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-black/60">{membersT('Active', locale)} ({activeRows.length})</p>
+              {activeRows.length === 0 && <p className="text-[11px] text-black/50">{membersT('No active reservations.', locale)}</p>}
               {activeRows.map((row) => {
                 const addons = parseActivityAddons(row);
                 return (
                   <div key={`active-${row.id}`} className="rounded-lg border border-black/10 px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs font-semibold text-black">
-                        {row.plate || "Unknown plate"} · {row.location_display_id || row.location_id || "Unknown location"}
+                        {row.plate || membersT('Unknown plate', locale)} · {row.location_display_id || row.location_id || membersT('Unknown location', locale)}
                       </p>
                       <p className="text-[11px] text-black/60">{formatActivityDate(row.ui_check_in || row.entry_time || row.created_at)}</p>
                     </div>
@@ -2426,7 +2496,7 @@ export default function MembersPage() {
                       <span>{membersT('ACTIVE', locale)}</span>
                     </div>
                     <div className="mt-1 text-[11px] text-black/70">
-                      Vrijedi: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
+                      {membersT('Vrijedi', locale)}: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
                     </div>
                     {addons.length > 0 && (
                       <div className="mt-1.5 flex flex-wrap gap-1">
@@ -2436,15 +2506,15 @@ export default function MembersPage() {
                   </div>
                 );
               })}
-              <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-black/60">NADOLAZEĆI ({upcomingRows.length})</p>
-              {upcomingRows.length === 0 && <p className="text-[11px] text-black/50">No upcoming reservations.</p>}
+              <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-black/60">{membersT('UPCOMING', locale)} ({upcomingRows.length})</p>
+              {upcomingRows.length === 0 && <p className="text-[11px] text-black/50">{membersT('No upcoming reservations.', locale)}</p>}
               {upcomingRows.map((row) => {
                 const addons = parseActivityAddons(row);
                 return (
                   <div key={`upcoming-${row.id}`} className="rounded-lg border border-black/10 px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs font-semibold text-black">
-                        {row.plate || "Unknown plate"} · {row.location_display_id || row.location_id || "Unknown location"}
+                        {row.plate || membersT('Unknown plate', locale)} · {row.location_display_id || row.location_id || membersT('Unknown location', locale)}
                       </p>
                       <p className="text-[11px] text-black/60">{formatActivityDate(row.ui_check_in || row.entry_time || row.created_at)}</p>
                     </div>
@@ -2453,7 +2523,7 @@ export default function MembersPage() {
                       <span>{resolveActivityLifecycleForView(row) === "pending" ? "NA ČEKANJU · NADOLAZEĆI" : "NADOLAZEĆI"}</span>
                     </div>
                     <div className="mt-1 text-[11px] text-black/70">
-                      Vrijedi: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
+                      {membersT('Vrijedi', locale)}: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
                     </div>
                     {addons.length > 0 && (
                       <div className="mt-1.5 flex flex-wrap gap-1">
@@ -2463,15 +2533,15 @@ export default function MembersPage() {
                   </div>
                 );
               })}
-              <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-black/60">Expired ({expiredRows.length})</p>
-              {expiredRows.length === 0 && <p className="text-[11px] text-black/50">No expired reservations.</p>}
+              <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-black/60">{membersT('Expired', locale)} ({expiredRows.length})</p>
+              {expiredRows.length === 0 && <p className="text-[11px] text-black/50">{membersT('No expired reservations.', locale)}</p>}
               {expiredRows.map((row) => {
                 const addons = parseActivityAddons(row);
                 return (
                   <div key={`expired-${row.id}`} className="rounded-lg border border-black/10 px-3 py-2 opacity-70">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs font-semibold text-black">
-                        {row.plate || "Unknown plate"} · {row.location_display_id || row.location_id || "Unknown location"}
+                        {row.plate || membersT('Unknown plate', locale)} · {row.location_display_id || row.location_id || membersT('Unknown location', locale)}
                       </p>
                       <p className="text-[11px] text-black/60">{formatActivityDate(row.ui_check_in || row.entry_time || row.created_at)}</p>
                     </div>
@@ -2480,7 +2550,7 @@ export default function MembersPage() {
                       <span>{membersT('EXPIRED', locale)}</span>
                     </div>
                     <div className="mt-1 text-[11px] text-black/70">
-                      Vrijedi: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
+                      {membersT('Vrijedi', locale)}: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
                     </div>
                     {addons.length > 0 && (
                       <div className="mt-1.5 flex flex-wrap gap-1">
@@ -2501,25 +2571,25 @@ export default function MembersPage() {
         <div className="space-y-4">
           <div className="space-y-2">
             <h2 className="text-lg font-semibold tracking-tight text-black">
-              Payment
+              {membersT('Payment', locale)}
             </h2>
             <p className="text-sm text-black/70">
-              Manage saved cards that can be charged for future sessions.
+              {membersT('Manage saved cards that can be charged for future sessions.', locale)}
             </p>
           </div>
           {/* PAYMENTS SECTION */}
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-black">Payments</h3>
+            <h3 className="text-sm font-semibold text-black">{membersT('Payments', locale)}</h3>
             <div className="space-y-2">
               <p className="text-xs font-semibold text-black/70">
-                Saved payment methods
+                {membersT('Saved payment methods', locale)}
               </p>
               {paymentMethodsLoading && (
-                <p className="text-sm text-black/60">Loading payment methods...</p>
+                <p className="text-sm text-black/60">{membersT('Loading payment methods...', locale)}</p>
               )}
               {paymentMethods.length === 0 && (
                 <p className="text-sm text-black/60">
-                  No payment methods added yet.
+                  {membersT('No payment methods added yet.', locale)}
                 </p>
               )}
               {paymentMethods.length > 0 && (
@@ -2535,14 +2605,14 @@ export default function MembersPage() {
                       </span>
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] text-black/50">
-                          {method.isDefault ? "Default card" : "Card on file"}
+                          {method.isDefault ? membersT('Default card', locale) : membersT('Card on file', locale)}
                         </span>
                         <button
                           type="button"
                           onClick={() => void handleRemovePaymentMethod(method.id)}
                           className="text-[11px] underline underline-offset-2 text-black/60 hover:text-black"
                         >
-                          Remove
+                          {membersT('Remove', locale)}
                         </button>
                       </div>
                     </li>
@@ -2552,7 +2622,7 @@ export default function MembersPage() {
             </div>
             <div className="space-y-2">
               <p className="text-xs font-semibold text-black/70">
-                Add a payment method
+                {membersT('Add a payment method', locale)}
               </p>
               <div className="flex flex-col md:flex-row gap-2">
                 <button
@@ -2561,11 +2631,11 @@ export default function MembersPage() {
                   disabled={!!actionProcessing}
                   className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors disabled:opacity-60"
                 >
-                  Add payment method
+                  {membersT('Add payment method', locale)}
                 </button>
               </div>
               <p className="text-[11px] text-black/60">
-                Opens secure Stripe setup and stores cards on your customer profile.
+                {membersT('Opens secure Stripe setup and stores cards on your customer profile.', locale)}
               </p>
               {actionError && (
                 <p className="text-[11px] text-red-600">{actionError}</p>
@@ -2581,20 +2651,19 @@ export default function MembersPage() {
         <div className="space-y-4">
           <div className="space-y-2">
             <h2 className="text-lg font-semibold tracking-tight text-black">
-              Vehicles
+              {membersT('Vehicles', locale)}
             </h2>
             <p className="text-sm text-black/70">
-              Add license plates you use for work so Payparq can recognise your
-              arrivals.
+              {membersT('Add license plates you use for work so Payparq can recognise your arrivals.', locale)}
             </p>
           </div>
           <div className="space-y-2">
             <p className="text-xs font-semibold text-black/70">
-              Saved plates
+              {membersT('Saved plates', locale)}
             </p>
             {plates.length === 0 && (
               <p className="text-sm text-black/60">
-                No plates added yet. Add your first plate below.
+                {membersT('No plates added yet. Add your first plate below.', locale)}
               </p>
             )}
             {plates.length > 0 && (
@@ -2613,7 +2682,7 @@ export default function MembersPage() {
                       disabled={plateSaving}
                       className="text-[10px] underline underline-offset-2 text-black/60 hover:text-black"
                     >
-                      Remove
+                      {membersT('Remove', locale)}
                     </button>
                   </li>
                 ))}
@@ -2622,7 +2691,7 @@ export default function MembersPage() {
           </div>
           <div className="space-y-2">
             <p className="text-xs font-semibold text-black/70">
-              Add a license plate
+              {membersT('Add a license plate', locale)}
             </p>
             <div className="flex flex-col md:flex-row gap-2">
               <input
@@ -2630,7 +2699,7 @@ export default function MembersPage() {
                 value={newPlate}
                 onChange={(event) => setNewPlate(event.target.value)}
                 className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40 uppercase"
-                placeholder="e.g. ZG-123-AB"
+                placeholder={locale === 'en' ? 'e.g. ZG-123-AB' : 'npr. ZG-123-AB'}
               />
               <button
                 type="button"
@@ -2647,12 +2716,12 @@ export default function MembersPage() {
                 disabled={plateSaving}
                 className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors"
               >
-                {plateSaving ? "Saving..." : "Add plate"}
+                {plateSaving ? membersT('Saving...', locale) : membersT('Add plate', locale)}
               </button>
             </div>
             {plateMessage && <p className="text-[11px] text-black/60">{plateMessage}</p>}
             <p className="text-[11px] text-black/60">
-              Saved plates sync to your account and are available on next sign-in.
+              {membersT('Saved plates sync to your account and are available on next sign-in.', locale)}
             </p>
           </div>
         </div>
@@ -2664,14 +2733,14 @@ export default function MembersPage() {
         return (
           <div className="space-y-3">
             <h2 className="text-lg font-semibold tracking-tight text-black">
-              Promotions
+              {membersT('Promocije', locale)}
             </h2>
             <p className="text-sm text-black/70">
-              Promotions are locked until your email is verified.
+              {membersT('Promotions are locked until your email is verified.', locale)}
             </p>
             <div className="rounded-xl border border-black/10 bg-white p-4 space-y-3">
               <p className="text-xs text-black/70">
-                Before verifying, check Inbox and Junk/Spam folders.
+                {membersT('Before verifying, check Inbox and Junk/Spam folders.', locale)}
               </p>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -2680,7 +2749,7 @@ export default function MembersPage() {
                   disabled={verificationLoading}
                   className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-[black] text-white text-xs font-semibold shadow-md hover:bg-[#4330c4] transition-colors disabled:opacity-60"
                 >
-                  {verificationLoading ? "Sending..." : "Verify email"}
+                  {verificationLoading ? membersT('Sending...', locale) : membersT('Verify email', locale)}
                 </button>
                 <button
                   type="button"
@@ -2688,7 +2757,7 @@ export default function MembersPage() {
                   disabled={verificationLoading}
                   className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-black/10 text-xs font-semibold hover:bg-black/5 transition-colors disabled:opacity-60"
                 >
-                  Resend email
+                  {membersT('Resend email', locale)}
                 </button>
               </div>
               {verificationNotice && (
