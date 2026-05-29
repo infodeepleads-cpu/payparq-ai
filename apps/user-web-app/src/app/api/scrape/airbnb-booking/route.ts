@@ -5,7 +5,17 @@ export const dynamic = 'force-dynamic';
 
 const EMAIL_REGEX = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi;
 
-export async function GET() {
+export async function GET(req: Request) {
+  // Require CRON_SECRET token
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const authHeader = req.headers.get('authorization');
+    const tokenParam = new URL(req.url).searchParams.get('token');
+    const provided = authHeader?.replace('Bearer ', '') || tokenParam;
+    if (provided !== cronSecret) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+  }
   if (!supabaseAdmin) {
     return NextResponse.json({ error: 'db_unavailable' }, { status: 500 });
   }
