@@ -954,7 +954,7 @@ export default function HostPage() {
               <p className="text-xs font-black text-gray-500 uppercase tracking-widest">{hostT('3 — Lot specifics', locale)}</p>
 
               {/* 3.1 Stvari koje biste trebali znati */}
-              <CollapsibleSection title="Stvari koje biste trebali znati" defaultOpen={false}>
+              <CollapsibleSection title={locale === 'en' ? 'Things you should know' : 'Stvari koje biste trebali znati'} defaultOpen={false}>
                 {/* Access Type */}
                 <div>
                   <label className={labelClass}>{hostT('Access type', locale)}</label>
@@ -991,20 +991,20 @@ export default function HostPage() {
                 {/* Height / Width */}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className={labelClass}>Ograničenje visine (m)</label>
-                    <input type="text" placeholder="npr. 2.10" value={heightLimit} onChange={(e) => setHeightLimit(e.target.value)} className={inputClass} />
+                    <label className={labelClass}>{locale === 'en' ? 'Height limit (m)' : 'Ograničenje visine (m)'}</label>
+                    <input type="text" placeholder={locale === 'en' ? 'e.g. 2.10' : 'npr. 2.10'} value={heightLimit} onChange={(e) => setHeightLimit(e.target.value)} className={inputClass} />
                   </div>
                   <div>
-                    <label className={labelClass}>Ograničenje širine (m)</label>
+                    <label className={labelClass}>{locale === 'en' ? 'Width limit (m)' : 'Ograničenje širine (m)'}</label>
                     <input type="text" placeholder="npr. 2.20" value={widthLimit} onChange={(e) => setWidthLimit(e.target.value)} className={inputClass} />
                   </div>
                 </div>
 
                 {/* Exotic vehicles */}
                 <div>
-                  <label className={labelClass}>Egzotična vozila</label>
+                  <label className={labelClass}>{locale === 'en' ? 'Exotic vehicles' : 'Egzotična vozila'}</label>
                   <div className="flex gap-2">
-                    {['Da', 'Ne', 'Na upit'].map((v) => (
+                    {(locale === 'en' ? ['Yes', 'No', 'On request'] : ['Da', 'Ne', 'Na upit']).map((v) => (
                       <button key={v} type="button" onClick={() => setExoticVehicles(v)}
                         className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ${exoticVehicles === v ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
                         {v}
@@ -1015,7 +1015,7 @@ export default function HostPage() {
 
                 {/* Owner comment */}
                 <div>
-                  <label className={labelClass}>Komentar Vlasnika</label>
+                  <label className={labelClass}>{locale === 'en' ? 'Owner comment' : 'Komentar Vlasnika'}</label>
                   <textarea
                     placeholder={"npr. Parking je zaštićen 24/7 video nadzorom. Molimo vozače da ne parkiraju ispred rampe. Za hitne slučajeve nazovite broj na ulazu."}
                     value={ownerComment}
@@ -1027,20 +1027,20 @@ export default function HostPage() {
 
                 {/* Upute za pristup */}
                 <div>
-                  <label className={labelClass}>Upute za pristup</label>
+                  <label className={labelClass}>{locale === 'en' ? 'Access instructions' : 'Upute za pristup'}</label>
                   <textarea
-                    placeholder={"npr. Uđite s Ulice kralja Tomislava, rampa se otvara automatski skeniranjem QR koda iz aplikacije. Lift se nalazi odmah lijevo od ulaza. Vaše mjesto je označeno brojem rezervacije."}
+                    placeholder={locale === 'en' ? 'e.g. Enter from King Tomislav Street, the ramp opens automatically by scanning the QR code from the app. The elevator is immediately to the left of the entrance. Your spot is marked with the reservation number.' : 'npr. Uđite s Ulice kralja Tomislava, rampa se otvara automatski skeniranjem QR koda iz aplikacije. Lift se nalazi odmah lijevo od ulaza. Vaše mjesto je označeno brojem rezervacije.'}
                     value={accessInstructions}
                     onChange={(e) => setAccessInstructions(e.target.value)}
                     rows={3}
                     className="w-full border border-gray-300 rounded-md px-3.5 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-colors resize-none"
                   />
-                  <p className="text-xs text-gray-400 mt-1">Prikazuje se vozaču nakon rezervacije i u mobilnom skeneru.</p>
+                  <p className="text-xs text-gray-400 mt-1">{locale === 'en' ? 'Shown to driver after booking and in the mobile scanner.' : 'Prikazuje se vozaču nakon rezervacije i u mobilnom skeneru.'}</p>
                 </div>
               </CollapsibleSection>
 
               {/* 3.2 Dodaci */}
-              <CollapsibleSection title="Dodaci (10)" defaultOpen={false}>
+              <CollapsibleSection title={locale === 'en' ? 'Add-ons (10)' : 'Dodaci (10)'} defaultOpen={false}>
                 <div className="flex flex-wrap gap-2">
                   {ADDONS.map((a) => (
                     <button key={a} type="button" onClick={() => toggleAddon(a)}
@@ -1091,9 +1091,9 @@ export default function HostPage() {
               </CollapsibleSection>
 
               {/* 3.4 Kapacitet */}
-              <CollapsibleSection title="Kapacitet" defaultOpen={false}>
+              <CollapsibleSection title={locale === 'en' ? 'Capacity' : 'Kapacitet'} defaultOpen={false}>
                 <div>
-                  <label className={labelClass}>Broj mjesta</label>
+                  <label className={labelClass}>{locale === 'en' ? 'Number of spots' : 'Broj mjesta'}</label>
                   <input type="number" placeholder="10" min="1" value={baseSpots} onChange={(e) => setBaseSpots(e.target.value)} className={inputClass} required />
                 </div>
 
@@ -1103,8 +1103,8 @@ export default function HostPage() {
               </CollapsibleSection>
 
               {/* 3.5 Vrsta mjesta */}
-              <CollapsibleSection title="Vrsta mjesta" defaultOpen={false}>
-                <p className="text-xs text-gray-600 mb-3 leading-relaxed">Razlikujte kategoriju mjesta — odaberite koje ćete smjestiti uz množitelj standardne cijene</p>
+              <CollapsibleSection title={locale === 'en' ? 'Spot types' : 'Vrsta mjesta'} defaultOpen={false}>
+                <p className="text-xs text-gray-600 mb-3 leading-relaxed">{locale === 'en' ? 'Differentiate spot categories — select which you offer with a standard price multiplier' : 'Razlikujte kategoriju mjesta — odaberite koje ćete smjestiti uz množitelj standardne cijene'}</p>
                 <div className="space-y-2">
                   {SPOT_TYPES.map((st) => (
                     <div key={st.key}
@@ -1133,7 +1133,7 @@ export default function HostPage() {
 
                 {/* Standard pricing */}
                 <div className="space-y-4 mb-6 pb-6 border-b border-gray-100">
-                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">Standard</p>
+                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">Standardna cijena</p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <div>
                       <label className={labelClass}>Satna (€/h)</label>
@@ -1152,7 +1152,7 @@ export default function HostPage() {
 
                 {true && (
                   <div className="space-y-4 pt-2 border-t border-gray-100">
-                    <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">Minimalne cijene koje ćete prihvatiti</p>
+                    <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">{locale === 'en' ? 'Minimum prices you will accept' : 'Minimalne cijene koje ćete prihvatiti'}</p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                       <div>
                         <label className={labelClass} translate="no">Satna (€/h)</label>
@@ -1169,7 +1169,7 @@ export default function HostPage() {
                     </div>
                     <div className="flex items-center justify-between pt-4">
                       <div>
-                        <p className="text-xs font-semibold text-gray-800">AI Dynamic Pricing</p>
+                        <p className="text-xs font-semibold text-gray-800">AI Dinamičko Određivanje Cijena</p>
                         <p className="text-xs text-gray-400">Kalkulacija cijene za maksimalnu zaradu</p>
                       </div>
                       <Toggle checked={useAIDynamicPricing} onChange={setUseAIDynamicPricing} />
@@ -1179,19 +1179,19 @@ export default function HostPage() {
               </CollapsibleSection>
 
               {/* 3.7 Fotografije */}
-              <CollapsibleSection title="Fotografije (Neobavezno)" defaultOpen={false}>
+              <CollapsibleSection title={locale === 'en' ? 'Photos (Optional)' : 'Fotografije (Neobavezno)'} defaultOpen={false}>
                 {/* Info box */}
                 <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
-                  <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> Povećajte konverzije</p>
-                  <p className="text-xs text-black leading-relaxed">Ogledni parkingi s fotografijama imaju 33-72% veće stope konverzije. Preporučujemo dodavanje 3-5 kvalitetnih fotografija vašeg parking mjesta.</p>
+                  <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" />{locale === 'en' ? 'Increase conversions' : 'Povećajte konverzije'}</p>
+                  <p className="text-xs text-black leading-relaxed">{locale === 'en' ? 'Listings with photos have 33-72% higher conversion rates. We recommend adding 3-5 quality photos of your parking space.' : 'Ogledni parkingi s fotografijama imaju 33-72% veće stope konverzije. Preporučujemo dodavanje 3-5 kvalitetnih fotografija vašeg parking mjesta.'}</p>
                 </div>
 
                 {/* Photos upload */}
                 <div className="space-y-3">
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-500 transition-colors"
                     onClick={() => document.getElementById('photo-input')?.click()}>
-                    <p className="text-xs font-semibold text-gray-700 mb-1">Kliknite za upload ili prevucite fotografije</p>
-                    <p className="text-xs text-gray-500">JPG, PNG, max 5MB po datoteci</p>
+                    <p className="text-xs font-semibold text-gray-700 mb-1">{locale === 'en' ? 'Click to upload or drag photos' : 'Kliknite za upload ili prevucite fotografije'}</p>
+                    <p className="text-xs text-gray-500">{locale === 'en' ? 'JPG, PNG, max 5MB per file' : 'JPG, PNG, max 5MB po datoteci'}</p>
                     <input
                       id="photo-input"
                       type="file"
@@ -1231,7 +1231,7 @@ export default function HostPage() {
             {/* ── Toggles ── */}
             <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
               <div className="flex items-center justify-between gap-4 pb-3 border-b border-gray-100">
-                <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Payparq Business</p>
+                <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Payparq Poslovni paket</p>
                 <Toggle checked={wantPartnership} onChange={(v) => {
                   setWantPartnership(v);
                   if (!v) { setWantQR(false); setWantLPR(false); setWantDashboard(false); setWantMarketing(false); }
@@ -1239,8 +1239,8 @@ export default function HostPage() {
                 }} />
               </div>
               {[
-                { state: wantQR, setter: setWantQR, label: 'Da, želim besplatni PayParq QR Pay za plaćanje na licu mjesta' },
-                { state: wantMarketing, setter: setWantMarketing, label: 'Da, želim besplatnu digitalnu marketinšku optimizaciju i vlastitu Safe Parking web stranicu' },
+                { state: wantQR, setter: setWantQR, label: locale === 'en' ? 'Yes, I want free PayParq QR Pay for on-site payments' : 'Da, želim besplatni PayParq QR Pay za plaćanje na licu mjesta' },
+                { state: wantMarketing, setter: setWantMarketing, label: locale === 'en' ? 'Yes, I want free digital marketing optimization and my own Safe Parking website' : 'Da, želim besplatnu digitalnu marketinšku optimizaciju i vlastitu Safe Parking web stranicu' },
               ].map(({ state, setter, label }) => (
                 <div key={label} className="flex items-start justify-between gap-4">
                   <p className="text-xs font-medium text-gray-600 leading-relaxed">{label}</p>
@@ -1248,11 +1248,11 @@ export default function HostPage() {
                 </div>
               ))}
               <div className="flex items-start justify-between gap-4 pt-3 border-t border-gray-100">
-                <p className="text-xs font-medium text-gray-600 leading-relaxed">Da, želim se pridružiti PayParq Referral programu</p>
+                <p className="text-xs font-medium text-gray-600 leading-relaxed">{locale === 'en' ? 'Yes, I want to join the PayParq Referral program' : 'Da, želim se pridružiti PayParq Referral programu'}</p>
                 <Toggle checked={wantReferral} onChange={setWantReferral} />
               </div>
               <div className="flex items-start justify-between gap-4">
-                <p className="text-xs font-medium text-gray-600 leading-relaxed">Da, želim pomoć pri traženju operativnog partnera</p>
+                <p className="text-xs font-medium text-gray-600 leading-relaxed">{locale === 'en' ? 'Yes, I want help finding an operational partner' : 'Da, želim pomoć pri traženju operativnog partnera'}</p>
                 <Toggle checked={wantOperativePartner} onChange={setWantOperativePartner} />
               </div>
             </div>
