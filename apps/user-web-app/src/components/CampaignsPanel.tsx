@@ -23,7 +23,7 @@ type Template = {
 };
 
 export function CampaignsPanel() {
-  const [tab, setTab] = useState<'list' | 'create' | 'templates' | 'analytics'>('list');
+  const [tab, setTab] = useState<'list' | 'create' | 'templates' | 'analytics' | 'sequences'>('list');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(false);
@@ -49,6 +49,13 @@ export function CampaignsPanel() {
   });
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+
+  // Sequence state
+  const [seqSending, setSeqSending] = useState(false);
+  const [seqResult, setSeqResult] = useState<{ sent?: number; checked?: number } | null>(null);
+  const [enrollEmails, setEnrollEmails] = useState('');
+  const [enrolling, setEnrolling] = useState(false);
+  const [enrollResult, setEnrollResult] = useState('');
 
   useEffect(() => {
     if (tab === 'list') fetchCampaigns();
@@ -268,6 +275,16 @@ export function CampaignsPanel() {
           }`}
         >
           Analytics
+        </button>
+        <button
+          onClick={() => setTab('sequences')}
+          className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            tab === 'sequences'
+              ? 'border-black text-black'
+              : 'border-transparent text-black/60 hover:text-black'
+          }`}
+        >
+          Sequences
         </button>
       </div>
 
@@ -531,6 +548,103 @@ export function CampaignsPanel() {
                   : '0'}%
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'sequences' && (
+        <div className="space-y-6">
+          <h2 className="text-lg font-semibold">Airbnb Host Sequence</h2>
+
+          {/* Sequence overview */}
+          <div className="space-y-2">
+            {[
+              { n: 1, subject: 'Objavite parking mjesto i ostvarite do 100€ bespovratno', day: 'Day 0' },
+              { n: 2, subject: 'Pretvori svoje parkirno mjesto u zaradu', day: 'Day 3' },
+              { n: 3, subject: 'Zaradi više sa svojim parkingom...', day: 'Day 6' },
+            ].map(e => (
+              <div key={e.n} className="flex items-center gap-3 p-3 border border-black/10 rounded-lg">
+                <span className="w-7 h-7 rounded-full bg-black text-white text-xs font-bold flex items-center justify-center flex-shrink-0">{e.n}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-black truncate">{e.subject}</p>
+                </div>
+                <span className="text-xs text-black/40 flex-shrink-0">{e.day}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Enroll recipients */}
+          <div className="border border-black/10 rounded-lg p-4 space-y-3">
+            <p className="text-sm font-semibold">Add Recipients</p>
+            <p className="text-xs text-black/50">Paste emails one per line or comma-separated</p>
+            <textarea
+              value={enrollEmails}
+              onChange={e => setEnrollEmails(e.target.value)}
+              placeholder={'host@hotel.hr\ninfo@apartmani.hr\nvilla@dubrovnik.hr'}
+              rows={5}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-black"
+            />
+            <button
+              onClick={async () => {
+                setEnrolling(true);
+                setEnrollResult('');
+                try {
+                  const emails = enrollEmails
+                    .split(/[\n,]+/)
+                    .map(e => e.trim())
+                    .filter(e => e.includes('@'))
+                    .map(email => ({ email }));
+                  const res = await fetch('/api/sequences/enroll', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sequenceName: 'airbnb-host', recipients: emails }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error);
+                  setEnrollResult(`✅ ${data.enrolled} recipients enrolled`);
+                  setEnrollEmails('');
+                } catch (err) {
+                  setEnrollResult(`❌ ${err instanceof Error ? err.message : 'Error'}`);
+                } finally {
+                  setEnrolling(false);
+                }
+              }}
+              disabled={enrolling || !enrollEmails.trim()}
+              className="px-4 py-2 bg-black text-white text-sm font-semibold rounded-full hover:bg-gray-900 disabled:opacity-50"
+            >
+              {enrolling ? 'Enrolling...' : 'Enroll Recipients'}
+            </button>
+            {enrollResult && <p className="text-sm">{enrollResult}</p>}
+          </div>
+
+          {/* Send 10 today button */}
+          <div className="border border-black/10 rounded-lg p-4 space-y-3">
+            <p className="text-sm font-semibold">Send Today&apos;s Batch</p>
+            <p className="text-xs text-black/50">Sends up to 10 emails to next recipients in queue. Click once per day.</p>
+            <button
+              onClick={async () => {
+                setSeqSending(true);
+                setSeqResult(null);
+                try {
+                  const res = await fetch('/api/cron/sequence-sender');
+                  const data = await res.json();
+                  setSeqResult(data);
+                } catch {
+                  setSeqResult({ sent: 0 });
+                } finally {
+                  setSeqSending(false);
+                }
+              }}
+              disabled={seqSending}
+              className="px-6 py-2.5 bg-black text-white text-sm font-semibold rounded-full hover:bg-gray-900 disabled:opacity-50"
+            >
+              {seqSending ? 'Sending...' : '🚀 Send 10 Today'}
+            </button>
+            {seqResult && (
+              <p className="text-sm text-green-700 font-medium">
+                ✅ Sent {seqResult.sent} of {seqResult.checked} queued emails
+              </p>
+            )}
           </div>
         </div>
       )}
