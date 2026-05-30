@@ -554,6 +554,20 @@ export function SearchPage() {
 
   // Auto-request current location on mount
   useEffect(() => {
+    // Check for prefilled location from URL params (e.g. from landing pages)
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramLat = parseFloat(urlParams.get('lat') || '');
+    const paramLng = parseFloat(urlParams.get('lng') || '');
+    const paramName = urlParams.get('name');
+
+    if (paramLat && paramLng && paramName) {
+      setMapCenter({ lat: paramLat, lng: paramLng });
+      setSearchLocationPin({ lat: paramLat, lng: paramLng });
+      setSearchLocationState(paramName);
+      setLocationReady(true);
+      return;
+    }
+
     if (!navigator.geolocation) {
       setLocationReady(true);
       return;
@@ -2653,6 +2667,16 @@ export function SearchPage() {
             })()}
           </GoogleMap>
           )}
+          {/* Location Clusters */}
+          <div className="flex-shrink-0 px-4 py-3 border-t border-gray-100 bg-white">
+            <p className="text-[10px] uppercase tracking-widest text-black/30 mb-2">Location Clusters</p>
+            <div className="flex flex-wrap gap-2">
+              <a href="/split-airport" className="text-xs text-black/60 hover:text-black border border-black/10 hover:border-black/30 rounded-full px-3 py-1 transition-colors">✈️ Split Airport</a>
+              <a href="/zagreb-airport" className="text-xs text-black/60 hover:text-black border border-black/10 hover:border-black/30 rounded-full px-3 py-1 transition-colors">✈️ Zagreb Airport</a>
+              <a href="/dubrovnik-airport" className="text-xs text-black/60 hover:text-black border border-black/10 hover:border-black/30 rounded-full px-3 py-1 transition-colors">✈️ Dubrovnik Airport</a>
+              <a href="/zadar-airport" className="text-xs text-black/60 hover:text-black border border-black/10 hover:border-black/30 rounded-full px-3 py-1 transition-colors">✈️ Zadar Airport</a>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2809,6 +2833,16 @@ export function SearchPage() {
                 <p className="text-gray-600">Loading map...</p>
               </div>
             )}
+            {/* Location Clusters - mobile */}
+            <div className="px-4 py-3 border-t border-gray-100 bg-white">
+              <p className="text-[10px] uppercase tracking-widest text-black/30 mb-2">Location Clusters</p>
+              <div className="flex flex-wrap gap-2">
+                <a href="/split-airport" className="text-xs text-black/60 hover:text-black border border-black/10 hover:border-black/30 rounded-full px-3 py-1 transition-colors">✈️ Split Airport</a>
+                <a href="/zagreb-airport" className="text-xs text-black/60 hover:text-black border border-black/10 hover:border-black/30 rounded-full px-3 py-1 transition-colors">✈️ Zagreb Airport</a>
+                <a href="/dubrovnik-airport" className="text-xs text-black/60 hover:text-black border border-black/10 hover:border-black/30 rounded-full px-3 py-1 transition-colors">✈️ Dubrovnik Airport</a>
+                <a href="/zadar-airport" className="text-xs text-black/60 hover:text-black border border-black/10 hover:border-black/30 rounded-full px-3 py-1 transition-colors">✈️ Zadar Airport</a>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto w-full h-full">

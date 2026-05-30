@@ -9,22 +9,22 @@ export default function SplitAirportPage() {
   const router = useRouter();
 
   const handleBookNow = () => {
-    router.push('/search?location=split-airport');
+    router.push('/search?lat=43.5388&lng=16.2973&name=Split+Airport');
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col overflow-hidden">
       <SiteHeader />
 
-      <main className="flex-1 pt-24 md:pt-28">
+      <main className="flex-1 overflow-y-auto pt-24 md:pt-28">
         {/* Hero Section */}
-        <section className="max-w-4xl mx-auto px-6 md:px-12 py-16 border-b border-black/10">
+        <section className="max-w-4xl mx-auto w-full px-6 md:px-12 py-12 md:py-16 border-b border-black/10">
           <div className="mb-8">
             <p className="text-[11px] uppercase tracking-[0.24em] text-black/40 mb-2">Parking</p>
-            <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-black mb-4">
+            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-4 break-words">
               Book Your Parking Spot at Split Airport
             </h1>
-            <p className="text-base text-black/60">
+            <p className="text-sm md:text-base text-black/60">
               Guaranteed parking. Instant booking. Save up to 70%.
             </p>
           </div>
@@ -133,7 +133,11 @@ export default function SplitAirportPage() {
         </section>
       </main>
 
-      <FooterBrand />
+      <footer className="bg-[#05020A] px-6 md:px-12 py-10">
+        <div className="max-w-4xl mx-auto">
+          <FooterBrand />
+        </div>
+      </footer>
     </div>
   );
 }
