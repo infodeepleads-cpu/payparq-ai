@@ -71,7 +71,8 @@ export async function GET(req: NextRequest) {
     }
 
     // Redirect to admin panel
-    return NextResponse.redirect('https://payparq.com/members?activeItem=social&youtube=connected');
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://payparq.com';
+    return NextResponse.redirect(`${baseUrl}/members?activeItem=social&youtube=connected`);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
