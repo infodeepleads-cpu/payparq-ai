@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     });
 
     const body = await req.json();
-    const { location_id, amount_cents, check_in, check_out, description, promo_code, email, address, plate_number, display_id } = body;
+    const { location_id, amount_cents, check_in, check_out, description, promo_code, email, address, plate_number, display_id, booking_source, commission, service_fee } = body;
 
     if (!location_id || !amount_cents || amount_cents < 50) {
       return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
@@ -53,6 +53,9 @@ export async function POST(req: NextRequest) {
         location_id,
         check_in: check_in || '',
         check_out: check_out || '',
+        booking_source: booking_source || 'platform',
+        commission: commission ? commission.toString() : '0',
+        service_fee: service_fee ? service_fee.toString() : '0',
         ...(promo_code ? { promo_code } : {}),
         ...(email ? { customer_email: email } : {}),
         ...(address ? { address } : {}),
@@ -81,7 +84,7 @@ export async function PUT(req: NextRequest) {
     });
 
     const body = await req.json();
-    const { payment_intent_id, email, plate, phone, pricing_type, amount_cents } = body;
+    const { payment_intent_id, email, plate, phone, pricing_type, amount_cents, booking_source, commission, service_fee } = body;
 
     if (!payment_intent_id || !/^pi_/.test(payment_intent_id)) {
       return NextResponse.json({ error: 'Invalid payment_intent_id' }, { status: 400 });
@@ -100,6 +103,9 @@ export async function PUT(req: NextRequest) {
         ...(plate ? { plate_number: plate } : {}),
         ...(phone ? { customer_phone: phone } : {}),
         ...(pricing_type ? { pricing_type } : {}),
+        ...(booking_source ? { booking_source } : {}),
+        ...(commission !== undefined ? { commission: commission.toString() } : {}),
+        ...(service_fee !== undefined ? { service_fee: service_fee.toString() } : {}),
       },
     });
 

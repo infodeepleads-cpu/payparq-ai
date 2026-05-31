@@ -264,6 +264,7 @@ export function SearchPage() {
   const userGpsRef = useRef<{ lat: number; lng: number } | null>(null);
   const [noResultsForLocation, setNoResultsForLocation] = useState<string | null>(null);
   const [nearbyCitiesWithParking, setNearbyCitiesWithParking] = useState<{ name: string; lat: number; lng: number; count: number; distanceKm: number }[]>([]);
+  const [bookingSource, setBookingSource] = useState('platform');
   const [startTime, setStartTime] = useState<string>(() => {
     const now = new Date();
     now.setMinutes(now.getMinutes() >= 30 ? 30 : 0, 0, 0);
@@ -504,6 +505,7 @@ export function SearchPage() {
       name: listing.name || listing.address,
       address: listing.address,
       ph: Math.round(rates.hourly * 100).toString(),
+      source: bookingSource,
       ...(rates.daily ? { pd: Math.round(rates.daily * 100).toString() } : {}),
       ...(listing.pricePerMonth ? { pm: Math.round(listing.pricePerMonth * 100).toString() } : {}),
       ...(listing.display_id ? { display_id: listing.display_id } : {}),
@@ -562,6 +564,7 @@ export function SearchPage() {
     const paramName = urlParams.get('name');
     const paramStart = urlParams.get('start');
     const paramEnd = urlParams.get('end');
+    const paramSource = urlParams.get('source') || 'platform';
 
     if (paramLat && paramLng && paramName) {
       setMapCenter({ lat: paramLat, lng: paramLng });
@@ -569,6 +572,7 @@ export function SearchPage() {
       setSearchLocationState(paramName);
       if (paramStart) setStartTime(paramStart);
       if (paramEnd) setEndTime(paramEnd);
+      setBookingSource(paramSource);
       setLocationReady(true);
       return;
     }

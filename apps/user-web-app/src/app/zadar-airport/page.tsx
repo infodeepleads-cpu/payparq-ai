@@ -10,7 +10,7 @@ export default function ZadarAirportPage() {
   const router = useRouter();
 
   const handleBookNow = () => {
-    router.push('/search?lat=44.1083&lng=15.3467&name=Zadar+Airport');
+    router.push('/search?lat=44.1083&lng=15.3467&name=Zadar+Airport&source=airport');
   };
 
   return (

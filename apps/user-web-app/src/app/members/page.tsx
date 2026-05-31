@@ -3137,7 +3137,7 @@ export default function MembersPage() {
                           title={membersT('Kopiraj link', locale)}
                           onClick={(e) => {
                             e.stopPropagation();
-                            const url = `${window.location.origin}/search?hubId=${loc.id}`;
+                            const url = `${window.location.origin}/search?hubId=${loc.id}&source=member`;
                             navigator.clipboard.writeText(url).then(() => {
                               setCopiedLotId(loc.id);
                               setTimeout(() => setCopiedLotId(null), 1500);

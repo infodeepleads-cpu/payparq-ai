@@ -69,6 +69,7 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
       name: selectedName,
       start: arrivalDateTime,
       end: finalDeparture,
+      source: 'platform',
     });
     router.push(`/search?${params.toString()}`);
   };

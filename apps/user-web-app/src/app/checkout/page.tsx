@@ -154,7 +154,7 @@ function SummaryPanel({
   locale: 'en' | 'hr';
 }) {
   const subtotalEur = originalAmountCents / 100;
-  const serviceFeeEur = promoDiscountPercent === 100 ? 0 : 0.99 + (subtotalEur * 0.05);
+  const serviceFeeEur = promoDiscountPercent === 100 ? 0 : 0.99 + (subtotalEur * 0.10);
   const discountEur = promoDiscountCents / 100;
   const isFree = amountEur <= 0;
 
@@ -508,7 +508,7 @@ function SummaryPanel({
               )}
               {serviceFeeEur > 0 && (
                 <div className="flex justify-between text-gray-700">
-                  <span>{checkoutT('Service Fee', locale)}</span>
+                  <span>{checkoutT('Service Fee', locale)} (€0.99 + 10%)</span>
                   <span className="font-medium">€{serviceFeeEur.toFixed(2)}</span>
                 </div>
               )}
@@ -659,7 +659,7 @@ function PaidCheckoutForm({
     const piId = clientSecret.split('_secret_')[0];
     if (!piId?.startsWith('pi_')) return;
     const addOnsCents = totalAmountCents - originalAmountCents;
-    const fee = Math.round(99 + (originalAmountCents * 0.05));
+    const fee = Math.round(99 + (originalAmountCents * 0.10));
     const finalAmount = originalAmountCents + fee + addOnsCents;
     fetch('/api/stripe/payment-intent', {
       method: 'PUT',
@@ -1050,6 +1050,7 @@ function CheckoutInner() {
   const phCents = parseInt(searchParams.get('ph') || '0', 10);
   const pdCents = parseInt(searchParams.get('pd') || '0', 10);
   const pmCents = parseInt(searchParams.get('pm') || '0', 10);
+  const source = searchParams.get('source') || 'platform';
 
   const [amountCents, setAmountCents] = useState(initialAmountCents);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -1089,9 +1090,16 @@ function CheckoutInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const getCommissionRate = (src: string): number => {
+    if (src === 'member') return 0;
+    return 0.25; // 25% for 'platform' and 'airport'
+  };
+
   const createIntent = useCallback(async (cents: number, promoCode?: string, userEmail?: string) => {
     if (cents < 50) { setClientSecret('free'); return; }
     try {
+      const commissionCents = Math.round(cents * getCommissionRate(source));
+      const serviceFee = Math.round(99 + (cents * 0.10));
       const res = await fetch('/api/stripe/payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1101,6 +1109,9 @@ function CheckoutInner() {
           description: `PayParq — ${locationName}`,
           email: userEmail || undefined,
           address: address || undefined,
+          booking_source: source,
+          commission: commissionCents,
+          service_fee: serviceFee,
           ...(promoCode ? { promo_code: promoCode } : {}),
         }),
       });
@@ -1108,18 +1119,18 @@ function CheckoutInner() {
       if (!res.ok || !data.client_secret) { setFetchError('Unable to start payment.'); return; }
       setClientSecret(data.client_secret);
     } catch { setFetchError('Network error.'); }
-  }, [locId, checkIn, checkOut, locationName]);
+  }, [locId, checkIn, checkOut, locationName, source]);
 
   useEffect(() => {
     if (!locId) { setFetchError('Invalid parameters.'); return; }
-    const fee = Math.round(99 + (initialAmountCents * 0.05));
+    const fee = Math.round(99 + (initialAmountCents * 0.10));
     createIntent(initialAmountCents + fee);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAmountChange = useCallback((newCents: number, promoCode?: string) => {
     setAmountCents(newCents);
-    const fee = newCents > 0 ? Math.round(99 + (newCents * 0.05)) : 0;
+    const fee = newCents > 0 ? Math.round(99 + (newCents * 0.10)) : 0;
     createIntent(newCents + fee, promoCode);
   }, [createIntent]);
 

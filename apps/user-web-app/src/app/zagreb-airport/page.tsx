@@ -10,7 +10,7 @@ export default function ZagrebAirportPage() {
   const router = useRouter();
 
   const handleBookNow = () => {
-    router.push('/search?lat=45.7429&lng=16.0688&name=Zagreb+Airport');
+    router.push('/search?lat=45.7429&lng=16.0688&name=Zagreb+Airport&source=airport');
   };
 
   return (

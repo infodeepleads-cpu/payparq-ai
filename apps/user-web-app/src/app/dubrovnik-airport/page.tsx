@@ -10,7 +10,7 @@ export default function DubrovnikAirportPage() {
   const router = useRouter();
 
   const handleBookNow = () => {
-    router.push('/search?lat=42.5614&lng=18.2682&name=Dubrovnik+Airport');
+    router.push('/search?lat=42.5614&lng=18.2682&name=Dubrovnik+Airport&source=airport');
   };
 
   return (

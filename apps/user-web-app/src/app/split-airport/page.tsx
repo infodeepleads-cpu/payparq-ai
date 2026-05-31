@@ -10,7 +10,7 @@ export default function SplitAirportPage() {
   const router = useRouter();
 
   const handleBookNow = () => {
-    router.push('/search?lat=43.5388&lng=16.2973&name=Split+Airport');
+    router.push('/search?lat=43.5388&lng=16.2973&name=Split+Airport&source=airport');
   };
 
   return (
