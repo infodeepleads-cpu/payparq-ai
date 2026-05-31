@@ -3434,10 +3434,8 @@ export function SearchPage() {
         />
       )}
 
-      {/* Mobile: Auto-opening booking flow on page load */}
-      <div className="md:hidden">
-        <HomeBookingFlow autoOpen={true} />
-      </div>
+      {/* Auto-opening booking flow on page load */}
+      <HomeBookingFlow autoOpen={true} />
     </div>
   );
 }

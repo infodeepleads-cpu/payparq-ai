@@ -54,25 +54,23 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
   };
 
   const handleDepartureConfirm = () => {
+    if (!arrivalDateTime) return;
+
     let finalDeparture = departureDateTime;
-    if (!finalDeparture && arrivalDateTime) {
+    if (!finalDeparture) {
       const d = new Date(arrivalDateTime);
       d.setHours(d.getHours() + 3);
       finalDeparture = d.toISOString().slice(0, 16);
     }
-    if (arrivalDateTime && selectedLat && selectedLng) {
-      const params = new URLSearchParams({
-        lat: String(selectedLat),
-        lng: String(selectedLng),
-        name: selectedName,
-        start: arrivalDateTime,
-        end: finalDeparture,
-      });
-      router.push(`/search?${params.toString()}`);
-    } else if (arrivalDateTime) {
-      const params = new URLSearchParams({ start: arrivalDateTime, end: finalDeparture });
-      router.push(`/search?${params.toString()}`);
-    }
+
+    const params = new URLSearchParams({
+      lat: String(selectedLat),
+      lng: String(selectedLng),
+      name: selectedName,
+      start: arrivalDateTime,
+      end: finalDeparture,
+    });
+    router.push(`/search?${params.toString()}`);
   };
 
   return (
@@ -80,7 +78,7 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
       {!autoOpen && (
         <button
           onClick={() => setStep('location')}
-          className="md:hidden bg-black text-white font-semibold py-3.5 px-7 rounded-xl hover:bg-black/90 transition inline-flex items-center gap-2 text-base"
+          className="bg-black text-white font-semibold py-3.5 px-7 rounded-xl hover:bg-black/90 transition inline-flex items-center gap-2 text-base"
         >
           Pronađi Parking <ArrowRight size={18} />
         </button>
