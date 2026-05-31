@@ -533,17 +533,17 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
       icon: CreditCard,
     },
     {
-      label: "Unesi podatke i plati",
-      title: "2. Unesi podatke i plati",
+      label: "Enter payment details",
+      title: "2. Enter payment details",
       description:
-        "Odaberi količinu (broj sati), unesi email, broj mobitela i plati.",
+        "Select duration (hours), enter email and phone number, and pay.",
       icon: Car,
     },
     {
-      label: "Dodaj vožnju ili produži parking",
-      title: "3. Dodaj vožnju ili produži parking",
+      label: "Add a ride or extend parking",
+      title: "3. Add a ride or extend parking",
       description:
-        "Možeš dodati Vožnju ili produžiti parking putem aplikacije. Za najbolje iskustvo vožnje rezerviraj 60 min unaprijed.",
+        "Add a ride or extend your parking through the app. For the best ride experience, book at least 60 minutes in advance.",
       icon: Camera,
     },
   ];
@@ -551,8 +551,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const serviceWidgets = [
     {
       id: "hours" as SectionKey,
-      title: "Radno Vrijeme",
-      value: "24/7 Operacije",
+      title: "Opening Hours",
+      value: "24/7 Operations",
       description: "Open day and night including weekends.",
       icon: (
         <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -1237,8 +1237,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       <span className="absolute -bottom-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#5F3DFC] px-1 text-[8px] font-semibold text-white">★</span>
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-[13px] font-semibold text-black">Domaćin je Ivo</p>
-                      <p className="text-[10px] text-black/60 leading-snug">Pošaljite poruku sada! Odgovara u manje od 5 minuta.</p>
+                      <p className="truncate text-[13px] font-semibold text-black">{locale === 'en' ? 'Host is Ivo' : 'Domaćin je Ivo'}</p>
+                      <p className="text-[10px] text-black/60 leading-snug">{locale === 'en' ? 'Send message now! Responds in less than 5 minutes.' : 'Pošaljite poruku sada! Odgovara u manje od 5 minuta.'}</p>
                     </div>
                   </div>
                   <a
@@ -1288,7 +1288,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         />
                       </div>
                     </div>
-                    <p className="mb-2 text-[11px] text-gray-600">Napomena: Vožnju možete rezervirati nakon što rezervirate parking. Dostupna je Uber integracija.</p>
+                    <p className="mb-2 text-[11px] text-gray-600">Note: You can book a ride after reserving parking. Uber integration is available.</p>
                     <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
                       <button
                         onClick={() => setActiveTab('reserve')}
@@ -1397,8 +1397,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       <span className="absolute -bottom-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#5F3DFC] px-1 text-[8px] font-semibold text-white">★</span>
                     </div>
                     <div>
-                      <p className="text-[13px] font-semibold text-black">Domaćin je Ivo</p>
-                      <p className="text-[10px] text-black/60 leading-snug">Pošaljite poruku sada! Odgovara u manje od 5 minuta.</p>
+                      <p className="text-[13px] font-semibold text-black">{locale === 'en' ? 'Host is Ivo' : 'Domaćin je Ivo'}</p>
+                      <p className="text-[10px] text-black/60 leading-snug">{locale === 'en' ? 'Send message now! Responds in less than 5 minutes.' : 'Pošaljite poruku sada! Odgovara u manje od 5 minuta.'}</p>
                     </div>
                   </div>
                   <a
@@ -1415,15 +1415,15 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
               <div data-no-translate="true" className="w-full rounded-2xl border border-black/10 bg-white p-3 md:p-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                   <div className="rounded-xl border border-[#5F3DFC]/20 bg-[#F8F6FF] p-3">
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-[#5F3DFC] font-semibold">PayParq cjenik</p>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-[#5F3DFC] font-semibold">{locale === 'en' ? 'PayParq Pricing' : 'PayParq cjenik'}</p>
                     <div className="mt-2 space-y-1.5 text-xs text-black/85">
-                      <div className="flex items-center justify-between"><span>Sati</span><span className="font-semibold">{formatEur(hourlyPrice)}</span></div>
-                      <div className="flex items-center justify-between"><span>Dan</span><span className="font-semibold">{formatEur(dailyPrice)}</span></div>
-                      <div className="flex items-center justify-between"><span>Mjesec</span><span className="font-semibold">{formatEur(monthlyPrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>{locale === 'en' ? 'Hours' : 'Sati'}</span><span className="font-semibold">{formatEur(hourlyPrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>{locale === 'en' ? 'Day' : 'Dan'}</span><span className="font-semibold">{formatEur(dailyPrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>{locale === 'en' ? 'Month' : 'Mjesec'}</span><span className="font-semibold">{formatEur(monthlyPrice)}</span></div>
                     </div>
                   </div>
                   <div className="rounded-xl border border-black/10 bg-[#FAFAFA] p-3">
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-black/70 font-semibold">Posebni Upiti</p>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-black/70 font-semibold">{locale === 'en' ? 'Special Inquiries' : 'Posebni Upiti'}</p>
                     <div className="mt-2 space-y-1.5 text-xs text-black/80">
                       <div className="flex items-center justify-between"><span className="notranslate" translate="no">Park & Taxi (Poruka)</span><span className="font-semibold">{formatEur(parkTaxiUnitPrice)}</span></div>
                       <div className="flex items-center justify-between"><span>Kamperi (Poruka)</span><span className="font-semibold">{formatEur(camperDailyPrice)}/dan</span></div>
@@ -1443,7 +1443,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                   </svg>
                   <p className="text-xs md:text-sm font-semibold text-black">Street View & Photos ({streetAndPhotoCount})</p>
                 </div>
-                <p className="mt-1 text-[11px] md:text-xs text-black/60">Provjerite ulaz i okolinu prije dolaska</p>
+                <p className="mt-1 text-[11px] md:text-xs text-black/60">{locale === 'en' ? 'Check the entrance and surroundings before arrival' : 'Provjerite ulaz i okolinu prije dolaska'}</p>
                 <div className="mt-3 grid grid-cols-4 md:grid-cols-8 gap-2">
                   <a
                     href={streetViewHref}
@@ -1804,7 +1804,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         <svg viewBox="0 0 24 24" className="w-5 h-5 text-[#5F3DFC] shrink-0" fill="currentColor" aria-hidden="true">
                           <path d="m12 17.27 6.18 3.73-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
                         </svg>
-                        <span className="text-sm md:text-base font-semibold">Recenzije i podrška</span>
+                        <span className="text-sm md:text-base font-semibold">Reviews and Support</span>
                       </span>
                       {openSections.reviews ? (
                         <Minus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
@@ -1818,7 +1818,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                           <>
                             <div className="rounded-2xl border border-black/10 bg-white p-3 md:p-4 flex items-center gap-6">
                               <div>
-                                <p className="text-[11px] uppercase tracking-[0.14em] text-black/60">Prosječna ocjena</p>
+                                <p className="text-[11px] uppercase tracking-[0.14em] text-black/60">Average Rating</p>
                                 <p className="text-lg font-semibold text-black">{averageRating} / 10</p>
                               </div>
                               <div>
@@ -1829,9 +1829,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                             {hub.review_scores && (
                               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                 {[
-                                  ['security', 'Sigurnost'], ['accessibility', 'Pristupačnost'],
-                                  ['cleanliness', 'Čistoća'], ['staff', 'Osoblje'],
-                                  ['value', 'Vrijednost'], ['location', 'Lokacija'],
+                                  ['security', 'Security'], ['accessibility', 'Accessibility'],
+                                  ['cleanliness', 'Cleanliness'], ['staff', 'Staff'],
+                                  ['value', 'Value'], ['location', 'Location'],
                                 ].map(([key, label]) => {
                                   const scores = hub.review_scores as Record<string, number>;
                                   const v = scores[key] ?? 0;
@@ -1962,7 +1962,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       />
                     </div>
                   </div>
-                  <p className="mb-3 text-xs text-gray-600">Napomena: Vožnju možete rezervirati nakon što rezervirate parking. Dostupna je Uber integracija.</p>
+                  <p className="mb-3 text-xs text-gray-600">Note: You can book a ride after reserving parking. Uber integration is available.</p>
                   
                   <div className="border-t border-gray-100 mb-4 pt-3 flex justify-end">
                     <div className="p-3 w-full flex flex-col gap-0">
