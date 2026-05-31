@@ -142,9 +142,8 @@ export function ScrollableDateTimePicker({
 
         {/* Selected Time Preview */}
         <div className="bg-black/5 rounded-lg p-3 text-center">
-          <div className="text-xs text-black/60 mb-1">Odabrano vrijeme:</div>
           <div className="text-2xl md:text-3xl font-bold text-black">
-            {selectedDate.getDate()}. {new Intl.DateTimeFormat('hr-HR', { month: 'long' }).format(selectedDate)} {String(selectedDate.getHours()).padStart(2, '0')}:{String(selectedDate.getMinutes()).padStart(2, '0')}
+            {selectedDate.getDate()}. {new Intl.DateTimeFormat('hr-HR', { month: 'long' }).format(selectedDate)}
           </div>
         </div>
 
@@ -197,13 +196,13 @@ export function ScrollableDateTimePicker({
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            Nastavi →
+            {locale === 'en' ? 'Continue →' : 'Nastavi →'}
           </button>
           <button
             onClick={onCancel}
             className="w-full px-5 py-3 md:py-4 border-2 border-black/10 text-black font-semibold rounded-2xl hover:bg-black/5 active:scale-95 transition-all"
           >
-            Otkaži
+            {locale === 'en' ? 'Cancel' : 'Otkaži'}
           </button>
         </div>
       </div>
