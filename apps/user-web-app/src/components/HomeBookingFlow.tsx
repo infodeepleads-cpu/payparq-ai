@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useJsApiLoader, Autocomplete } from '@react-google-maps/api';
 import { ScrollableDateTimePicker } from './ScrollableDateTimePicker';
+import { useLocale } from './LocaleProvider';
 import { ArrowRight, MapPin, X } from 'lucide-react';
 
 const LIBRARIES: ('places')[] = ['places'];
@@ -16,6 +17,7 @@ interface HomeBookingFlowProps {
 
 export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
   const router = useRouter();
+  const { locale } = useLocale();
   const [step, setStep] = useState<Step | null>(autoOpen ? 'location' : null);
   const [selectedLat, setSelectedLat] = useState<number | null>(null);
   const [selectedLng, setSelectedLng] = useState<number | null>(null);
@@ -158,6 +160,7 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
           title="Kada dolazite?"
           subtitle="Odaberite datum i vrijeme dolaska"
           step="Korak 2 od 3"
+          locale={locale}
         />
       )}
 
@@ -172,6 +175,7 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
           subtitle="Odaberite datum i vrijeme odlaska"
           step="Korak 3 od 3"
           initialDateTime={arrivalDateTime}
+          locale={locale}
         />
       )}
     </>

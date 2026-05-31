@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ScrollableDateTimePicker } from './ScrollableDateTimePicker';
+import { useLocale } from './LocaleProvider';
 import { ArrowRight } from 'lucide-react';
 
 interface AirportBookingFlowProps {
@@ -15,6 +16,7 @@ type Step = 'arrival' | 'departure';
 
 export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: AirportBookingFlowProps) {
   const router = useRouter();
+  const { locale } = useLocale();
   const [step, setStep] = useState<Step | null>(null);
   const [arrivalDateTime, setArrivalDateTime] = useState('');
   const [departureDateTime, setDepartureDateTime] = useState('');
@@ -72,6 +74,7 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: Airp
           title="Kada dolazite?"
           subtitle="Odaberite datum i vrijeme dolaska"
           step="Korak 1 od 2"
+          locale={locale}
         />
       )}
 
@@ -85,6 +88,7 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: Airp
           subtitle="Odaberite datum i vrijeme odlaska"
           step="Korak 2 od 2"
           initialDateTime={arrivalDateTime}
+          locale={locale}
         />
       )}
     </>

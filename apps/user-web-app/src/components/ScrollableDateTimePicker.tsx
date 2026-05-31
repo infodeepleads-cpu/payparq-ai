@@ -12,6 +12,7 @@ interface ScrollableDateTimePickerProps {
   subtitle: string;
   step: string;
   initialDateTime?: string;
+  locale?: 'en' | 'hr';
 }
 
 export function ScrollableDateTimePicker({
@@ -23,6 +24,7 @@ export function ScrollableDateTimePicker({
   subtitle,
   step,
   initialDateTime,
+  locale = 'hr',
 }: ScrollableDateTimePickerProps) {
   const now = new Date();
   const baseTime = initialDateTime ? new Date(initialDateTime) : now;
@@ -148,7 +150,9 @@ export function ScrollableDateTimePicker({
 
         {/* Time Picker - All 30-minute intervals in scrollable list */}
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-black/50 uppercase tracking-wide">Vrijeme</label>
+          <label className="text-xs font-semibold text-black/50 uppercase tracking-wide">
+            {locale === 'en' ? 'Time' : 'Vrijeme'}
+          </label>
           <div className="text-center text-3xl md:text-4xl font-bold text-black tabular-nums mb-3">
             {String(selectedDate.getHours()).padStart(2, '0')}:{String(selectedDate.getMinutes()).padStart(2, '0')}
           </div>
@@ -179,7 +183,9 @@ export function ScrollableDateTimePicker({
         <div className="space-y-2 pt-2">
           {!value && (
             <div className="text-xs text-black/60 text-center px-2 py-2 bg-blue-50 rounded-lg">
-              ℹ️ Korišćenje zadane vrijednosti. Promijenite ako trebate drugačije vrijeme.
+              ℹ️ {locale === 'en'
+                ? 'Using default time. Change if you need different time.'
+                : 'Korišćenje zadane vrijednosti. Promijenite ako trebate drugačije vrijeme.'}
             </div>
           )}
           <button

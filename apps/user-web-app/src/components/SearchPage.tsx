@@ -3391,6 +3391,7 @@ export function SearchPage() {
           title="Kada dolazite?"
           subtitle="Odaberite datum i vrijeme dolaska"
           step="Korak 1 od 2"
+          locale={locale}
         />
       )}
 
@@ -3435,6 +3436,7 @@ export function SearchPage() {
           subtitle="Odaberite datum i vrijeme odlaska"
           step="Korak 2 od 2"
           initialDateTime={arrivalDateTime}
+          locale={locale}
         />
       )}
 
