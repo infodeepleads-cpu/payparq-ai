@@ -773,14 +773,6 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     isBaskaVodaPuntaRataLocation ? "1.1 km" : "200 m",
   );
   const defaultFaq = [
-    {
-      q: isBaskaVodaPuntaRataLocation
-        ? `Koliko je PayParq blizu Punta Rate i plaže Baška Voda?`
-        : `Koliko je PayParq blizu zračne luke Split?`,
-      a: isBaskaVodaPuntaRataLocation
-        ? `Do plaže Punta Rata (Brela) stižete kratkom vožnjom, a do plaže i centra Baške Vode možete pješice.`
-        : `Udaljenost pješice je oko 5 minuta, a moguć je i transfer koji traje manje od minute.`,
-    },
     { q: `Is the car park secure?`, a: `Yes. We use AI‑powered cameras to monitor every entry and exit 24/7. The lot is remote but digitally supervised at all times.` },
     { q: `Do I need to display a ticket?`, a: `No. Your license plate is your digital permit. Our system recognises your car automatically.` },
     { q: `Can I cancel or change my booking?`, a: `Yes. You can cancel for a full refund up to 1 hour before your arrival time.` },
