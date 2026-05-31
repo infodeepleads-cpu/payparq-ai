@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronDown, Car, Camera, MessageCircle, CreditCard, Plus, Minus, ChevronLeft, ChevronRight, MapPin, Route, Info } from "lucide-react";
@@ -120,6 +121,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   travelTime: string;
 }) {
   const { locale } = useLocale();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
@@ -355,79 +357,32 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   };
   const canSubmitCheckout = Boolean(checkIn && checkOut);
   
-  async function handleBook(e: React.MouseEvent<HTMLElement>) {
+  function handleBook(e: React.MouseEvent<HTMLElement>) {
     if (!canSubmitCheckout) return;
     const parkTaxiError = validateParkTaxiLeadTime();
     if (parkTaxiError) {
       setCheckoutError(parkTaxiError);
       return;
     }
-    
+
     e.preventDefault();
     setCheckoutError("");
-    setLoading(true);
-    
-    try {
-      let customerEmail: string | undefined = undefined;
-      let authToken: string | undefined = undefined;
-      if (supabase && isSupabaseConfigured) {
-        const { data } = await supabase.auth.getSession();
-        customerEmail = data.session?.user?.email?.trim().toLowerCase() || undefined;
-        authToken = data.session?.access_token || undefined;
-      }
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (authToken) {
-        headers.Authorization = `Bearer ${authToken}`;
-      }
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          location_id: locationId,
-          display_id: hub.display_id,
-          check_in: checkIn ? new Date(checkIn).toISOString() : undefined,
-          check_out: checkOut ? new Date(checkOut).toISOString() : undefined,
-          flow_type: activeTab,
-          customer_email: customerEmail,
-          type: activeTab === 'park_now' || (activeTab === 'reserve' && reserveUsesDailyPricing) ? 'daily' : undefined,
-          park_taxi: activeTab === 'park_now' ? 1 : undefined,
-        }),
-      });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        console.error("Checkout error response:", errData);
-        const normalizedError =
-          typeof errData?.error === "string" && errData.error.trim()
-            ? mapCheckoutErrorMessage(errData.error)
-            : "Checkout nije uspio. Pokušajte ponovno.";
-        throw new Error(normalizedError);
-      }
-      let checkoutUrl = "";
-      const contentType = (res.headers.get("content-type") || "").toLowerCase();
-      if (contentType.includes("application/json")) {
-        const data = (await res.json().catch(() => null)) as { url?: string } | null;
-        checkoutUrl = (data?.url || "").toString().trim();
-      } else if (res.redirected && res.url) {
-        checkoutUrl = res.url;
-      }
-      if (checkoutUrl) {
-        window.location.assign(checkoutUrl);
-        return;
-      }
-      setCheckoutError("Checkout link not available. Please try again.");
-      setLoading(false);
-    } catch (err) {
-      console.error(err);
-      const errorMessage =
-        err instanceof Error && err.message.trim().length > 0
-          ? err.message
-          : "Checkout nije uspio. Pokušajte ponovno.";
-      setCheckoutError(errorMessage);
-      setLoading(false);
-    }
+    const params = new URLSearchParams();
+    params.set('loc', locationId);
+    if (hub.display_id) params.set('display_id', hub.display_id);
+    params.set('name', hub.name || '');
+    if (hub.address) params.set('address', hub.address);
+    params.set('in', checkIn ? new Date(checkIn).toISOString() : '');
+    params.set('out', checkOut ? new Date(checkOut).toISOString() : '');
+    params.set('amount_cents', String(activeFlowAmountCents));
+    params.set('ph', String(Math.round(hourlyPrice * 100)));
+    params.set('pd', String(Math.round(dailyPrice * 100)));
+    params.set('pm', String(Math.round(monthlyPrice * 100)));
+    params.set('source', 'platform');
+    params.set('flow', activeTab);
+
+    router.push(`/checkout?${params.toString()}`);
   }
   
   useEffect(() => {
