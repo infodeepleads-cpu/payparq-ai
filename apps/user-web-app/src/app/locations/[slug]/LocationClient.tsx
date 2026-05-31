@@ -41,6 +41,11 @@ type HubData = {
   } | null;
   capacity?: number;
   total_spots?: number;
+  nearby_landmarks?: Array<{
+    name: string;
+    latitude: number;
+    longitude: number;
+  }>;
 };
 
 type SectionKey =
@@ -714,17 +719,28 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     }
     return "Your City";
   })();
-  const referencePoints = isBaskaVodaPuntaRataLocation
-    ? {
-        airport: { lat: 43.3687, lng: 16.9318, name: "Plaža Punta Rata (Brela)" },
-        trogir: { lat: 43.3561, lng: 16.9502, name: "Plaža Baška Voda" },
-        marina: { lat: 43.3559, lng: 16.9512, name: "Centar Baška Voda" },
-      }
-    : {
-        airport: { lat: 43.5389, lng: 16.2976, name: "Aerodrom Kaštela" },
-        trogir: { lat: 43.5157, lng: 16.2502, name: "Trogir centar" },
-        marina: { lat: 43.5126, lng: 16.1112, name: "Closest Beach" },
+  const referencePoints = (() => {
+    // Use location-specific landmarks if available
+    if (hub.nearby_landmarks && hub.nearby_landmarks.length >= 3) {
+      return {
+        airport: { lat: hub.nearby_landmarks[0].latitude, lng: hub.nearby_landmarks[0].longitude, name: hub.nearby_landmarks[0].name },
+        trogir: { lat: hub.nearby_landmarks[1].latitude, lng: hub.nearby_landmarks[1].longitude, name: hub.nearby_landmarks[1].name },
+        marina: { lat: hub.nearby_landmarks[2].latitude, lng: hub.nearby_landmarks[2].longitude, name: hub.nearby_landmarks[2].name },
       };
+    }
+    // Fallback to hardcoded defaults
+    return isBaskaVodaPuntaRataLocation
+      ? {
+          airport: { lat: 43.3687, lng: 16.9318, name: "Plaža Punta Rata (Brela)" },
+          trogir: { lat: 43.3561, lng: 16.9502, name: "Plaža Baška Voda" },
+          marina: { lat: 43.3559, lng: 16.9512, name: "Centar Baška Voda" },
+        }
+      : {
+          airport: { lat: 43.5389, lng: 16.2976, name: "Aerodrom Kaštela" },
+          trogir: { lat: 43.5157, lng: 16.2502, name: "Trogir centar" },
+          marina: { lat: 43.5126, lng: 16.1112, name: "Closest Beach" },
+        };
+  })();
   const distanceToReferenceMeters = (targetLat: number, targetLng: number) => {
     if (typeof hub.latitude !== "number" || typeof hub.longitude !== "number") return null;
     const earthRadiusKm = 6371;
