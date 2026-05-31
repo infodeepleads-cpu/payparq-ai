@@ -426,10 +426,10 @@ export default function Locations() {
               Airport Parking
             </p>
             <div className="flex flex-wrap gap-3">
-              <a href="/split-airport" className="text-xs text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-2 transition-all">✈️ Split Airport</a>
-              <a href="/zagreb-airport" className="text-xs text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-2 transition-all">✈️ Zagreb Airport</a>
-              <a href="/dubrovnik-airport" className="text-xs text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-2 transition-all">✈️ Dubrovnik Airport</a>
-              <a href="/zadar-airport" className="text-xs text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-2 transition-all">✈️ Zadar Airport</a>
+              <a href="/split-airport" className="text-xs text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-2 transition-all">Split Airport</a>
+              <a href="/zagreb-airport" className="text-xs text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-2 transition-all">Zagreb Airport</a>
+              <a href="/dubrovnik-airport" className="text-xs text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-2 transition-all">Dubrovnik Airport</a>
+              <a href="/zadar-airport" className="text-xs text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-2 transition-all">Zadar Airport</a>
             </div>
           </div>
 
