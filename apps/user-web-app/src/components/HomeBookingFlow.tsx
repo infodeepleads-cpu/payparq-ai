@@ -71,6 +71,8 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
       end: finalDeparture,
       source: 'platform',
     });
+
+    setStep(null);
     router.push(`/search?${params.toString()}`);
   };
 

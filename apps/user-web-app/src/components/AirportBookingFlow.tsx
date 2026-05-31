@@ -49,6 +49,7 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: Airp
         start: arrivalDateTime,
         end: finalDeparture,
       });
+      setStep(null);
       router.push(`/search?${params.toString()}`);
     }
   };
