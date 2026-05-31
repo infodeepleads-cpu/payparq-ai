@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { onCLS, onFID, onFCP, onLCP, onTTFB } from 'web-vitals';
+import { onCLS, onINP, onFCP, onLCP, onTTFB } from 'web-vitals';
 
 export function WebVitals() {
   useEffect(() => {
@@ -16,7 +16,7 @@ export function WebVitals() {
       });
     });
 
-    onFID((metric) => {
+    onINP((metric) => {
       window.gtag?.('event', metric.name, {
         value: Math.round(metric.value),
         event_category: 'Web Vitals',
