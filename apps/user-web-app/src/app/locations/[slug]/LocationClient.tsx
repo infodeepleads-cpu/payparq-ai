@@ -1290,7 +1290,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       </button>
                       <button
                         onClick={() => setActiveTab('park_now')}
-                        className="flex-1 py-1 text-xs font-medium rounded-lg transition-all text-gray-500 hover:text-black"
+                        className="hidden flex-1 py-1 text-xs font-medium rounded-lg transition-all text-gray-500 hover:text-black"
                       >
                         <span className="notranslate" translate="no">Park & Taxi</span>
                       </button>
@@ -1949,7 +1949,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                 </button>
                 <button
                   onClick={() => setActiveTab('park_now')}
-                  className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                  className={`hidden flex-1 py-1.5 text-sm font-medium rounded-lg transition-all ${
                     activeTab === 'park_now' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'
                   }`}
                 >
