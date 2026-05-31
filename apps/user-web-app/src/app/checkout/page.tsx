@@ -508,7 +508,7 @@ function SummaryPanel({
               )}
               {serviceFeeEur > 0 && (
                 <div className="flex justify-between text-gray-700">
-                  <span>{checkoutT('Service Fee', locale)} (€0.99 + 10%)</span>
+                  <span>{checkoutT('Service Fee', locale)}</span>
                   <span className="font-medium">€{serviceFeeEur.toFixed(2)}</span>
                 </div>
               )}
