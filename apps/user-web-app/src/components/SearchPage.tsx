@@ -1530,7 +1530,7 @@ export function SearchPage() {
             className="flex-1 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 px-3 py-1 text-left flex items-center gap-2"
           >
             {searchLocation ? <MapPin className="w-4 h-4 text-black flex-shrink-0" /> : <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />}
-            <div className="flex flex-col justify-center flex-1">
+            <div className="flex flex-col justify-center flex-1 min-w-0">
               <div className="text-xs text-gray-600 font-semibold truncate">{searchLocation || t('Kamo ideš?', locale)}</div>
               {startTime && endTime && (
                 <div className="text-xs text-gray-700 font-medium">

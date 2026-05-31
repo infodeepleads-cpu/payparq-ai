@@ -148,7 +148,7 @@ export function ScrollableDateTimePicker({
           </div>
         </div>
 
-        {/* Time Picker - All 30-minute intervals in scrollable list */}
+        {/* Time Picker */}
         <div className="space-y-2">
           <label className="text-xs font-semibold text-black/50 uppercase tracking-wide">
             {locale === 'en' ? 'Time' : 'Vrijeme'}
@@ -156,26 +156,35 @@ export function ScrollableDateTimePicker({
           <div className="text-center text-3xl md:text-4xl font-bold text-black tabular-nums mb-3">
             {String(selectedDate.getHours()).padStart(2, '0')}:{String(selectedDate.getMinutes()).padStart(2, '0')}
           </div>
-          <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-2">
-            {Array.from({ length: 48 }, (_, i) => {
-              const totalMinutes = (i * 30 + 6 * 60) % (24 * 60);
-              const hour = Math.floor(totalMinutes / 60);
-              const minute = totalMinutes % 60;
-              const isSelected = selectedDate.getHours() === hour && selectedDate.getMinutes() === minute;
-              return (
-                <button
-                  key={`${hour}:${minute}`}
-                  onClick={() => handleTimeSelect(hour, minute)}
-                  className={`py-3 px-2 rounded-lg text-sm font-semibold transition-all ${
-                    isSelected
-                      ? 'bg-black text-white'
-                      : 'bg-black/5 text-black hover:bg-black/10'
-                  }`}
-                >
-                  {String(hour).padStart(2, '0')}:{String(minute).padStart(2, '0')}
-                </button>
-              );
-            })}
+          <div className="grid grid-cols-4 gap-2">
+            {[0, 6, 12, 18].map(hour => (
+              <button
+                key={hour}
+                onClick={() => handleTimeSelect(hour, 0)}
+                className={`py-2 rounded-lg text-xs md:text-sm font-semibold transition-all ${
+                  selectedDate.getHours() === hour
+                    ? 'bg-black text-white'
+                    : 'bg-black/5 text-black hover:bg-black/10'
+                }`}
+              >
+                {String(hour).padStart(2, '0')}:00
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {[0, 15, 30, 45].map(minute => (
+              <button
+                key={minute}
+                onClick={() => handleTimeSelect(selectedDate.getHours(), minute)}
+                className={`py-2 rounded-lg text-xs md:text-sm font-semibold transition-all ${
+                  selectedDate.getMinutes() === minute
+                    ? 'bg-black text-white'
+                    : 'bg-black/5 text-black hover:bg-black/10'
+                }`}
+              >
+                :{String(minute).padStart(2, '0')}
+              </button>
+            ))}
           </div>
         </div>
 
