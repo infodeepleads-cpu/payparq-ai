@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
+import { AirportBookingFlow } from '@/components/AirportBookingFlow';
 import { ArrowRight, Check } from 'lucide-react';
 
 export default function ZagrebAirportPage() {
@@ -26,9 +27,12 @@ export default function ZagrebAirportPage() {
               Guaranteed parking. Instant booking. Save up to 70%.
             </p>
           </div>
-          <button onClick={handleBookNow} className="bg-black text-white font-semibold py-3 px-6 rounded-lg hover:bg-black/90 transition inline-flex items-center gap-2">
-            Book Now <ArrowRight size={18} />
-          </button>
+          <div className="flex gap-3 flex-wrap">
+            <button onClick={handleBookNow} className="hidden md:inline-flex bg-black text-white font-semibold py-3 px-6 rounded-lg hover:bg-black/90 transition items-center gap-2">
+              Book Now <ArrowRight size={18} />
+            </button>
+            <AirportBookingFlow defaultLat={45.7429} defaultLng={16.0688} defaultName="Zagreb Airport" />
+          </div>
         </section>
 
         <section className="max-w-4xl mx-auto px-6 md:px-12 py-16 border-b border-black/10">
@@ -83,9 +87,12 @@ export default function ZagrebAirportPage() {
           <div className="border border-black/10 rounded-xl p-8 md:p-12">
             <h2 className="text-2xl font-semibold tracking-tight text-black mb-4">Ready to Book?</h2>
             <p className="text-base text-black/60 mb-6">Save up to 70% on parking at Zagreb Airport. Book your guaranteed spot in 2 minutes.</p>
-            <button onClick={handleBookNow} className="bg-black text-white font-semibold py-3 px-6 rounded-lg hover:bg-black/90 transition inline-flex items-center gap-2">
-              Book Now <ArrowRight size={18} />
-            </button>
+            <div className="flex gap-3 flex-wrap">
+              <button onClick={handleBookNow} className="hidden md:inline-flex bg-black text-white font-semibold py-3 px-6 rounded-lg hover:bg-black/90 transition items-center gap-2">
+                Book Now <ArrowRight size={18} />
+              </button>
+              <AirportBookingFlow defaultLat={45.7429} defaultLng={16.0688} defaultName="Zagreb Airport" />
+            </div>
           </div>
         </section>
       </main>

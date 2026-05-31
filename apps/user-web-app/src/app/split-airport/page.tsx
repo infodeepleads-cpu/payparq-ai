@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
+import { AirportBookingFlow } from '@/components/AirportBookingFlow';
 import { ArrowRight, Check } from 'lucide-react';
 
 export default function SplitAirportPage() {
@@ -29,13 +30,17 @@ export default function SplitAirportPage() {
             </p>
           </div>
 
-          <button
-            onClick={handleBookNow}
-            className="bg-black text-white font-semibold py-3 px-6 rounded-lg hover:bg-black/90 transition inline-flex items-center gap-2"
-          >
-            Book Now
-            <ArrowRight size={18} />
-          </button>
+          <div className="flex gap-3 flex-wrap">
+            {/* Desktop button */}
+            <button
+              onClick={handleBookNow}
+              className="hidden md:inline-flex bg-black text-white font-semibold py-3 px-6 rounded-lg hover:bg-black/90 transition items-center gap-2"
+            >
+              Book Now <ArrowRight size={18} />
+            </button>
+            {/* Mobile popup flow */}
+            <AirportBookingFlow defaultLat={43.5388} defaultLng={16.2973} defaultName="Split Airport" />
+          </div>
         </section>
 
         {/* Benefits Section */}
@@ -122,13 +127,15 @@ export default function SplitAirportPage() {
             <p className="text-base text-black/60 mb-6">
               Save up to 70% on parking at Split Airport. Book your guaranteed spot in 2 minutes.
             </p>
-            <button
-              onClick={handleBookNow}
-              className="bg-black text-white font-semibold py-3 px-6 rounded-lg hover:bg-black/90 transition inline-flex items-center gap-2"
-            >
-              Book Now
-              <ArrowRight size={18} />
-            </button>
+            <div className="flex gap-3 flex-wrap">
+              <button
+                onClick={handleBookNow}
+                className="hidden md:inline-flex bg-black text-white font-semibold py-3 px-6 rounded-lg hover:bg-black/90 transition items-center gap-2"
+              >
+                Book Now <ArrowRight size={18} />
+              </button>
+              <AirportBookingFlow defaultLat={43.5388} defaultLng={16.2973} defaultName="Split Airport" />
+            </div>
           </div>
         </section>
       </main>
