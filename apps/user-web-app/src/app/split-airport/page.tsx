@@ -74,10 +74,10 @@ export default function SplitAirportPage() {
           <h2 className="text-2xl font-semibold tracking-tight text-black mb-8">How It Works</h2>
 
           <div className="space-y-6">
-            {[
-              { num: 1, title: 'Enter Your Dates', desc: 'Tell us when you need parking at Split Airport' },
-              { num: 2, title: 'Browse Options', desc: 'See available parking spots with prices and amenities' },
-              { num: 3, title: 'Book Instantly', desc: 'Select your spot and receive instant confirmation' },
+            [
+              { num: 1, title: 'Search', desc: 'Find available parking near Split Airport' },
+              { num: 2, title: 'Book', desc: 'Select your spot and confirm instantly' },
+              { num: 3, title: 'Get Your Parking Pass', desc: 'Receive your parking pass immediately after booking' },
               { num: 4, title: 'Show Your Pass', desc: 'Display your parking pass at the entrance' },
             ].map(step => (
               <div key={step.num} className="flex gap-4">
