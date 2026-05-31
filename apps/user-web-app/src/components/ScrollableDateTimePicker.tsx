@@ -154,8 +154,9 @@ export function ScrollableDateTimePicker({
           </div>
           <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-2">
             {Array.from({ length: 48 }, (_, i) => {
-              const hour = Math.floor(i / 2);
-              const minute = (i % 2) * 30;
+              const totalMinutes = (i * 30 + 6 * 60) % (24 * 60);
+              const hour = Math.floor(totalMinutes / 60);
+              const minute = totalMinutes % 60;
               const isSelected = selectedDate.getHours() === hour && selectedDate.getMinutes() === minute;
               return (
                 <button
