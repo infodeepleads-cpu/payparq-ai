@@ -560,11 +560,15 @@ export function SearchPage() {
     const paramLat = parseFloat(urlParams.get('lat') || '');
     const paramLng = parseFloat(urlParams.get('lng') || '');
     const paramName = urlParams.get('name');
+    const paramStart = urlParams.get('start');
+    const paramEnd = urlParams.get('end');
 
     if (paramLat && paramLng && paramName) {
       setMapCenter({ lat: paramLat, lng: paramLng });
       setSearchLocationPin({ lat: paramLat, lng: paramLng });
       setSearchLocationState(paramName);
+      if (paramStart) setStartTime(paramStart);
+      if (paramEnd) setEndTime(paramEnd);
       setLocationReady(true);
       return;
     }
