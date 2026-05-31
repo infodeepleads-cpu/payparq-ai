@@ -1280,7 +1280,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         />
                       </div>
                     </div>
-                    <p className="mb-2 text-[11px] text-gray-600">Napomena: Vožnju možete rezervirati nakon što rezervirate parking; rezervacija 60 min unaprijed daje garanciju <span className="notranslate" translate="no">polaska</span>. <span className="notranslate" translate="no">Parq</span> vozači su dostupni i na licu mjesta, a dostupan je i Uber.</p>
+                    <p className="mb-2 text-[11px] text-gray-600">Napomena: Vožnju možete rezervirati nakon što rezervirate parking. Dostupna je Uber integracija.</p>
                     <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
                       <button
                         onClick={() => setActiveTab('reserve')}
@@ -1415,7 +1415,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </div>
                   </div>
                   <div className="rounded-xl border border-black/10 bg-[#FAFAFA] p-3">
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-black/70 font-semibold">Konkurentske cijene</p>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-black/70 font-semibold">Posebni Upiti</p>
                     <div className="mt-2 space-y-1.5 text-xs text-black/80">
                       <div className="flex items-center justify-between"><span className="notranslate" translate="no">Park & Taxi (Poruka)</span><span className="font-semibold">{formatEur(parkTaxiUnitPrice)}</span></div>
                       <div className="flex items-center justify-between"><span>Kamperi (Poruka)</span><span className="font-semibold">{formatEur(camperDailyPrice)}/dan</span></div>
@@ -1981,7 +1981,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       />
                     </div>
                   </div>
-                  <p className="mb-3 text-xs text-gray-600">Napomena: Vožnju možete rezervirati nakon što rezervirate parking; rezervacija 60 min unaprijed daje garanciju <span className="notranslate" translate="no">polaska</span>. <span className="notranslate" translate="no">Parq</span> vozači su dostupni i na licu mjesta, a dostupan je i Uber.</p>
+                  <p className="mb-3 text-xs text-gray-600">Napomena: Vožnju možete rezervirati nakon što rezervirate parking. Dostupna je Uber integracija.</p>
                   
                   <div className="border-t border-gray-100 mb-4 pt-3 flex justify-end">
                     <div className="p-3 w-full flex flex-col gap-0">
