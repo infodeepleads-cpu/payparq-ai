@@ -92,7 +92,7 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
           <div className="bg-white w-full rounded-t-3xl p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs font-semibold text-black/50 uppercase tracking-wide">Korak 1 od 3</div>
+                <div className="text-xs font-semibold text-black uppercase tracking-wide">Korak 1 od 3</div>
                 <h2 className="text-2xl font-bold text-black mt-0.5">Gdje želite parkirati?</h2>
                 <p className="text-xs text-black/60 mt-0.5">Unesite lokaciju ili odaberite prijedlog</p>
               </div>
