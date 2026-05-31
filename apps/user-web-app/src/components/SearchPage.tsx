@@ -555,16 +555,15 @@ export function SearchPage() {
   const [parkingType, setParkingType] = useState<'all' | 'self-park' | 'garage'>('all');
   const [vehicleType, setVehicleType] = useState('compact');
 
-  // Auto-request current location on mount
+  // Auto-request current location on mount, re-run when URL params change
   useEffect(() => {
     // Check for prefilled location from URL params (e.g. from landing pages)
-    const urlParams = new URLSearchParams(window.location.search);
-    const paramLat = parseFloat(urlParams.get('lat') || '');
-    const paramLng = parseFloat(urlParams.get('lng') || '');
-    const paramName = urlParams.get('name');
-    const paramStart = urlParams.get('start');
-    const paramEnd = urlParams.get('end');
-    const paramSource = urlParams.get('source') || 'platform';
+    const paramLat = parseFloat(searchParams.get('lat') || '');
+    const paramLng = parseFloat(searchParams.get('lng') || '');
+    const paramName = searchParams.get('name');
+    const paramStart = searchParams.get('start');
+    const paramEnd = searchParams.get('end');
+    const paramSource = searchParams.get('source') || 'platform';
 
     if (paramLat && paramLng && paramName) {
       setMapCenter({ lat: paramLat, lng: paramLng });
@@ -576,6 +575,8 @@ export function SearchPage() {
       setLocationReady(true);
       return;
     }
+
+    if (paramLat || paramLng || paramName) return; // partial params, don't fall through to geolocation
 
     if (!navigator.geolocation) {
       setLocationReady(true);
@@ -598,7 +599,7 @@ export function SearchPage() {
       },
       { timeout: 5000 }
     );
-  }, []);
+  }, [searchParams]);
 
   // Load recent searches from localStorage
   useEffect(() => {
@@ -1534,7 +1535,7 @@ export function SearchPage() {
               <div className="text-xs text-gray-600 font-semibold truncate">{searchLocation || t('Kamo ideš?', locale)}</div>
               {startTime && endTime && (
                 <div className="text-xs text-gray-700 font-medium">
-                  {new Date(startTime).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })} to {new Date(endTime).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(startTime).toLocaleDateString('hr-HR', { month: 'short', day: 'numeric' })} {new Date(startTime).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })} - {new Date(endTime).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })}
                 </div>
               )}
             </div>

@@ -34,18 +34,21 @@ export function ScrollableDateTimePicker({
 
   const [selectedDate, setSelectedDate] = useState<Date>(value ? new Date(value) : defaultTime);
 
+  const toLocalISO = (date: Date) => {
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}`;
+  };
+
   useEffect(() => {
     if (!value) {
-      const isoString = defaultTime.toISOString().slice(0, 16);
-      onChange(isoString);
+      onChange(toLocalISO(defaultTime));
     }
   }, [value]);
   const [viewMonth, setViewMonth] = useState<Date>(new Date(now.getFullYear(), now.getMonth()));
   const daysContainerRef = useRef<HTMLDivElement>(null);
 
   const updateValue = (date: Date) => {
-    const isoString = date.toISOString().slice(0, 16);
-    onChange(isoString);
+    onChange(toLocalISO(date));
   };
 
   const handleDateSelect = (day: number) => {
@@ -142,8 +145,9 @@ export function ScrollableDateTimePicker({
 
         {/* Selected Time Preview */}
         <div className="bg-black/5 rounded-lg p-3 text-center">
+          <div className="text-xs text-black/60 mb-1">{locale === 'en' ? 'Selected time' : 'Odabrano vrijeme'}:</div>
           <div className="text-2xl md:text-3xl font-bold text-black">
-            {selectedDate.getDate()}. {new Intl.DateTimeFormat('hr-HR', { month: 'long' }).format(selectedDate)}
+            {selectedDate.getDate()}. {new Intl.DateTimeFormat('hr-HR', { month: 'long' }).format(selectedDate)} {String(selectedDate.getHours()).padStart(2, '0')}:{String(selectedDate.getMinutes()).padStart(2, '0')}
           </div>
         </div>
 
@@ -155,7 +159,7 @@ export function ScrollableDateTimePicker({
           <div className="text-center text-3xl md:text-4xl font-bold text-black tabular-nums mb-3">
             {String(selectedDate.getHours()).padStart(2, '0')}:{String(selectedDate.getMinutes()).padStart(2, '0')}
           </div>
-          <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto pr-2">
+          <div className="grid grid-cols-4 gap-2 overflow-y-auto pr-2" style={{ maxHeight: "108px" }}>
             {Array.from({ length: 48 }, (_, i) => {
               const totalMinutes = (i * 30 + 6 * 60) % (24 * 60);
               const hour = Math.floor(totalMinutes / 60);
