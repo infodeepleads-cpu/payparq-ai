@@ -420,6 +420,19 @@ export default function Locations() {
             </div>
           </div>
 
+          {/* Location Clusters */}
+          <div className="mt-10 rounded-2xl border border-black/5 bg-[#05020A] text-white p-6 md:p-8">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-4">
+              Airport Parking
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <a href="/split-airport" className="text-xs text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-2 transition-all">✈️ Split Airport</a>
+              <a href="/zagreb-airport" className="text-xs text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-2 transition-all">✈️ Zagreb Airport</a>
+              <a href="/dubrovnik-airport" className="text-xs text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-2 transition-all">✈️ Dubrovnik Airport</a>
+              <a href="/zadar-airport" className="text-xs text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-2 transition-all">✈️ Zadar Airport</a>
+            </div>
+          </div>
+
           <div className="mt-10 rounded-2xl border border-black/5 bg-[#05020A] text-white p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
               <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-2">
