@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { getCLS, getFID, getFCP, getLCP, getTTFB } from 'web-vitals';
+import { onCLS, onFID, onFCP, onLCP, onTTFB } from 'web-vitals';
 
 export function WebVitals() {
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_GA_ID) return;
 
-    // Track Core Web Vitals
-    getCLS((metric) => {
+    onCLS((metric) => {
       window.gtag?.('event', metric.name, {
         value: Math.round(metric.value * 1000),
         event_category: 'Web Vitals',
@@ -17,7 +16,7 @@ export function WebVitals() {
       });
     });
 
-    getFID((metric) => {
+    onFID((metric) => {
       window.gtag?.('event', metric.name, {
         value: Math.round(metric.value),
         event_category: 'Web Vitals',
@@ -26,7 +25,7 @@ export function WebVitals() {
       });
     });
 
-    getFCP((metric) => {
+    onFCP((metric) => {
       window.gtag?.('event', metric.name, {
         value: Math.round(metric.value),
         event_category: 'Web Vitals',
@@ -35,7 +34,7 @@ export function WebVitals() {
       });
     });
 
-    getLCP((metric) => {
+    onLCP((metric) => {
       window.gtag?.('event', metric.name, {
         value: Math.round(metric.value),
         event_category: 'Web Vitals',
@@ -44,7 +43,7 @@ export function WebVitals() {
       });
     });
 
-    getTTFB((metric) => {
+    onTTFB((metric) => {
       window.gtag?.('event', metric.name, {
         value: Math.round(metric.value),
         event_category: 'Web Vitals',
