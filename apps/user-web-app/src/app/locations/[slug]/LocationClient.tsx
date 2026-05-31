@@ -578,8 +578,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     {
       id: "space" as SectionKey,
       title: "Space",
-      value: "Otvoreno, zid uz cestu, rasvjeta",
-      description: "Otvoreni parking prostor sa zidom uz cestu i rasvjetom.",
+      value: locale === 'en' ? "Open, wall by street, lighting" : "Otvoreno, zid uz cestu, rasvjeta",
+      description: locale === 'en' ? "Open parking space with wall by street and lighting." : "Otvoreni parking prostor sa zidom uz cestu i rasvjetom.",
       icon: (
         <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <rect x="4" y="5" width="16" height="14" rx="2" />
@@ -590,8 +590,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     {
       id: "cancellation" as SectionKey,
       title: "Cancellation policy",
-      value: "Besplatno otkazivanje + garancija rezervacije",
-      description: "Otkazivanje je besplatno unutar 60 minuta prije dolaska, a rezervacija je garantirana nakon potvrde.",
+      value: locale === 'en' ? "Free cancellation + reservation guarantee" : "Besplatno otkazivanje + garancija rezervacije",
+      description: locale === 'en' ? "Cancellation is free within 60 minutes before arrival, and your reservation is guaranteed after confirmation." : "Otkazivanje je besplatno unutar 60 minuta prije dolaska, a rezervacija je garantirana nakon potvrde.",
       icon: (
         <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <rect x="4" y="5" width="16" height="16" rx="2" />
@@ -785,8 +785,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     { q: `Which languages are supported?`, a: `English is supported universally; local languages are available depending on location.` },
     { q: `Can I get an invoice for business travel?`, a: `Yes. Stripe issues a detailed receipt, and VAT invoicing is available upon request.` },
     { q: `What happens if my flight is delayed?`, a: `For airport lots only: adjust your end time in the app or contact support — we'll help update your reservation.` },
-    { q: `Je li cijena transparentna?`, a: `Da. Jasne satnice bez skrivenih naknada. Ukupno se prikazuje prije nego što potvrdite, uz dodani Stripeov trošak obrade transakcije.` },
-    { q: `Mogu li naručiti prijevoz ili kupiti osiguranje s vaše stranice?`, a: `Da. Nakon što je vaša rezervacija potvrđena, bit ćete preusmjereni na uspješnu stranicu na kojoj možete dogovoriti Parq vožnju, kupiti osiguranje i preuzeti potvrdu o rezervaciji. Osiguranje je moguće aplicirati samo za verificirane korisnike, ovisno o lokaciji. <a href="/success" class="underline text-blue-600" target="_blank">Pogledajte demonstraciju stranice uspjeha</a>` },
+    { q: `Is the price transparent?`, a: `Yes. Clear rates without hidden fees. The total is shown before you confirm, plus Stripe's transaction processing fee.` },
+    { q: `Can I book a ride or buy insurance from your website?`, a: `Yes. After your reservation is confirmed, you'll be redirected to a success page where you can arrange a Parq ride, buy insurance, and download your reservation confirmation. Insurance can only be applied for verified users, depending on location. <a href="/success" class="underline text-blue-600" target="_blank">See the success page demo</a>` },
   ];
   const finalFaq = faqItems && faqItems.length > 0 ? faqItems : defaultFaq;
   const faqSchema = {
