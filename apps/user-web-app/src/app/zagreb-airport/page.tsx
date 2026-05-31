@@ -57,7 +57,7 @@ export default function ZagrebAirportPage() {
         <section className="max-w-4xl mx-auto px-6 md:px-12 py-16 border-b border-black/10">
           <h2 className="text-2xl font-semibold tracking-tight text-black mb-8">How It Works</h2>
           <div className="space-y-6">
-            [
+            {[
               { num: 1, title: 'Search', desc: 'Find available parking near Zagreb Airport' },
               { num: 2, title: 'Book', desc: 'Select your spot and confirm instantly' },
               { num: 3, title: 'Get Your Parking Pass', desc: 'Receive your parking pass immediately after booking' },
