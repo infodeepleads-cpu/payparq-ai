@@ -3442,7 +3442,7 @@ export function SearchPage() {
       )}
 
       {/* Auto-opening booking flow on page load */}
-      <HomeBookingFlow autoOpen={true} />
+      <HomeBookingFlow autoOpen={!searchParams.get('lat') && !searchParams.get('start')} />
     </div>
   );
 }
