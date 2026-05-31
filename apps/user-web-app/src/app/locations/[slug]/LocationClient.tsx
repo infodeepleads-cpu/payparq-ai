@@ -1411,23 +1411,19 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     <div className="mt-2 space-y-1.5 text-xs text-black/85">
                       <div className="flex items-center justify-between"><span>Sati</span><span className="font-semibold">{formatEur(hourlyPrice)}</span></div>
                       <div className="flex items-center justify-between"><span>Dan</span><span className="font-semibold">{formatEur(dailyPrice)}</span></div>
-                      <div className="flex items-center justify-between"><span className="notranslate" translate="no">Park & Taxi (Dnevni parking i 2 vožnje do 5km)</span><span className="font-semibold">{formatEur(parkTaxiUnitPrice)}</span></div>
                       <div className="flex items-center justify-between"><span>Mjesec</span><span className="font-semibold">{formatEur(monthlyPrice)}</span></div>
-                      <div className="flex items-center justify-between"><span>Kamperi (Poruka)</span><span className="font-semibold">{formatEur(camperDailyPrice)}/dan</span></div>
-                      <div className="flex items-center justify-between"><span>Autobusi (Poruka)</span><span className="font-semibold">{formatEur(busDailyPrice)}/dan</span></div>
                     </div>
                   </div>
                   <div className="rounded-xl border border-black/10 bg-[#FAFAFA] p-3">
                     <p className="text-[11px] uppercase tracking-[0.16em] text-black/70 font-semibold">Konkurentske cijene</p>
                     <div className="mt-2 space-y-1.5 text-xs text-black/80">
-                      <div className="flex items-center justify-between"><span>Sati</span><span className="font-semibold">{formatEur(competitorHourly)}</span></div>
-                      <div className="flex items-center justify-between"><span>Dan</span><span className="font-semibold">{formatEur(competitorDaily)}</span></div>
-                      <div className="flex items-center justify-between"><span>Vožnja Uber Trogir/Aerodrom (1 Smjer)</span><span className="font-semibold">{formatEur(uberOneWayRidePrice)}</span></div>
-                      <div className="flex items-center justify-between"><span>Vožnja Uber Trogir/Aerodrom (2 Smjera)</span><span className="font-semibold">{formatEur(uberTwoWayRidePrice)}</span></div>
+                      <div className="flex items-center justify-between"><span className="notranslate" translate="no">Park & Taxi (Poruka)</span><span className="font-semibold">{formatEur(parkTaxiUnitPrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Kamperi (Poruka)</span><span className="font-semibold">{formatEur(camperDailyPrice)}/dan</span></div>
+                      <div className="flex items-center justify-between"><span>Autobusi (Poruka)</span><span className="font-semibold">{formatEur(busDailyPrice)}/dan</span></div>
                     </div>
                   </div>
                 </div>
-                <p className="mt-3 text-[11px] md:text-xs text-black/65">Napomena: početna vožnja min. 60 min unaprijed (samo tada je garantirana). Povratnu vožnju najavite 15 min prije u aplikaciji, gdje možete pratiti dolazak vozača uživo. Cijene su dinamične.</p>
+                <p className="mt-3 text-[11px] md:text-xs text-black/65">Dostupna je uber integracija</p>
               </div>
               
               <div className="w-full rounded-2xl border border-black/10 bg-white p-3 md:p-4">
