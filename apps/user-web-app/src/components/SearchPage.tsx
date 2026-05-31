@@ -1228,16 +1228,21 @@ export function SearchPage() {
     };
 
     if (isModalOpen) {
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
       document.body.style.overflow = 'hidden';
       document.documentElement.style.overflow = 'hidden';
       document.body.style.overflowX = 'hidden';
       document.documentElement.style.overflowX = 'hidden';
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
       document.addEventListener('touchmove', preventScroll, { passive: false });
     } else {
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
       document.body.style.overflowX = '';
       document.documentElement.style.overflowX = '';
+      document.body.style.paddingRight = '';
     }
 
     return () => {
@@ -1246,6 +1251,7 @@ export function SearchPage() {
       document.documentElement.style.overflow = '';
       document.body.style.overflowX = '';
       document.documentElement.style.overflowX = '';
+      document.body.style.paddingRight = '';
     };
   }, [allParkingDropdownOpen, filterModalOpen, sortModalOpen, showDestinationPicker, showPredictions, showMobileSearchEdit, showArrivalPicker, showDeparturePicker]);
 
