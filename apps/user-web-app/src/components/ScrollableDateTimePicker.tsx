@@ -148,7 +148,7 @@ export function ScrollableDateTimePicker({
           </div>
         </div>
 
-        {/* Time Picker - All 30-minute intervals */}
+        {/* Time Picker - All 30-minute intervals (daytime first, nighttime last) */}
         <div className="space-y-2">
           <label className="text-xs font-semibold text-black/50 uppercase tracking-wide">
             {locale === 'en' ? 'Time' : 'Vrijeme'}
@@ -156,10 +156,11 @@ export function ScrollableDateTimePicker({
           <div className="text-center text-3xl md:text-4xl font-bold text-black tabular-nums mb-3">
             {String(selectedDate.getHours()).padStart(2, '0')}:{String(selectedDate.getMinutes()).padStart(2, '0')}
           </div>
-          <div className="grid grid-cols-4 gap-2 max-h-72 overflow-y-auto pr-2">
+          <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto pr-2">
             {Array.from({ length: 48 }, (_, i) => {
-              const hour = Math.floor(i / 2);
-              const minute = (i % 2) * 30;
+              const totalMinutes = (i * 30 + 6 * 60) % (24 * 60);
+              const hour = Math.floor(totalMinutes / 60);
+              const minute = totalMinutes % 60;
               const isSelected = selectedDate.getHours() === hour && selectedDate.getMinutes() === minute;
               return (
                 <button
