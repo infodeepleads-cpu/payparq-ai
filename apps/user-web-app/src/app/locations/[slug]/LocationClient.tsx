@@ -521,10 +521,10 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
  
   const howItWorks = [
     {
-      label: "Skeniraj QR kod",
-      title: "1. Skeniraj QR kod",
+      label: "Choose your location",
+      title: "1. Choose your location",
       description:
-        "Dovezi se na lokaciju i skeniraj QR kod.",
+        "Browse and choose your location",
       icon: CreditCard,
     },
     {
@@ -1423,7 +1423,6 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </div>
                   </div>
                 </div>
-                <p className="mt-3 text-[11px] md:text-xs text-black/65">Dostupna je uber integracija</p>
               </div>
               
               <div className="w-full rounded-2xl border border-black/10 bg-white p-3 md:p-4">
@@ -1845,32 +1844,6 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                             <p className="text-xs text-black/40 mt-1">Ova lokacija još nema recenzija. Budite prvi koji će ocijeniti iskustvo.</p>
                           </div>
                         )}
-                        <div className="rounded-2xl border border-[#5F3DFC]/25 bg-white p-3 md:p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                          <div className="flex items-center gap-3 min-w-0">
-                            {cityManagerPhoto ? (
-                              <div className="relative w-12 h-12 rounded-full overflow-hidden border border-black/10 shrink-0">
-                                <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url("${cityManagerPhoto}")` }} aria-label={`${cityManagerName} profile`} />
-                              </div>
-                            ) : (
-                              <div className="w-12 h-12 rounded-full bg-[#F0EEFF] text-[#5F3DFC] font-semibold text-sm inline-flex items-center justify-center shrink-0">
-                                {cityManagerName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
-                              </div>
-                            )}
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-black truncate">{cityManagerName}</p>
-                              <p className="text-xs text-black/65">City Manager • Prosječni odgovor &lt; 5 min</p>
-                              <p className="text-xs text-black/65">WhatsApp Business kontakt City Managera: {cityManagerWhatsappDisplay}</p>
-                            </div>
-                          </div>
-                          <a
-                            href={cityManagerMessageHref}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center rounded-xl bg-[#5F3DFC] px-4 py-2 text-sm font-semibold text-white hover:bg-[#4F33D4] transition-colors"
-                          >
-                            Pošalji poruku
-                          </a>
-                        </div>
                       </div>
                     ) : null}
                   </div>
