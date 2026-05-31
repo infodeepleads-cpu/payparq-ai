@@ -112,7 +112,7 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
                   <input
                     type="text"
                     placeholder="npr. Split Airport, Zagreb Centar..."
-                    className="w-full pl-9 pr-4 py-3 border border-black/20 rounded-xl text-sm focus:outline-none focus:border-black"
+                    className="w-full pl-9 pr-4 py-3 border border-black/20 rounded-xl text-sm text-black placeholder:text-black/50 focus:outline-none focus:border-black"
                     autoFocus
                   />
                 </div>
@@ -124,7 +124,7 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
                   type="text"
                   placeholder="Učitavanje..."
                   disabled
-                  className="w-full pl-9 pr-4 py-3 border border-black/20 rounded-xl text-sm bg-black/5"
+                  className="w-full pl-9 pr-4 py-3 border border-black/20 rounded-xl text-sm text-black placeholder:text-black/50 bg-black/5"
                 />
               </div>
             )}
