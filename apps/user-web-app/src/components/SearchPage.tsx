@@ -12,6 +12,7 @@ import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
 import { ReservationTypeDropdown } from './ReservationTypeDropdown';
 import { DestinationPickerWidget } from './DestinationPickerWidget';
 import { ScrollableDateTimePicker } from './ScrollableDateTimePicker';
+import { HomeBookingFlow } from './HomeBookingFlow';
 import { useLocale } from './LocaleProvider';
 import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle, List, DollarSign, Globe } from 'lucide-react';
 import { resolveScannerTruthPriceEuro, getViablePrice } from '@/lib/locationPricing';
@@ -3428,6 +3429,11 @@ export function SearchPage() {
           initialDateTime={arrivalDateTime}
         />
       )}
+
+      {/* Mobile: Auto-opening booking flow on page load */}
+      <div className="md:hidden">
+        <HomeBookingFlow autoOpen={true} />
+      </div>
     </div>
   );
 }

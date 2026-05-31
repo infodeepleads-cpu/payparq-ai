@@ -10,9 +10,13 @@ const LIBRARIES: ('places')[] = ['places'];
 
 type Step = 'location' | 'arrival' | 'departure';
 
-export function HomeBookingFlow() {
+interface HomeBookingFlowProps {
+  autoOpen?: boolean;
+}
+
+export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
   const router = useRouter();
-  const [step, setStep] = useState<Step | null>(null);
+  const [step, setStep] = useState<Step | null>(autoOpen ? 'location' : null);
   const [selectedLat, setSelectedLat] = useState<number | null>(null);
   const [selectedLng, setSelectedLng] = useState<number | null>(null);
   const [selectedName, setSelectedName] = useState('');
@@ -73,12 +77,14 @@ export function HomeBookingFlow() {
 
   return (
     <>
-      <button
-        onClick={() => setStep('location')}
-        className="md:hidden bg-black text-white font-semibold py-3.5 px-7 rounded-xl hover:bg-black/90 transition inline-flex items-center gap-2 text-base"
-      >
-        Pronađi Parking <ArrowRight size={18} />
-      </button>
+      {!autoOpen && (
+        <button
+          onClick={() => setStep('location')}
+          className="md:hidden bg-black text-white font-semibold py-3.5 px-7 rounded-xl hover:bg-black/90 transition inline-flex items-center gap-2 text-base"
+        >
+          Pronađi Parking <ArrowRight size={18} />
+        </button>
+      )}
 
       {/* Step 1: Location */}
       {step === 'location' && (
