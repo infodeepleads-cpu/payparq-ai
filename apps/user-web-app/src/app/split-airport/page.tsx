@@ -99,7 +99,7 @@ export default function SplitAirportPage() {
 
           <div className="grid md:grid-cols-3 gap-8">
             <div>
-              <p className="text-3xl font-semibold text-black">5,000+</p>
+              <p className="text-3xl font-semibold text-black">50,000+</p>
               <p className="text-sm text-black/60 mt-2">Happy travelers trust PayParq</p>
             </div>
             <div>

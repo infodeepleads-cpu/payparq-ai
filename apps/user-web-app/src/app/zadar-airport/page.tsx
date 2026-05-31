@@ -73,7 +73,7 @@ export default function ZadarAirportPage() {
         <section className="max-w-4xl mx-auto px-6 md:px-12 py-16 border-b border-black/10">
           <h2 className="text-2xl font-semibold tracking-tight text-black mb-8">Trusted by Travelers</h2>
           <div className="grid md:grid-cols-3 gap-8">
-            <div><p className="text-3xl font-semibold text-black">5,000+</p><p className="text-sm text-black/60 mt-2">Happy travelers trust PayParq</p></div>
+            <div><p className="text-3xl font-semibold text-black">50,000+</p><p className="text-sm text-black/60 mt-2">Happy travelers trust PayParq</p></div>
             <div><p className="text-3xl font-semibold text-black">365</p><p className="text-sm text-black/60 mt-2">Days of customer support available</p></div>
             <div><p className="text-3xl font-semibold text-black">100%</p><p className="text-sm text-black/60 mt-2">Satisfaction guaranteed or full refund</p></div>
           </div>
