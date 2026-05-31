@@ -85,7 +85,7 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
           onClick={() => setStep('location')}
           className="bg-black text-white font-semibold py-3.5 px-7 rounded-xl hover:bg-black/90 transition inline-flex items-center gap-2 text-base"
         >
-          Pronađi Parking <ArrowRight size={18} />
+          {locale === 'en' ? 'Find Parking' : 'Pronađi Parking'} <ArrowRight size={18} />
         </button>
       )}
 
@@ -95,9 +95,15 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
           <div className="bg-white w-full rounded-t-3xl p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs font-semibold text-black uppercase tracking-wide">Korak 1 od 3</div>
-                <h2 className="text-2xl font-bold text-black mt-0.5">Gdje želite parkirati?</h2>
-                <p className="text-xs text-black/60 mt-0.5">Unesite lokaciju ili odaberite prijedlog</p>
+                <div className="text-xs font-semibold text-black uppercase tracking-wide">
+                  {locale === 'en' ? 'Step 1 of 3' : 'Korak 1 od 3'}
+                </div>
+                <h2 className="text-2xl font-bold text-black mt-0.5">
+                  {locale === 'en' ? 'Where do you want to park?' : 'Gdje želite parkirati?'}
+                </h2>
+                <p className="text-xs text-black/60 mt-0.5">
+                  {locale === 'en' ? 'Enter location or select suggestion' : 'Unesite lokaciju ili odaberite prijedlog'}
+                </p>
               </div>
               <button onClick={() => setStep(null)} className="p-2 hover:bg-black/5 rounded-full transition-colors">
                 <X size={20} className="text-black/60" />
@@ -114,7 +120,7 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
                   <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/40" />
                   <input
                     type="text"
-                    placeholder="npr. Split Airport, Zagreb Centar..."
+                    placeholder={locale === 'en' ? 'e.g. Split Airport, Zagreb Center...' : 'npr. Split Airport, Zagreb Centar...'}
                     className="w-full pl-9 pr-4 py-3 border border-black/20 rounded-xl text-sm text-black placeholder:text-black/50 focus:outline-none focus:border-black"
                     autoFocus
                   />
@@ -125,7 +131,7 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
                 <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/40" />
                 <input
                   type="text"
-                  placeholder="Učitavanje..."
+                  placeholder={locale === 'en' ? 'Loading...' : 'Učitavanje...'}
                   disabled
                   className="w-full pl-9 pr-4 py-3 border border-black/20 rounded-xl text-sm text-black placeholder:text-black/50 bg-black/5"
                 />
@@ -137,13 +143,13 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
                 onClick={() => setStep('arrival')}
                 className="w-full bg-black text-white font-bold py-3 rounded-2xl hover:bg-gray-900 active:scale-95 transition-all"
               >
-                Nastavi →
+                {locale === 'en' ? 'Continue →' : 'Nastavi →'}
               </button>
               <button
                 onClick={() => setStep(null)}
                 className="w-full border-2 border-black/10 text-black font-semibold py-3 rounded-2xl hover:bg-black/5 active:scale-95 transition-all"
               >
-                Otkaži
+                {locale === 'en' ? 'Cancel' : 'Otkaži'}
               </button>
             </div>
           </div>
@@ -157,9 +163,9 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
           onChange={setArrivalDateTime}
           onConfirm={() => { if (arrivalDateTime) setStep('departure'); }}
           onCancel={() => setStep('location')}
-          title="Kada dolazite?"
-          subtitle="Odaberite datum i vrijeme dolaska"
-          step="Korak 2 od 3"
+          title={locale === 'en' ? 'When are you arriving?' : 'Kada dolazite?'}
+          subtitle={locale === 'en' ? 'Select arrival date and time' : 'Odaberite datum i vrijeme dolaska'}
+          step={locale === 'en' ? 'Step 2 of 3' : 'Korak 2 od 3'}
           locale={locale}
         />
       )}
@@ -171,9 +177,9 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
           onChange={setDepartureDateTime}
           onConfirm={handleDepartureConfirm}
           onCancel={() => setStep('arrival')}
-          title="Kada odlazite?"
-          subtitle="Odaberite datum i vrijeme odlaska"
-          step="Korak 3 od 3"
+          title={locale === 'en' ? 'When are you leaving?' : 'Kada odlazite?'}
+          subtitle={locale === 'en' ? 'Select departure date and time' : 'Odaberite datum i vrijeme odlaska'}
+          step={locale === 'en' ? 'Step 3 of 3' : 'Korak 3 od 3'}
           initialDateTime={arrivalDateTime}
           locale={locale}
         />

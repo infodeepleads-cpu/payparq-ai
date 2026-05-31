@@ -71,9 +71,9 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: Airp
           onChange={setArrivalDateTime}
           onConfirm={() => { if (arrivalDateTime) setStep('departure'); }}
           onCancel={() => setStep(null)}
-          title="Kada dolazite?"
-          subtitle="Odaberite datum i vrijeme dolaska"
-          step="Korak 1 od 2"
+          title={locale === 'en' ? 'When are you arriving?' : 'Kada dolazite?'}
+          subtitle={locale === 'en' ? 'Select arrival date and time' : 'Odaberite datum i vrijeme dolaska'}
+          step={locale === 'en' ? 'Step 1 of 2' : 'Korak 1 od 2'}
           locale={locale}
         />
       )}
@@ -84,9 +84,9 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: Airp
           onChange={setDepartureDateTime}
           onConfirm={handleDepartureConfirm}
           onCancel={() => setStep('arrival')}
-          title="Kada odlazite?"
-          subtitle="Odaberite datum i vrijeme odlaska"
-          step="Korak 2 od 2"
+          title={locale === 'en' ? 'When are you leaving?' : 'Kada odlazite?'}
+          subtitle={locale === 'en' ? 'Select departure date and time' : 'Odaberite datum i vrijeme odlaska'}
+          step={locale === 'en' ? 'Step 2 of 2' : 'Korak 2 od 2'}
           initialDateTime={arrivalDateTime}
           locale={locale}
         />
