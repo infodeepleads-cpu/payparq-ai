@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FooterBrand } from "@/components/FooterBrand";
 import { ChevronDown } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
+import { HomeBookingFlow } from "@/components/HomeBookingFlow";
 
 export default function Home() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -327,6 +328,7 @@ export default function Home() {
                     →
                   </span>
                 </Link>
+                <HomeBookingFlow />
               </div>
             </div>
           </div>
