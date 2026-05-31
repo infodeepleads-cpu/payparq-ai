@@ -27,6 +27,10 @@ const staticRoutes = [
   "/technology",
   "/terms",
   "/vision",
+  "/split-airport",
+  "/zagreb-airport",
+  "/dubrovnik-airport",
+  "/zadar-airport",
 ];
 
 const regionRoutes = Object.values(REGION_CONFIG).map((config) => `/regions/${config.slug}`);

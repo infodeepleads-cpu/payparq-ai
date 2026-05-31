@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import { cookies, headers } from "next/headers";
 import { LocaleProvider } from "@/components/LocaleProvider";
 import { RuntimeTextTranslator } from "@/components/RuntimeTextTranslator";
+import { WebVitals } from "@/components/WebVitals";
 import { AppLocale, DEFAULT_LOCALE, LOCALE_COOKIE_NAME, normalizeLocale } from "@/lib/locale";
 import "./globals.css";
 
@@ -63,6 +64,26 @@ export default async function RootLayout({
     <html lang={locale} translate="no">
       <head>
         <meta name="google" content="notranslate" />
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <>
+            <script
+              async
+              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
+            />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}', {
+                    page_path: window.location.pathname,
+                  });
+                `,
+              }}
+            />
+          </>
+        )}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -87,6 +108,7 @@ export default async function RootLayout({
         />
         <LocaleProvider initialLocale={locale}>
           <RuntimeTextTranslator />
+          <WebVitals />
           {children}
         </LocaleProvider>
       </body>
