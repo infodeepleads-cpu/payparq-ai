@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@media (max-width: 767px) {
+  body.booking-popup-open header {
+    display: none;
+  }
+}
+
 :root {
   /* PayParq Tactical Theme - User Facing */
   --color-primary: #6D28D9;

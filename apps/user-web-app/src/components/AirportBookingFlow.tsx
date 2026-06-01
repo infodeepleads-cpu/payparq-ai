@@ -26,13 +26,16 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: Airp
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
       document.body.style.overflow = 'hidden';
       if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+      document.body.classList.add('booking-popup-open');
     } else {
       document.body.style.overflow = '';
       document.body.style.paddingRight = '';
+      document.body.classList.remove('booking-popup-open');
     }
     return () => {
       document.body.style.overflow = '';
       document.body.style.paddingRight = '';
+      document.body.classList.remove('booking-popup-open');
     };
   }, [step]);
 
