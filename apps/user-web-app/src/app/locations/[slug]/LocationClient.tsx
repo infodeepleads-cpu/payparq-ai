@@ -375,7 +375,10 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     if (hub.address) params.set('address', hub.address);
     params.set('in', checkIn ? new Date(checkIn).toISOString() : '');
     params.set('out', checkOut ? new Date(checkOut).toISOString() : '');
-    params.set('amount_cents', String(activeFlowAmountCents));
+    const activeFlowSubtotalCents = activeTab === "park_now"
+      ? Math.max(0, Math.round(parkTaxiSubtotal * 100))
+      : Math.max(0, Math.round(reserveSubtotal * 100));
+    params.set('amount_cents', String(activeFlowSubtotalCents));
     params.set('ph', String(Math.round(hourlyPrice * 100)));
     params.set('pd', String(Math.round(dailyPrice * 100)));
     params.set('pm', String(Math.round(monthlyPrice * 100)));
