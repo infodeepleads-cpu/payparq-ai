@@ -613,7 +613,7 @@ function PaidCheckoutForm({
     const ph = phCents || (originalAmountCents / Math.max(0.5, (new Date(initialCheckOut).getTime() - new Date(initialCheckIn).getTime()) / (1000 * 60 * 60)));
     const hourly = durationHours * ph;
     const daily = pdCents ? Math.ceil(durationHours / 24) * pdCents : Infinity;
-    const monthly = pmCents || Infinity;
+    const monthly = (pmCents && durationHours >= 24 * 28) ? pmCents : Infinity;
     return Math.max(100, Math.round(Math.min(hourly, daily, monthly)));
   }
 
