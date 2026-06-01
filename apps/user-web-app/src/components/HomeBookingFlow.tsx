@@ -19,7 +19,16 @@ interface HomeBookingFlowProps {
 export function HomeBookingFlow({ autoOpen = false, hideButton = false }: HomeBookingFlowProps) {
   const router = useRouter();
   const { locale } = useLocale();
-  const [step, setStep] = useState<Step | null>(autoOpen ? 'location' : null);
+  const [step, setStep] = useState<Step | null>(() => {
+    if (!autoOpen) return null;
+    if (typeof window !== 'undefined' && sessionStorage.getItem('pp_booking_shown')) return null;
+    return 'location';
+  });
+
+  const closePopup = () => {
+    if (typeof window !== 'undefined') sessionStorage.setItem('pp_booking_shown', '1');
+    setStep(null);
+  };
   const [selectedLat, setSelectedLat] = useState<number | null>(null);
   const [selectedLng, setSelectedLng] = useState<number | null>(null);
   const [selectedName, setSelectedName] = useState('');
@@ -75,7 +84,7 @@ export function HomeBookingFlow({ autoOpen = false, hideButton = false }: HomeBo
       source: 'platform',
     });
 
-    setStep(null);
+    closePopup();
     router.push(`/search?${params.toString()}`);
   };
 
@@ -106,7 +115,7 @@ export function HomeBookingFlow({ autoOpen = false, hideButton = false }: HomeBo
                   {locale === 'en' ? 'Enter location or select suggestion' : 'Unesite lokaciju ili odaberite prijedlog'}
                 </p>
               </div>
-              <button onClick={() => setStep(null)} className="p-2 hover:bg-black/5 rounded-full transition-colors">
+              <button onClick={closePopup} className="p-2 hover:bg-black/5 rounded-full transition-colors">
                 <X size={20} className="text-black/60" />
               </button>
             </div>
@@ -147,7 +156,7 @@ export function HomeBookingFlow({ autoOpen = false, hideButton = false }: HomeBo
                 {locale === 'en' ? 'Continue →' : 'Nastavi →'}
               </button>
               <button
-                onClick={() => setStep(null)}
+                onClick={closePopup}
                 className="w-full border-2 border-black/10 text-black font-semibold py-3 rounded-2xl hover:bg-black/5 active:scale-95 transition-all"
               >
                 {locale === 'en' ? 'Cancel' : 'Otkaži'}
