@@ -13,6 +13,7 @@ interface ScrollableDateTimePickerProps {
   step: string;
   initialDateTime?: string;
   locale?: 'en' | 'hr';
+  confirmLabel?: string;
 }
 
 export function ScrollableDateTimePicker({
@@ -25,6 +26,7 @@ export function ScrollableDateTimePicker({
   step,
   initialDateTime,
   locale = 'hr',
+  confirmLabel,
 }: ScrollableDateTimePickerProps) {
   const now = new Date();
   const baseTime = initialDateTime ? new Date(initialDateTime) : now;
@@ -200,7 +202,7 @@ export function ScrollableDateTimePicker({
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            {locale === 'en' ? 'Continue →' : 'Nastavi →'}
+            {confirmLabel ?? (locale === 'en' ? 'Continue →' : 'Nastavi →')}
           </button>
           <button
             onClick={onCancel}
