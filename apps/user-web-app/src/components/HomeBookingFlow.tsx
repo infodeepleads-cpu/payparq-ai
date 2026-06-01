@@ -105,7 +105,7 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
                   {locale === 'en' ? 'Enter location or select suggestion' : 'Unesite lokaciju ili odaberite prijedlog'}
                 </p>
               </div>
-              <button onClick={closePopup} className="p-2 hover:bg-black/5 rounded-full transition-colors">
+              <button onClick={() => setStep(null)} className="p-2 hover:bg-black/5 rounded-full transition-colors">
                 <X size={20} className="text-black/60" />
               </button>
             </div>
