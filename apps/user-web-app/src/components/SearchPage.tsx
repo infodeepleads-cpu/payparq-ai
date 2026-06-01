@@ -3348,17 +3348,15 @@ export function SearchPage() {
               </div>
             </div>
 
-            {/* Sticky Footer - Book Now Button (hidden on quick reservation links) */}
-            {!isHubIdMode && (
-              <div className="sticky bottom-0 px-4 py-6 border-t border-gray-200 bg-white flex items-center justify-center">
-                <a
-                  href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
-                  className="block w-full px-5 py-5 bg-blue-500 text-white text-base font-bold rounded-lg hover:bg-blue-700 transition-colors text-center"
-                >
-                  {t('Rezervirajte sada', locale)} — €{totalPrice.toFixed(2)}
-                </a>
-              </div>
-            )}
+            {/* Sticky Footer - Book Now Button */}
+            <div className="sticky bottom-0 px-4 py-6 border-t border-gray-200 bg-white flex items-center justify-center">
+              <a
+                href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
+                className="block w-full px-5 py-5 bg-blue-500 text-white text-base font-bold rounded-lg hover:bg-blue-700 transition-colors text-center"
+              >
+                {t('Rezervirajte sada', locale)} — €{totalPrice.toFixed(2)}
+              </a>
+            </div>
           </div>
         </div>
       )}
