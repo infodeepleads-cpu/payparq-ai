@@ -432,10 +432,10 @@ function SummaryPanel({
 
           {showPromoDropdown && (
             promoStatus === 'valid' ? (
-              <div className="flex items-center justify-between px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center justify-between px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-600" />
-                  <span className="text-xs font-medium text-green-700">{promoInput}</span>
+                  <CheckCircle className="w-3.5 h-3.5 text-blue-600" />
+                  <span className="text-xs font-medium text-blue-700">{promoInput}</span>
                 </div>
                 <button type="button" onClick={() => { onRemovePromo(); setShowPromoDropdown(false); }} className="text-gray-400 hover:text-gray-600">
                   <X className="w-3.5 h-3.5" />
