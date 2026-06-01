@@ -1214,7 +1214,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                   disabled={loading || !canSubmitCheckout}
                   className={`w-full inline-flex justify-center items-center px-4 py-2 rounded-xl bg-[#5F3DFC] text-white text-sm font-semibold shadow-sm hover:bg-[#4330c4] transition-colors mb-3 ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
                 >
-                  {loading ? "Processing..." : (activeTab === 'reserve' ? `Book Now (${priceLabel})` : "Book Now")}
+                  {loading ? "Processing..." : (activeTab === 'reserve' ? (checkIn && checkOut ? `Book Now (${reserveTotalPriceLabel})` : `Book Now (${priceLabel}/hr)`) : "Book Now")}
                 </button>
                 {showMinChargeWalletExplainer ? (
                   <p className="mb-2 text-[10px] text-gray-500">{minChargeWalletExplainerText}</p>
@@ -1263,17 +1263,6 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         <span className="font-semibold text-black" style={{ fontSize: '20px' }}>{reserveTotalPriceLabel}</span>
                         <span className="text-xs text-gray-500 border-b border-gray-400 pb-0.5">{t('Ukupno', locale)}</span>
                       </div>
-                    </div>
-                    <div className="flex flex-col gap-1 bg-yellow-100 rounded-md p-2" style={{ justifyContent: 'flex-end' }}>
-                      <div className="flex items-center gap-1">
-                        <Info className="w-3.5 h-3.5 text-yellow-700 flex-shrink-0" />
-                        <span className="text-xs font-semibold text-gray-900">{(() => { const s = hub.id.charCodeAt(hub.id.length - 1) % 3 + 1; return s === 1 ? '1 mjesto' : `${s} mjesta`; })()}</span>
-                      </div>
-                      <span className="text-xs text-gray-600">po ovoj cijeni</span>
-                    </div>
-                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mt-3 text-xs text-gray-800">
-                      <p className="font-semibold mb-1">Predlažemo da rezervirate odmah.</p>
-                      <p>Ovdje imamo samo {(() => { const s = hub.id.charCodeAt(hub.id.length - 1) % 3 + 1; return s === 1 ? '1 mjesto' : `${s} mjesta`; })()} preostala mjesta tijekom vremena koje ste odabrali po ovoj cijeni.</p>
                     </div>
                   </>
                 ) : (
