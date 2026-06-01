@@ -778,7 +778,7 @@ export function SearchPage() {
             : parkingListings;
           setFilteredListings(displayList);
           if (displayList.length > 0) {
-            setSelectedListing(displayList[0]);
+            setSelectedListing(displayList[1] ?? displayList[0]);
             if (urlHubId) {
               setShowDetailsView(true);
               setShowMobileDetails(true);
