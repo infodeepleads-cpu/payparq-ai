@@ -1258,8 +1258,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         <span className="notranslate" translate="no">Park & Taxi</span>
                       </button>
                     </div>
-                    <div className="border-t border-gray-100 pt-2 flex justify-end">
-                      <div className="p-2 w-full flex flex-col items-end gap-0">
+                    <div className="border-t border-gray-100 pt-2 flex justify-center">
+                      <div className="p-2 w-full flex flex-col items-center gap-0">
                         <span className="font-semibold text-black" style={{ fontSize: '20px' }}>{reserveTotalPriceLabel}</span>
                         <span className="text-xs text-gray-500 border-b border-gray-400 pb-0.5">{t('Ukupno', locale)}</span>
                       </div>
@@ -1369,7 +1369,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                   <div className="rounded-xl border border-black/10 bg-[#FAFAFA] p-3">
                     <p className="text-[11px] uppercase tracking-[0.16em] text-black/70 font-semibold">{locale === 'en' ? 'Special Inquiries' : 'Posebni Upiti'}</p>
                     <div className="mt-2 space-y-1.5 text-xs text-black/80">
-                      <div className="flex items-center justify-between"><span className="notranslate" translate="no">Park & Taxi (Poruka)</span><span className="font-semibold">{formatEur(parkTaxiUnitPrice)}</span></div>
+                      <div className="flex items-center justify-between"><span className="notranslate" translate="no">Park & Taxi (Poruka)</span><span className="font-semibold">Na Upit</span></div>
                       <div className="flex items-center justify-between"><span>Kamperi (Poruka)</span><span className="font-semibold">{formatEur(camperDailyPrice)}/dan</span></div>
                       <div className="flex items-center justify-between"><span>Autobusi (Poruka)</span><span className="font-semibold">{formatEur(busDailyPrice)}/dan</span></div>
                     </div>

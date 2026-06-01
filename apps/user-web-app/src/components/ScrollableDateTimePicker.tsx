@@ -196,6 +196,7 @@ export function ScrollableDateTimePicker({
           <button
             onClick={onConfirm}
             disabled={!value}
+            translate="no"
             className={`w-full px-5 py-3 md:py-4 font-bold rounded-2xl transition-all ${
               value
                 ? 'bg-black text-white hover:bg-gray-900 active:scale-95'
