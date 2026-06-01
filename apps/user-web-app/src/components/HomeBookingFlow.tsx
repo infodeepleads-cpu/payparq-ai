@@ -146,7 +146,7 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
                 {locale === 'en' ? 'Continue →' : 'Nastavi →'}
               </button>
               <button
-                onClick={closePopup}
+                onClick={() => setStep(null)}
                 className="w-full border-2 border-black/10 text-black font-semibold py-3 rounded-2xl hover:bg-black/5 active:scale-95 transition-all"
               >
                 {locale === 'en' ? 'Cancel' : 'Otkaži'}
