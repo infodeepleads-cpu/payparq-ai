@@ -118,6 +118,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none cursor-pointer leading-none flex-1 text-left"
+          translate="no"
         >
           {displayText}
         </button>
@@ -135,6 +136,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
                 value={startDate.toISOString().slice(0, 10)}
                 onChange={(e) => handleStartDateChange(e.target.value)}
                 className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black"
+                translate="no"
               >
                 {generateDateOptions().map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -167,6 +169,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
                 value={endDate.toISOString().slice(0, 10)}
                 onChange={(e) => handleEndDateChange(e.target.value)}
                 className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black"
+                translate="no"
               >
                 {generateDateOptions().map((opt) => (
                   <option key={opt.value} value={opt.value}>
