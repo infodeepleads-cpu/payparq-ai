@@ -92,7 +92,7 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: Airp
           step={locale === 'en' ? 'Step 2 of 2' : 'Korak 2 od 2'}
           initialDateTime={arrivalDateTime}
           locale={locale}
-          confirmLabel={locale === 'en' ? 'Book Now →' : 'Rezervirajte →'}
+          confirmLabel={locale === 'en' ? 'Book Now →' : 'Odabir →'}
         />
       )}
     </>

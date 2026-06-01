@@ -197,13 +197,15 @@ export function ScrollableDateTimePicker({
             onClick={onConfirm}
             disabled={!value}
             translate="no"
-            className={`w-full px-5 py-3 md:py-4 font-bold rounded-2xl transition-all ${
+            className={`w-full px-5 py-3 md:py-4 font-bold rounded-2xl transition-all notranslate ${
               value
                 ? 'bg-black text-white hover:bg-gray-900 active:scale-95'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            {confirmLabel ?? (locale === 'en' ? 'Continue →' : 'Nastavi →')}
+            <span className="notranslate" translate="no">
+              {confirmLabel ?? (locale === 'en' ? 'Continue →' : 'Nastavi →')}
+            </span>
           </button>
           <button
             onClick={onCancel}
