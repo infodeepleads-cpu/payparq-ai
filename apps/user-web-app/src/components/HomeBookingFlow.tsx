@@ -18,11 +18,7 @@ interface HomeBookingFlowProps {
 export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
   const router = useRouter();
   const { locale } = useLocale();
-  const [step, setStep] = useState<Step | null>(() => {
-    if (!autoOpen) return null;
-    if (typeof window !== 'undefined' && sessionStorage.getItem('pp_booking_shown')) return null;
-    return 'location';
-  });
+  const [step, setStep] = useState<Step | null>(autoOpen ? 'location' : null);
   const [selectedLat, setSelectedLat] = useState<number | null>(null);
   const [selectedLng, setSelectedLng] = useState<number | null>(null);
   const [selectedName, setSelectedName] = useState('');
@@ -49,11 +45,6 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
       document.body.style.paddingRight = '';
     };
   }, [step]);
-
-  const closePopup = () => {
-    if (typeof window !== 'undefined') sessionStorage.setItem('pp_booking_shown', '1');
-    setStep(null);
-  };
 
   const handlePlaceSelected = () => {
     const place = autocompleteRef.current?.getPlace();
@@ -83,7 +74,7 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
       source: 'platform',
     });
 
-    closePopup();
+    setStep(null);
     router.push(`/search?${params.toString()}`);
   };
 
