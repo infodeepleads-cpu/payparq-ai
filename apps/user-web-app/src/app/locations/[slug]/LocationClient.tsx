@@ -296,21 +296,21 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const parkTaxiUnitPrice = resolveParkTaxiPriceEuro(hub) || dailyPrice;
   const reserveUsesDailyPricing = totalHours > 24;
   const reserveSubtotal = reserveUsesDailyPricing ? totalDays * dailyPrice : totalHours * hourlyPrice;
-  const reserveServiceFee = 0;
+  const reserveServiceFee = +(0.99 + reserveSubtotal * 0.10).toFixed(2);
   const reserveTotalAmount = reserveSubtotal + reserveServiceFee;
   const reserveTotalPriceLabel = `€${reserveTotalAmount.toFixed(2)}`;
   const reserveDurationLabel = reserveUsesDailyPricing
     ? `${totalDays} days (${formatEur(dailyPrice)}/day)`
     : `${totalHours} hours (${formatEur(hourlyPrice)}/hr)`;
   const parkTaxiSubtotal = parkTaxiUnitPrice + (totalDays - 1) * dailyPrice;
-  const parkTaxiServiceFee = 0;
+  const parkTaxiServiceFee = +(0.99 + parkTaxiSubtotal * 0.10).toFixed(2);
   const parkTaxiTotal = parkTaxiSubtotal + parkTaxiServiceFee;
   const parkTaxiTotalPriceLabel = `€${parkTaxiTotal.toFixed(2)}`;
   const parkTaxiBreakdownLabel = totalDays > 1
     ? `P&T ${formatEur(parkTaxiUnitPrice)} + ${totalDays - 1} dan${totalDays > 2 ? 'a' : ''} (${formatEur(dailyPrice)}/dan)`
     : `Park & Taxi (${formatEur(parkTaxiUnitPrice)})`;
   const reserveTotalAmountCents = Math.max(0, Math.round(reserveTotalAmount * 100));
-  const parkTaxiTotalAmountCents = Math.max(0, Math.round((parkTaxiUnitPrice + (totalDays - 1) * dailyPrice) * 100));
+  const parkTaxiTotalAmountCents = Math.max(0, Math.round(parkTaxiTotal * 100));
   const activeFlowAmountCents = activeTab === "park_now" ? parkTaxiTotalAmountCents : reserveTotalAmountCents;
   const showMinChargeWalletExplainer = activeFlowAmountCents > 0 && activeFlowAmountCents < 50;
   const minChargeWalletExplainerText = "Card min €0.50. Extra is added to wallet.";
