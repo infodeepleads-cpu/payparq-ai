@@ -13,9 +13,10 @@ type Step = 'location' | 'arrival' | 'departure';
 
 interface HomeBookingFlowProps {
   autoOpen?: boolean;
+  hideButton?: boolean;
 }
 
-export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
+export function HomeBookingFlow({ autoOpen = false, hideButton = false }: HomeBookingFlowProps) {
   const router = useRouter();
   const { locale } = useLocale();
   const [step, setStep] = useState<Step | null>(autoOpen ? 'location' : null);
@@ -80,7 +81,7 @@ export function HomeBookingFlow({ autoOpen = false }: HomeBookingFlowProps) {
 
   return (
     <>
-      {!autoOpen && (
+      {!autoOpen && !hideButton && (
         <button
           onClick={() => setStep('location')}
           className="bg-black text-white font-semibold py-3.5 px-7 rounded-xl hover:bg-black/90 transition inline-flex items-center gap-2 text-base"

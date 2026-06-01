@@ -3444,7 +3444,7 @@ export function SearchPage() {
       )}
 
       {/* Auto-opening booking flow on page load */}
-      <HomeBookingFlow autoOpen={!searchParams.get('hubId') && !searchParams.get('source')} />
+      <HomeBookingFlow autoOpen={!searchParams.get('hubId')} hideButton={true} />
     </div>
   );
 }
