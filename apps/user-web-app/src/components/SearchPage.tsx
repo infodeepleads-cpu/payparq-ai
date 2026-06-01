@@ -1535,7 +1535,7 @@ export function SearchPage() {
               <div className="text-xs text-gray-600 font-semibold truncate">{searchLocation || t('Kamo ideš?', locale)}</div>
               {startTime && endTime && (
                 <div className="text-xs text-gray-700 font-medium">
-                  {new Date(startTime).toLocaleDateString(locale === 'en' ? 'en-GB' : 'hr-HR', { month: 'short', day: 'numeric' })} {new Date(startTime).toLocaleTimeString(locale === 'en' ? 'en-GB' : 'hr-HR', { hour: '2-digit', minute: '2-digit' })} - {new Date(endTime).toLocaleTimeString(locale === 'en' ? 'en-GB' : 'hr-HR', { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(startTime).toLocaleDateString(locale === 'en' ? 'en' : 'hr-HR', { month: 'short', day: 'numeric' })} {new Date(startTime).toLocaleTimeString(locale === 'en' ? 'en' : 'hr-HR', { hour: '2-digit', minute: '2-digit' })} - {new Date(endTime).toLocaleTimeString(locale === 'en' ? 'en' : 'hr-HR', { hour: '2-digit', minute: '2-digit' })}
                 </div>
               )}
             </div>
