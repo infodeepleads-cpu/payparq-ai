@@ -17,21 +17,42 @@ export default function ZagrebAirportPage() {
     <div className="min-h-screen bg-white flex flex-col overflow-hidden">
       <SiteHeader />
       <main className="flex-1 overflow-y-auto pt-24 md:pt-28">
-        <section className="max-w-4xl mx-auto w-full px-6 md:px-12 py-12 md:py-16 border-b border-black/10">
-          <div className="mb-8">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-black/40 mb-2">Parking</p>
-            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-4 break-words">
-              Book Your Parking Spot at Zagreb Airport
-            </h1>
-            <p className="text-sm md:text-base text-black/60">
-              Guaranteed parking. Instant booking. Save up to 70%.
-            </p>
+        <section className="w-full px-6 md:px-12 py-12 md:py-20 border-b border-black/10">
+          <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+            <div className="flex flex-col justify-center">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-black/40 mb-3">Parking Solutions</p>
+              <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-black mb-4 break-words">
+                Guaranteed Parking at Zagreb Airport
+              </h1>
+              <p className="text-base md:text-lg text-black/70 mb-8 leading-relaxed">
+                Book your parking spot in 2 minutes. Reserved space. Instant confirmation. Save up to 70% vs airport rates.
+              </p>
+              <div className="space-y-3 mb-8">
+                <div className="flex items-start gap-3">
+                  <Check size={20} className="text-black flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-black/80">Guaranteed reserved parking spot</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check size={20} className="text-black flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-black/80">Free cancellation up to 24 hours</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check size={20} className="text-black flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-black/80">Instant parking pass via email & SMS</span>
+                </div>
+              </div>
+              <div className="md:hidden">
+                <AirportBookingFlow defaultLat={45.7429} defaultLng={16.0688} defaultName="Zagreb Airport" />
+              </div>
+            </div>
+            <div className="hidden md:flex h-96 rounded-xl overflow-hidden border border-black/10 shadow-sm">
+              <div className="w-full bg-cover bg-center" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600&h=400&fit=crop")' }} />
+            </div>
           </div>
-          <div className="flex gap-3 flex-wrap">
-            <button onClick={handleBookNow} className="hidden md:inline-flex bg-black text-white font-semibold py-3 px-6 rounded-lg hover:bg-black/90 transition items-center gap-2">
-              Book Now <ArrowRight size={18} />
-            </button>
-            <AirportBookingFlow defaultLat={45.7429} defaultLng={16.0688} defaultName="Zagreb Airport" />
+          <div className="hidden md:flex max-w-6xl mx-auto mt-12 justify-center">
+            <div className="w-full md:w-2/3 bg-gradient-to-r from-gray-50 to-white border border-black/10 rounded-xl p-6">
+              <AirportBookingFlow defaultLat={45.7429} defaultLng={16.0688} defaultName="Zagreb Airport" />
+            </div>
           </div>
         </section>
 
