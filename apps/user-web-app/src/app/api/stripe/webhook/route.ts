@@ -641,7 +641,9 @@ async function sendBookingConfirmation(
   } catch { /* best effort */ }
 
   const plate = (meta.plate_number ?? meta.plate ?? '').toString().trim() || undefined;
-  const address = (meta.address ?? '').toString().trim() || undefined;
+  let address = (meta.address ?? '').toString().trim() || undefined;
+  const isAddressUuid = address ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(address) : false;
+  if (isAddressUuid) address = undefined;
 
   let coverPhoto: string | null = null;
   try {
@@ -687,9 +689,13 @@ async function sendBookingConfirmation(
       body: JSON.stringify({ from: fromAddress, to: email, subject: `Rezervacija potvrđena · ${reservationCode}`, html }),
     });
     const resBody = await res.text().catch(() => '');
-    console.log(`📧 Resend: ${res.status} to ${email} (${reservationCode}) — ${resBody}`);
+    if (!res.ok) {
+      console.error(`⚠️ Email send failed: ${res.status} to ${email} (${reservationCode}). Body: ${resBody}`);
+    } else {
+      console.log(`✅ Email sent: to ${email} (${reservationCode})`);
+    }
   } catch (e) {
-    console.error('📧 Email error:', e);
+    console.error('⚠️ Email exception:', { email, reservationCode, error: String(e) });
   }
 }
 
@@ -1465,6 +1471,10 @@ export async function POST(req: Request) {
       }
     } catch { /* best effort */ }
 
+    let addressPI = (meta.address ?? '').toString().trim() || undefined;
+    const isAddressUuidPI = addressPI ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(addressPI) : false;
+    if (isAddressUuidPI) addressPI = undefined;
+
     const html = await buildBookingConfirmationEmail({
       sessionId: paymentIntent.id,
       reservationCode,
@@ -1476,7 +1486,7 @@ export async function POST(req: Request) {
       amountCents,
       currency: paymentIntent.currency?.toUpperCase() || 'EUR',
       plate: plate_number !== 'UNKNOWN' ? plate_number : undefined,
-      address: (meta.address ?? '').toString().trim() || undefined,
+      address: addressPI,
       coverPhoto: coverPhotoPI,
     });
 
@@ -1491,9 +1501,13 @@ export async function POST(req: Request) {
           body: JSON.stringify({ from: fromAddress, to: email, subject: `Rezervacija potvrđena · ${reservationCode}`, html }),
         });
         const resBody = await res.text().catch(() => '');
-        console.log(`📧 Resend Response: status=${res.status}, to=${email}, code=${reservationCode}, body=${resBody}`);
+        if (!res.ok) {
+          console.error(`⚠️ Email send failed: ${res.status} to ${email} (${reservationCode}). Body: ${resBody}`);
+        } else {
+          console.log(`✅ Email sent: to ${email} (${reservationCode})`);
+        }
       } catch (e) {
-        console.error('📧 Email error:', e);
+        console.error('⚠️ Email exception:', { email, reservationCode, error: String(e) });
       }
     } else {
       console.warn(`📧 Skipped email send: email="${email}" resendKey exists=${!!resendKey}`);
