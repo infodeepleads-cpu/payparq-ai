@@ -289,7 +289,7 @@ export function SearchPage() {
   const homeDropdownRef = useRef<HTMLDivElement>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
-  const [showTotalPrice, setShowTotalPrice] = useState(true);
+  const [showTotalPrice, setShowTotalPrice] = useState(false);
   const [allParkingDropdownOpen, setAllParkingDropdownOpen] = useState(false);
   const [showMobileSearchEdit, setShowMobileSearchEdit] = useState(false);
   const [showMobileDetails, setShowMobileDetails] = useState(false);
@@ -431,9 +431,13 @@ export function SearchPage() {
     }
     const hourlyTotal = listing.pricePerHour * duration;
     if (!listing.pricePerDay) return hourlyTotal;
-    const numberOfDays = Math.ceil(duration / 24);
-    const dailyTotal = listing.pricePerDay * numberOfDays;
-    return Math.min(hourlyTotal, dailyTotal);
+    const fullDays = Math.floor(duration / 24);
+    const remainingHours = duration % 24;
+    const ceilDaysTotal = listing.pricePerDay * Math.ceil(duration / 24);
+    const mixedTotal = fullDays > 0
+      ? listing.pricePerDay * fullDays + listing.pricePerHour * remainingHours
+      : hourlyTotal;
+    return Math.min(hourlyTotal, ceilDaysTotal, mixedTotal);
   };
 
   const subtotal = selectedListing ? (() => {

@@ -76,9 +76,13 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
     }
     const hourlyTotal = list.pricePerHour * duration;
     if (!list.pricePerDay) return hourlyTotal;
-    const numberOfDays = Math.ceil(duration / 24);
-    const dailyTotal = list.pricePerDay * numberOfDays;
-    return Math.min(hourlyTotal, dailyTotal);
+    const fullDays = Math.floor(duration / 24);
+    const remainingHours = duration % 24;
+    const ceilDaysTotal = list.pricePerDay * Math.ceil(duration / 24);
+    const mixedTotal = fullDays > 0
+      ? list.pricePerDay * fullDays + list.pricePerHour * remainingHours
+      : hourlyTotal;
+    return Math.min(hourlyTotal, ceilDaysTotal, mixedTotal);
   };
 
   const subtotal = getDisplayPrice(listing, durationHours, reservationType);

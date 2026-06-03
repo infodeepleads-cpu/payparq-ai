@@ -294,8 +294,13 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const hourlyPrice = resolveScannerTruthPriceEuro(hub, "hourly") || (priceValue > 0 ? priceValue : 2.5);
   const dailyPrice = resolveScannerTruthPriceEuro(hub, "daily");
   const parkTaxiUnitPrice = resolveParkTaxiPriceEuro(hub) || dailyPrice;
-  const reserveUsesDailyPricing = totalHours > 24;
-  const reserveSubtotal = reserveUsesDailyPricing ? totalDays * dailyPrice : totalHours * hourlyPrice;
+  const fullDays = Math.floor(totalHours / 24);
+  const remainingHours = totalHours % 24;
+  const allHourly = totalHours * hourlyPrice;
+  const ceilDaysTotal = totalDays * dailyPrice;
+  const mixedTotal = fullDays > 0 ? fullDays * dailyPrice + remainingHours * hourlyPrice : allHourly;
+  const reserveSubtotal = dailyPrice > 0 ? Math.min(allHourly, ceilDaysTotal, mixedTotal) : allHourly;
+  const reserveUsesDailyPricing = dailyPrice > 0 && reserveSubtotal < allHourly;
   const reserveServiceFee = +(0.99 + reserveSubtotal * 0.10).toFixed(2);
   const reserveTotalAmount = reserveSubtotal + reserveServiceFee;
   const reserveTotalPriceLabel = `€${reserveTotalAmount.toFixed(2)}`;
