@@ -7,6 +7,8 @@ const CroatiaMap = dynamic(() => import("@/components/CroatiaMap"), { ssr: false
 import { FooterBrand } from "@/components/FooterBrand";
 import { ChevronDown } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
+import { CitiesWidget } from "@/components/CitiesWidget";
+import { VenuesWidget } from "@/components/VenuesWidget";
 
 export default function Locations() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -431,6 +433,14 @@ export default function Locations() {
               <a href="/dubrovnik-airport" className="text-xs text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-2 transition-all">Dubrovnik Airport</a>
               <a href="/zadar-airport" className="text-xs text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-2 transition-all">Zadar Airport</a>
             </div>
+          </div>
+
+          <div className="mt-10">
+            <CitiesWidget />
+          </div>
+
+          <div className="mt-10">
+            <VenuesWidget />
           </div>
 
           <div className="mt-10 rounded-2xl border border-black/5 bg-[#05020A] text-white p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">

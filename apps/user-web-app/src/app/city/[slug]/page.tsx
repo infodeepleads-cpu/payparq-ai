@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
@@ -10,16 +10,25 @@ import { AirportParkingLots } from '@/components/AirportParkingLots';
 import { AirportSEOSection } from '@/components/AirportSEOSection';
 import { NearbyPlaces } from '@/components/NearbyPlaces';
 import { HowItWorks } from '@/components/HowItWorks';
+import { CITIES } from '@/data/cities';
 
-export default function ZagrebCityPage() {
-  const router = useRouter();
-  const lat = 45.815;
-  const lng = 15.982;
-  const cityName = 'Zagreb';
+export default function CityPage() {
+  const params = useParams();
+  const slug = params?.slug as string;
+  const city = CITIES[slug];
 
-  const handleBookNow = () => {
-    router.push(`/search?lat=${lat}&lng=${lng}&name=${cityName}&source=city`);
-  };
+  if (!city) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold text-black mb-2">City not found</h1>
+          <Link href="/locations" className="text-blue-600 hover:underline">
+            Back to locations
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col overflow-hidden">
@@ -31,15 +40,15 @@ export default function ZagrebCityPage() {
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-4 break-words">
-                  Pronađi Parking u Zagrebu
+                  Pronađi Parking u {city.name}
                 </h1>
 
                 <p className="text-base text-black/70 mb-8 leading-relaxed">
-                  Pronađite parking u Zagrebu sa 200+ dostupnih mjesta za rezervaciju. Pomoći ćemo vam osigurati mjesto na najboljim cijenama. Rezervirajte u 2 minute sa trenutnom potvrdom.
+                  {city.description}
                 </p>
 
                 <div className="bg-white border border-black/10 rounded-xl p-6 shadow-sm">
-                  <AirportBookingFlow defaultLat={lat} defaultLng={lng} defaultName={cityName} />
+                  <AirportBookingFlow defaultLat={city.lat} defaultLng={city.lng} defaultName={city.name} />
                 </div>
               </div>
 
@@ -56,25 +65,25 @@ export default function ZagrebCityPage() {
         </section>
 
         {/* Reviews Section */}
-        <AirportReviews airport="split" locationName="Zagreb" />
+        <AirportReviews airport="split" locationName={city.name} />
 
         {/* Parking Lots Section */}
-        <AirportParkingLots airport="split" lat={lat} lng={lng} airportName="Zagreb" />
+        <AirportParkingLots airport="split" lat={city.lat} lng={city.lng} airportName={city.name} />
 
         {/* SEO Section */}
         <AirportSEOSection
-          location="zagreb"
-          locationName="Zagreb"
-          city="Zagreb"
-          region="Central Croatia"
-          nearbyAreas={['Grad', 'New Zagreb']}
+          location={slug}
+          locationName={city.name}
+          city={city.name}
+          region={city.region}
+          nearbyAreas={[`${city.name} Center`, 'City Area']}
         />
 
         {/* Nearby Places Section */}
-        <NearbyPlaces locationName="Zagreb" locationKey="zagreb" />
+        <NearbyPlaces locationName={city.name} locationKey={slug} />
 
         {/* How It Works + Why Choose PayParq */}
-        <HowItWorks airport="Zagreb" />
+        <HowItWorks airport={city.name} />
       </main>
 
       <footer className="bg-[#05020A] px-6 md:px-12 py-12 border-t border-white/10">

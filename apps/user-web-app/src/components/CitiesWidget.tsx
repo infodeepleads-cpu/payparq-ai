@@ -1,0 +1,26 @@
+'use client';
+
+import { CITIES } from '@/data/cities';
+
+export function CitiesWidget() {
+  const cities = Object.values(CITIES).slice(0, 6);
+
+  return (
+    <div className="rounded-2xl border border-black/5 bg-[#05020A] text-white p-6 md:p-8">
+      <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-4">
+        Parking u Hrvatskim Gradovima
+      </p>
+      <div className="flex flex-wrap gap-3">
+        {cities.map((city) => (
+          <a
+            key={city.id}
+            href={`/city/${city.id}`}
+            className="text-xs text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-2 transition-all"
+          >
+            {city.name}
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}

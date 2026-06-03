@@ -10,6 +10,7 @@ interface AirportBookingFlowProps {
   defaultLat: number;
   defaultLng: number;
   defaultName: string;
+  showEvents?: boolean;
 }
 
 type Step = null | 'arrival' | 'departure';
@@ -20,7 +21,7 @@ interface Event {
   date: string;
 }
 
-export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: AirportBookingFlowProps) {
+export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEvents = false }: AirportBookingFlowProps) {
   const router = useRouter();
   const { locale } = useLocale();
   const [step, setStep] = useState<Step>(null);
@@ -137,16 +138,18 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: Airp
         >
           {locale === 'en' ? 'Monthly' : 'Mjesečno'}
         </button>
-        <button
-          onClick={() => setBookingType('event')}
-          className={`flex-1 px-4 py-3 text-sm font-semibold rounded transition ${
-            bookingType === 'event'
-              ? 'bg-gray-700 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          {locale === 'en' ? 'Events' : 'Događanja'}
-        </button>
+        {showEvents && (
+          <button
+            onClick={() => setBookingType('event')}
+            className={`flex-1 px-4 py-3 text-sm font-semibold rounded transition ${
+              bookingType === 'event'
+                ? 'bg-gray-700 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {locale === 'en' ? 'Events' : 'Događanja'}
+          </button>
+        )}
       </div>
 
       {/* Widget Fields */}

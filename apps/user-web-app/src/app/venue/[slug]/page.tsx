@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
@@ -10,12 +10,25 @@ import { AirportParkingLots } from '@/components/AirportParkingLots';
 import { AirportSEOSection } from '@/components/AirportSEOSection';
 import { NearbyPlaces } from '@/components/NearbyPlaces';
 import { HowItWorks } from '@/components/HowItWorks';
+import { VENUES } from '@/data/venues';
 
-export default function PoljudVenuePage() {
-  const router = useRouter();
-  const lat = 43.5067;
-  const lng = 16.3417;
-  const venueName = 'Poljud Stadium';
+export default function VenuePage() {
+  const params = useParams();
+  const slug = params?.slug as string;
+  const venue = VENUES[slug];
+
+  if (!venue) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold text-black mb-2">Venue not found</h1>
+          <Link href="/locations" className="text-blue-600 hover:underline">
+            Back to locations
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col overflow-hidden">
@@ -27,15 +40,15 @@ export default function PoljudVenuePage() {
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-4 break-words">
-                  Parking kod Poljuda
+                  Parking kod {venue.name}
                 </h1>
 
                 <p className="text-base text-black/70 mb-8 leading-relaxed">
-                  Pronađite parking blizu Poljuda sa 80+ dostupnih mjesta. Siguran parking za sve događaje i utakmice. Rezervirajte unaprijed i garantirajte svoje mjesto.
+                  Pronađite sigurno parking blizu {venue.name} sa {venue.capacity.toLocaleString()} mjesta kapaciteta. Rezervirajte unaprijed za sve utakmice i dogodnje. Instant potvrda i najbolje cijene.
                 </p>
 
                 <div className="bg-white border border-black/10 rounded-xl p-6 shadow-sm">
-                  <AirportBookingFlow defaultLat={lat} defaultLng={lng} defaultName={venueName} />
+                  <AirportBookingFlow defaultLat={venue.lat} defaultLng={venue.lng} defaultName={venue.name} showEvents={true} />
                 </div>
               </div>
 
@@ -52,25 +65,25 @@ export default function PoljudVenuePage() {
         </section>
 
         {/* Reviews Section */}
-        <AirportReviews airport="split" locationName="Poljud Stadium" />
+        <AirportReviews airport="split" locationName={venue.name} />
 
         {/* Parking Lots Section */}
-        <AirportParkingLots airport="split" lat={lat} lng={lng} airportName="Poljud Stadium" />
+        <AirportParkingLots airport="split" lat={venue.lat} lng={venue.lng} airportName={venue.name} />
 
         {/* SEO Section */}
         <AirportSEOSection
-          location="split"
-          locationName="Poljud Stadium"
-          city="Split"
-          region="Dalmatia"
-          nearbyAreas={['Stadium Area', 'Stadion']}
+          location={slug}
+          locationName={venue.name}
+          city={venue.city}
+          region="Events & Games"
+          nearbyAreas={[`${venue.name} Area`, 'Parking']}
         />
 
         {/* Nearby Places Section */}
-        <NearbyPlaces locationName="Poljud Stadium" locationKey="split" />
+        <NearbyPlaces locationName={venue.name} locationKey={venue.city.toLowerCase().replace(/\s+/g, '_')} />
 
         {/* How It Works + Why Choose PayParq */}
-        <HowItWorks airport="Poljud Stadium" />
+        <HowItWorks airport={venue.name} />
       </main>
 
       <footer className="bg-[#05020A] px-6 md:px-12 py-12 border-t border-white/10">
