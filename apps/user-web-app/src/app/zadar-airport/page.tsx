@@ -28,10 +28,10 @@ export default function ZadarAirportPage() {
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-4 break-words">
-                  Reserve Parking at Zadar Airport
+                  Parkiraj kod Aerodroma Zadar
                 </h1>
                 <p className="text-base text-black/70 mb-8 leading-relaxed">
-                  Find parking near Zadar Airport with 100+ reservable spaces available. We'll help you secure a space at the best priced parking. Book in 2 minutes with instant confirmation.
+                  Pronađite parking blizu Aerodroma Zadar sa 100+ dostupnih mjesta za rezervaciju. Pomoći ćemo vam osigurati mjesto na najboljim cijenama. Rezervirajte u 2 minute sa trenutnom potvrdom.
                 </p>
                 <div className="bg-white border border-black/10 rounded-xl p-6 shadow-sm">
                   <AirportBookingFlow defaultLat={44.1083} defaultLng={15.3467} defaultName="Zadar Airport" />
@@ -57,7 +57,7 @@ export default function ZadarAirportPage() {
       </main>
       <footer className="bg-[#05020A] px-6 md:px-12 py-12 border-t border-white/10">
         <div className="max-w-6xl mx-auto">
-          <div className="grid gap-8 md:grid-cols-4 mb-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
             <div className="space-y-3 text-white/70 text-xs md:text-sm">
               <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">About</p>
               <Link href="/about" className="block hover:text-white transition-colors">About</Link>

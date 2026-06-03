@@ -69,11 +69,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = resolveSiteUrl();
   const now = new Date();
 
+  const airportRoutes = ['/split-airport', '/zagreb-airport', '/dubrovnik-airport', '/zadar-airport'];
+
   const staticEntries: MetadataRoute.Sitemap = staticRoutes.map((route) => ({
     url: `${siteUrl}${route}`,
     lastModified: now,
-    changeFrequency: route === "/" ? "daily" : "weekly",
-    priority: route === "/" ? 1 : 0.7,
+    changeFrequency: route === "/" ? "daily" : airportRoutes.includes(route) ? "daily" : "weekly",
+    priority: route === "/" ? 1 : airportRoutes.includes(route) ? 0.95 : 0.7,
   }));
 
   let locationEntries: MetadataRoute.Sitemap = [];

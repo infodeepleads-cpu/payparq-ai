@@ -9,36 +9,36 @@ interface HowItWorksProps {
 const STEPS = [
   {
     num: 1,
-    title: 'Search',
-    desc: 'Browse verified parking spaces near the airport with real-time availability and pricing.',
+    title: 'Pronađi',
+    desc: 'Pregledajte proverene parking prostore blizu aerodroma sa dostupnošću u realnom vremenu i cijenama.',
     image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=500&h=400&fit=crop&auto=format&q=80',
   },
   {
     num: 2,
-    title: 'Book',
-    desc: 'Secure your spot with a quick checkout. Instant confirmation sent to your email.',
+    title: 'Odabir',
+    desc: 'Odaberite parking spot i potvrdite rezervaciju. Instant potvrda će stići na vašu e-poštu.',
     image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=500&h=400&fit=crop&auto=format&q=80',
   },
   {
     num: 3,
-    title: 'Get Your Parking Pass',
-    desc: 'Receive your digital parking pass immediately. Show it on arrival — no printing needed.',
+    title: 'Parking dozvola',
+    desc: 'Primite digitalnu parking dozvolu odmah. Pokažite je pri dolasku — nije potrebno štampanje.',
     image: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=500&h=400&fit=crop&auto=format&q=80',
   },
 ];
 
 const BENEFITS = [
   {
-    title: 'Guaranteed Parking Spot',
-    description: 'Your space is reserved and waiting. No searching, no disappointment.',
+    title: 'Garantovano parking mjesto',
+    description: 'Vaše mjesto je rezervirano i čeka vas. Bez pretraživanja, bez razočaranja.',
   },
   {
-    title: 'Book in 2 Minutes',
-    description: 'Fast, simple booking process with instant confirmation.',
+    title: 'Rezervirajte u 2 minute',
+    description: 'Brz i jednostavan proces rezervacije sa trenutnom potvrdom.',
   },
   {
-    title: 'Save Up to 70%',
-    description: 'Much cheaper than airport parking with guaranteed quality.',
+    title: 'Uštedite do 70%',
+    description: 'Znatno jeftinije od aerodromskog parkinga sa zajamčenom kvalitetom.',
   },
 ];
 
@@ -49,7 +49,7 @@ export function HowItWorks({ airport = 'Airport' }: HowItWorksProps) {
 
         {/* How It Works */}
         <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-black mb-12">
-          How It Works
+          Kako radi
         </h2>
 
         <div className="space-y-16 mb-20">
@@ -78,7 +78,7 @@ export function HowItWorks({ airport = 'Airport' }: HowItWorksProps) {
 
         {/* Why Choose PayParq — horizontal */}
         <div className="border-t border-black/10 pt-12">
-          <h2 className="text-2xl font-semibold tracking-tight text-black mb-8">Why Choose PayParq?</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-black mb-8">Zašto PayParq?</h2>
           <div className="grid md:grid-cols-3 gap-6">
             {BENEFITS.map((b, idx) => (
               <div key={idx} className="flex gap-4">

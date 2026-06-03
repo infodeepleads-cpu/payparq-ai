@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ScrollableDateTimePicker } from './ScrollableDateTimePicker';
 import { useLocale } from './LocaleProvider';
-import { ArrowRight } from 'lucide-react';
+import { MapPin, Calendar, ArrowRight } from 'lucide-react';
 
 interface AirportBookingFlowProps {
   defaultLat: number;
@@ -12,14 +12,25 @@ interface AirportBookingFlowProps {
   defaultName: string;
 }
 
-type Step = 'arrival' | 'departure';
+type Step = null | 'arrival' | 'departure';
+type BookingType = 'hourly_daily' | 'monthly';
 
 export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: AirportBookingFlowProps) {
   const router = useRouter();
   const { locale } = useLocale();
-  const [step, setStep] = useState<Step | null>(null);
-  const [arrivalDateTime, setArrivalDateTime] = useState('');
-  const [departureDateTime, setDepartureDateTime] = useState('');
+  const [step, setStep] = useState<Step>(null);
+  const [bookingType, setBookingType] = useState<BookingType>('hourly_daily');
+  const [arrivalDateTime, setArrivalDateTime] = useState(() => {
+    const now = new Date();
+    now.setHours(15, 0, 0, 0);
+    return now.toISOString().slice(0, 16);
+  });
+  const [departureDateTime, setDepartureDateTime] = useState(() => {
+    const future = new Date();
+    future.setDate(future.getDate() + 7);
+    future.setHours(15, 0, 0, 0);
+    return future.toISOString().slice(0, 16);
+  });
 
   useEffect(() => {
     if (step) {
@@ -39,6 +50,21 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: Airp
     };
   }, [step]);
 
+  const handleSearch = () => {
+    if (!arrivalDateTime || !departureDateTime) {
+      setStep('arrival');
+      return;
+    }
+    const params = new URLSearchParams({
+      lat: String(defaultLat),
+      lng: String(defaultLng),
+      name: defaultName,
+      start: arrivalDateTime,
+      end: departureDateTime,
+    });
+    router.push(`/search?${params.toString()}`);
+  };
+
   const handleDepartureConfirm = () => {
     let finalDeparture = departureDateTime;
     if (!finalDeparture && arrivalDateTime) {
@@ -46,28 +72,143 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: Airp
       d.setHours(d.getHours() + 3);
       finalDeparture = d.toISOString().slice(0, 16);
     }
-    if (arrivalDateTime) {
-      const params = new URLSearchParams({
-        lat: String(defaultLat),
-        lng: String(defaultLng),
-        name: defaultName,
-        start: arrivalDateTime,
-        end: finalDeparture,
-      });
+    if (arrivalDateTime && finalDeparture) {
+      setDepartureDateTime(finalDeparture);
       setStep(null);
-      router.push(`/search?${params.toString()}`);
     }
+  };
+
+  const formatDateDisplay = (iso: string) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString(locale === 'en' ? 'en-US' : 'hr-HR', { month: 'long', day: 'numeric' });
+  };
+
+  const formatTimeDisplay = (iso: string) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleTimeString(locale === 'en' ? 'en-US' : 'hr-HR', { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
     <>
-      <button
-        onClick={() => setStep('arrival')}
-        className="md:hidden bg-black text-white font-semibold py-3 px-6 rounded-lg hover:bg-black/90 transition inline-flex items-center gap-2"
-      >
-        Book Now <ArrowRight size={18} />
-      </button>
+      {/* Hourly/Daily vs Monthly Toggle */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setBookingType('hourly_daily')}
+          className={`flex-1 px-4 py-3 text-sm font-semibold rounded transition ${
+            bookingType === 'hourly_daily'
+              ? 'bg-gray-700 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          {locale === 'en' ? 'Hourly/Daily' : 'Po satu/Dnevno'}
+        </button>
+        <button
+          onClick={() => setBookingType('monthly')}
+          className={`flex-1 px-4 py-3 text-sm font-semibold rounded transition ${
+            bookingType === 'monthly'
+              ? 'bg-gray-700 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          {locale === 'en' ? 'Monthly' : 'Mjesečno'}
+        </button>
+      </div>
 
+      {/* Widget Fields */}
+      <div className="w-full space-y-3">
+        {/* Park at Location */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
+            {locale === 'en' ? 'Park at' : 'Parkiraj u'}
+          </label>
+          <div className="flex items-center gap-3 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3">
+            <MapPin size={18} className="text-gray-600 flex-shrink-0" />
+            <input
+              type="text"
+              value={defaultName}
+              disabled
+              className="flex-1 bg-transparent text-sm font-medium text-black outline-none disabled:cursor-default"
+            />
+          </div>
+        </div>
+
+        {/* Hourly/Daily: From & Until - One Row */}
+        {bookingType === 'hourly_daily' && (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
+                {locale === 'en' ? 'From' : 'Od'}
+              </label>
+              <button
+                onClick={() => setStep('arrival')}
+                className="w-full flex items-center gap-3 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 hover:border-gray-400 transition text-left"
+              >
+                <Calendar size={18} className="text-gray-600 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-black truncate">
+                    {arrivalDateTime
+                      ? `${formatDateDisplay(arrivalDateTime)} at ${formatTimeDisplay(arrivalDateTime)}`
+                      : (locale === 'en' ? 'Today at 15:00' : 'Danas u 15:00')}
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
+                {locale === 'en' ? 'Until' : 'Do'}
+              </label>
+              <button
+                onClick={() => arrivalDateTime && setStep('departure')}
+                disabled={!arrivalDateTime}
+                className="w-full flex items-center gap-3 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 hover:border-gray-400 transition text-left disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Calendar size={18} className="text-gray-600 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-black truncate">
+                    {departureDateTime
+                      ? `${formatDateDisplay(departureDateTime)} at ${formatTimeDisplay(departureDateTime)}`
+                      : (locale === 'en' ? 'Today at 19:00' : 'Danas u 19:00')}
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Monthly: Start Date Only */}
+        {bookingType === 'monthly' && (
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
+              {locale === 'en' ? 'Start Date' : 'Početni datum'}
+            </label>
+            <button
+              onClick={() => setStep('arrival')}
+              className="w-full flex items-center gap-3 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 hover:border-gray-400 transition text-left"
+            >
+              <Calendar size={18} className="text-gray-600 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-black truncate">
+                  {arrivalDateTime ? formatDateDisplay(arrivalDateTime) : (locale === 'en' ? 'Select date' : 'Odaberite datum')}
+                </div>
+              </div>
+            </button>
+          </div>
+        )}
+
+        {/* Search Button */}
+        <button
+          onClick={handleSearch}
+          disabled={!arrivalDateTime || !departureDateTime}
+          className="w-full bg-black text-white font-semibold py-3 px-4 rounded-lg hover:bg-black/90 disabled:opacity-50 disabled:cursor-not-allowed transition"
+        >
+          {locale === 'en' ? 'Show me the best parking deals' : 'Pokaži mi najbolje ponude parkinga'}
+        </button>
+      </div>
+
+      {/* Date Picker Modals */}
       {step === 'arrival' && (
         <ScrollableDateTimePicker
           value={arrivalDateTime}

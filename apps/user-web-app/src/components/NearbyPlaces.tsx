@@ -61,10 +61,10 @@ export function NearbyPlaces({ locationName, locationKey, nearbyPlaces }: Nearby
           {/* Header */}
           <div className="mb-10">
             <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-3">
-              What's Nearby
+              Što je blizu
             </h2>
             <p className="text-lg text-black/70">
-              Discover what's nearby <strong>{locationName}</strong>.
+              Otkrijte što je blizu <strong>{locationName}</strong>.
             </p>
           </div>
 
@@ -115,9 +115,7 @@ export function NearbyPlaces({ locationName, locationKey, nearbyPlaces }: Nearby
                       alt={place.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-end p-2">
-                      <span className="text-white text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity">{place.name}</span>
-                    </div>
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />
                   </button>
                 ))}
               </div>
@@ -135,9 +133,7 @@ export function NearbyPlaces({ locationName, locationKey, nearbyPlaces }: Nearby
                       alt={place.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-end p-2">
-                      <span className="text-white text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity">{place.name}</span>
-                    </div>
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />
                   </button>
                 ))}
                 <div className="flex-1" /> {/* spacer fills bottom */}
@@ -148,7 +144,7 @@ export function NearbyPlaces({ locationName, locationKey, nearbyPlaces }: Nearby
           {/* Footer Note */}
           <div className="mt-10 p-6 rounded-xl bg-black/5">
             <p className="text-sm text-black/60">
-              <strong>Tip:</strong> Distances shown in kilometers. Click on any location or photo to view it on Google Maps and get directions from {locationName}.
+              <strong>Savjet:</strong> Udaljenosti su prikazane u kilometrima. Kliknite na bilo koju lokaciju ili foto da biste je otvorili na Google Mapama i dobili upute od {locationName}.
             </p>
           </div>
         </div>
