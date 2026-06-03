@@ -501,7 +501,7 @@ const membersT = (key: string, locale: 'en' | 'hr'): string => {
 export default function MembersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { locale } = useLocale();
+  const { locale, setLocale } = useLocale();
 
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -1903,6 +1903,35 @@ export default function MembersPage() {
               {verificationNotice && (
                 <p className="text-[11px] text-black/70">{verificationNotice}</p>
               )}
+            </div>
+            <div className="rounded-xl border border-black/5 bg-black/[0.02] p-4 space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/60">
+                Language
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLocale('en')}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${
+                    locale === 'en'
+                      ? 'bg-black text-white'
+                      : 'border border-black/10 hover:bg-black/5'
+                  }`}
+                >
+                  English
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLocale('hr')}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${
+                    locale === 'hr'
+                      ? 'bg-black text-white'
+                      : 'border border-black/10 hover:bg-black/5'
+                  }`}
+                >
+                  Hrvatski
+                </button>
+              </div>
             </div>
           </div>
         </div>
