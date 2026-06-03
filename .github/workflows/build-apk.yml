@@ -12,6 +12,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
@@ -20,6 +25,14 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
+
+      - name: Install dependencies
+        working-directory: apps/user-web-app
+        run: npm install
+
+      - name: Sync Capacitor
+        working-directory: apps/user-web-app
+        run: npx cap sync
 
       - name: Decode Keystore
         run: |
