@@ -93,7 +93,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   onClick={() => setMenuOpen(false)}
                   className="w-full px-4 py-3 rounded-xl hover:bg-black/5 transition text-sm font-medium text-black"
                 >
-                  My Bookings
+                  Members
                 </a>
               ) : (
                 <button
