@@ -172,11 +172,12 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEv
                   setDepartureDateTime(departure.toISOString().slice(0, 16));
                 }
               }}
-              className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-gray-600"
+              className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-sm text-black focus:outline-none focus:border-gray-600"
+              style={{ color: '#000', backgroundColor: '#fff' }}
             >
-              <option value="">{locale === 'en' ? 'Choose event...' : 'Odaberite...'}</option>
+              <option value="" style={{ color: '#000', backgroundColor: '#fff' }}>{locale === 'en' ? 'Choose event...' : 'Odaberite...'}</option>
               {upcomingEvents.map(event => (
-                <option key={event.id} value={event.id}>{event.name}</option>
+                <option key={event.id} value={event.id} style={{ color: '#000', backgroundColor: '#fff' }}>{event.name}</option>
               ))}
             </select>
           </div>

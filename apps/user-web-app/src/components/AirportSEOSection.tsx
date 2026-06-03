@@ -142,11 +142,44 @@ const SEO_CONTENT: Record<string, any> = {
   }
 };
 
-export function AirportSEOSection({ location, locationName, city, region, nearbyAreas }: LocationSEOSectionProps) {
-  const content = SEO_CONTENT[location];
-  const [openFAQ, setOpenFAQ] = useState<number | null>(null);
+function generateContent(locationName: string, city: string, region: string) {
+  return {
+    title: `Sve što trebate znati o parkiranju u ${locationName}`,
+    intro: `Pronađite pouzdano parking u <strong>${locationName}</strong> uz PayParq. Naša <strong>mreža rezervabilnih parkirnih mjesta</strong> — uključujući privatna parkirališta i osigurane objekte — osigurava vam lak pristup. <strong>Rezervirajte unaprijed</strong> i zaključajte konkurentne cijene.`,
+    paragraphs: [
+      `PayParq je <strong>vodeća hrvatska platforma za parkiranje</strong>, kojoj vjeruje više od <strong>100.000+ vozača</strong> u pronalaženju, rezervaciji i plaćanju parkinga. Naša mreža uključuje <strong>privatna parkirališta, dvorišta i osigurane objekte</strong> širom ${region} regije, uključujući ${locationName}.`,
+      `Naš <strong>napredni sustav pretrage</strong> omogućuje vam lako pronalaženje najboljeg parkinga u ${locationName} — filtrirajte po <strong>cijeni, blizini, sigurnosnim značajkama</strong> ili pogodnostima poput <strong>CCTV nadzora, punjenja EV vozila ili natkrivenog parkinga</strong>.`,
+      `Rezervirajte parking u ${locationName} unaprijed putem naše web stranice ili aplikacije — i imat ćete <strong>zajamčeno slobodno mjesto kada stignete</strong>. Naša parkirna mjesta dostupna su za <strong>kratke i dugoročne boravke</strong>, uključujući noćno parkiranje.`,
+      `PayParq nudi više od tradicionalnih parkirališta. Pristupite <strong>pristupačnim alternativama poput osiguranih privatnih dvorišta</strong>, često bliže lokaciji i po boljim cijenama od uobičajenih parkirnih objekata u ${city}.`,
+    ],
+    faqs: [
+      {
+        question: `Zašto rezervirati parking unaprijed u ${locationName}?`,
+        answer: `<strong>Rezervacija unaprijed jamči vaše mjesto</strong>, osigurava najniže cijene i eliminiira stres pronalaska parkinga. PayParqov <strong>proces rezervacije traje samo 2 minute</strong> — rezervirajte još od kuće.`,
+      },
+      {
+        question: `Nudi li PayParq sigurno parkiranje u ${locationName}?`,
+        answer: `Apsolutno! PayParq pruža <strong>provjerene sigurnosne opcije parkinga</strong>, uključujući mjesta s <strong>CCTV-om, ograđenim prostorima i privatnim dvorištima</strong>. Svi naši domaćini su provjereni kako bi osigurali sigurnost vašeg vozila.`,
+      },
+      {
+        question: `Koliko košta parkiranje u ${locationName}?`,
+        answer: `PayParq nudi <strong>konkurentne cijene</strong> za parkiranje u ${locationName}, s opcijama od samo <strong>€2-5 dnevno</strong>. Cijene variraju ovisno o lokaciji, sadržajima i trajanju rezervacije.`,
+      },
+      {
+        question: `Koje opcije parkinga PayParq nudi u ${locationName}?`,
+        answer: `Nudimo <strong>širok raspon opcija</strong> uključujući <strong>natkriveno parkiranje, otvorene prostore, objekte s 24/7 nadzorom, EV punjače</strong> i pristupačno parkiranje za goste s posebnim potrebama.`,
+      },
+      {
+        question: `Ima li pristupačnog parkinga u ${locationName}?`,
+        answer: `Da! PayParq se specijalizira za <strong>pristupačne alternative parkinga</strong>. Naša mreža uključuje <strong>privatna dvorišta i stambena parkirna mjesta koja su često 50-70% jeftinija</strong> od tradicionalnih parkirnih objekata, bez kompromisa po pitanju sigurnosti.`,
+      },
+    ],
+  };
+}
 
-  if (!content) return null;
+export function AirportSEOSection({ location, locationName, city, region, nearbyAreas }: LocationSEOSectionProps) {
+  const content = SEO_CONTENT[location] || generateContent(locationName, city, region);
+  const [openFAQ, setOpenFAQ] = useState<number | null>(null);
 
   return (
     <section className="w-full px-6 md:px-12 py-16 bg-white">

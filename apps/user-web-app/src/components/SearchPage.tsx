@@ -566,13 +566,29 @@ export function SearchPage() {
     const paramSource = searchParams.get('source') || 'platform';
 
     if (paramLat && paramLng && paramName) {
-      setMapCenter({ lat: paramLat, lng: paramLng });
-      setSearchLocationPin({ lat: paramLat, lng: paramLng });
-      setSearchLocationState(paramName);
       if (paramStart) setStartTime(paramStart);
       if (paramEnd) setEndTime(paramEnd);
       setBookingSource(paramSource);
-      setLocationReady(true);
+      setSearchLocationState(paramName);
+
+      // Geocode the name to get authoritative coordinates from Google — prevents pins in the sea
+      if (window.google?.maps?.Geocoder) {
+        new window.google.maps.Geocoder().geocode({ address: paramName }, (results, status) => {
+          if (status === 'OK' && results?.[0]?.geometry?.location) {
+            const loc = results[0].geometry.location;
+            setMapCenter({ lat: loc.lat(), lng: loc.lng() });
+            setSearchLocationPin({ lat: loc.lat(), lng: loc.lng() });
+          } else {
+            setMapCenter({ lat: paramLat, lng: paramLng });
+            setSearchLocationPin({ lat: paramLat, lng: paramLng });
+          }
+          setLocationReady(true);
+        });
+      } else {
+        setMapCenter({ lat: paramLat, lng: paramLng });
+        setSearchLocationPin({ lat: paramLat, lng: paramLng });
+        setLocationReady(true);
+      }
       return;
     }
 
@@ -599,7 +615,7 @@ export function SearchPage() {
       },
       { timeout: 5000 }
     );
-  }, [searchParams]);
+  }, [searchParams, isLoaded]);
 
   // Load recent searches from localStorage
   useEffect(() => {

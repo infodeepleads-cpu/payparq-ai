@@ -80,7 +80,7 @@ export default function VenuePage() {
         />
 
         {/* Nearby Places Section */}
-        <NearbyPlaces locationName={venue.name} locationKey={venue.city.toLowerCase().replace(/\s+/g, '_')} />
+        <NearbyPlaces locationName={venue.name} locationKey={venue.id} />
 
         {/* How It Works + Why Choose PayParq */}
         <HowItWorks airport={venue.name} />

@@ -144,7 +144,7 @@ export function NearbyPlaces({ locationName, locationKey, nearbyPlaces }: Nearby
           {/* Footer Note */}
           <div className="mt-10 p-6 rounded-xl bg-black/5">
             <p className="text-sm text-black/60">
-              <strong>Savjet:</strong> Udaljenosti su prikazane u kilometrima. Kliknite na bilo koju lokaciju ili foto da biste je otvorili na Google Mapama i dobili upute od {locationName}.
+              <strong translate="no" className="notranslate">Savjet:</strong> Udaljenosti su prikazane u kilometrima. Kliknite na bilo koju lokaciju ili foto da biste je otvorili na Google Mapama i dobili upute od {locationName}.
             </p>
           </div>
         </div>
