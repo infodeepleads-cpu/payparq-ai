@@ -39,13 +39,13 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          mkdir -p apps/user-web-app/android/app/keystore
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > apps/user-web-app/android/app/keystore/payparq-release.jks
+          mkdir -p apps/user-web-app/android/app/src/main/assets/keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > apps/user-web-app/android/app/src/main/assets/keystore/payparq-release.jks
 
       - name: Build & Sign APK
         working-directory: apps/user-web-app/android
         env:
-          KEYSTORE_PATH: app/keystore/payparq-release.jks
+          KEYSTORE_PATH: app/src/main/assets/keystore/payparq-release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
