@@ -1,12 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
@@ -19,108 +17,79 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  const handleSignOut = async () => {
-    if (supabase) await supabase.auth.signOut();
-    setMenuOpen(false);
-    router.push('/app');
-  };
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [menuOpen]);
 
-  const openExternal = (url: string) => {
-    window.open(url, '_blank');
-    setMenuOpen(false);
-  };
+  const close = () => setMenuOpen(false);
+  const openExternal = (url: string) => { window.open(url, '_blank'); close(); };
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* App Top Bar */}
-      <header className="fixed inset-x-0 top-0 z-[2000] bg-white border-b border-black/10 px-4 h-14 flex items-center justify-end">
-        <button
-          onClick={() => setMenuOpen(true)}
-          className="flex flex-col gap-[5px] p-2"
-          aria-label="Open menu"
-        >
-          <span className="h-[2px] w-5 bg-black rounded" />
-          <span className="h-[2px] w-5 bg-black rounded" />
-          <span className="h-[2px] w-5 bg-black rounded" />
-        </button>
-      </header>
+    <div className="min-h-screen">
+      {children}
 
-      {/* Hamburger Drawer */}
+      {/* Floating hamburger button — top right, no bar */}
+      <button
+        onClick={() => setMenuOpen(true)}
+        className="fixed top-4 right-4 z-[1100] flex flex-col gap-[5px] p-2 md:top-[22px] md:py-[13px] bg-white rounded-lg shadow-md border border-black/10"
+        aria-label="Open menu"
+      >
+        <span className="h-[2px] w-5 bg-black rounded" />
+        <span className="h-[2px] w-5 bg-black rounded" />
+        <span className="h-[2px] w-5 bg-black rounded" />
+      </button>
+
+      {/* Backdrop */}
       {menuOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-[3000] bg-black/40"
-            onClick={() => setMenuOpen(false)}
-          />
-          <div className="fixed inset-y-0 left-0 z-[3001] w-72 bg-white shadow-2xl flex flex-col">
-            {/* Header */}
-            <div className="h-14 flex items-center justify-end px-5 border-b border-black/10">
-              <button
-                onClick={() => setMenuOpen(false)}
-                className="text-black/60 hover:text-black text-xl leading-none"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* User info or login */}
-            <div className="px-5 py-4 border-b border-black/10">
-              {user ? (
-                <div>
-                  <p className="text-xs text-black/50 mb-0.5">Signed in as</p>
-                  <p className="text-sm font-semibold text-black truncate">{user.email}</p>
-                </div>
-              ) : (
-                <p className="text-sm text-black/60">Not signed in</p>
-              )}
-            </div>
-
-            {/* Nav items */}
-            <nav className="flex-1 px-3 py-4 space-y-1">
-              <a
-                href="/app"
-                onClick={() => setMenuOpen(false)}
-                className="w-full px-4 py-3 rounded-xl hover:bg-black/5 transition text-sm font-medium text-black"
-              >
-                Find Parking
-              </a>
-
-              <a
-                href="/members"
-                onClick={() => setMenuOpen(false)}
-                className={`w-full px-4 py-3 rounded-xl transition text-sm font-medium ${
-                  user
-                    ? 'hover:bg-black/5 text-black'
-                    : 'bg-black text-white'
-                }`}
-              >
-                Members
-              </a>
-
-              <button
-                onClick={() => openExternal('https://www.payparq.com')}
-                className="w-full text-left px-4 py-3 rounded-xl hover:bg-black/5 transition text-sm font-medium text-black/60 text-[11px]"
-              >
-                Visit www.payparq.com
-              </button>
-            </nav>
-
-            {/* Download App */}
-            <div className="px-3 py-4 border-t border-black/10">
-              <button
-                onClick={() => openExternal('https://github.com/kzamic-prog/payparq.ai/releases/download/apk-latest/payparq-app.apk')}
-                className="w-full px-4 py-3 rounded-xl bg-blue-600 text-white transition text-sm font-semibold hover:bg-blue-700"
-              >
-                Download App
-              </button>
-            </div>
-          </div>
-        </>
+        <div className="fixed inset-0 z-[8999] bg-black/40" onClick={close} />
       )}
 
-      {/* Page content — offset by header height */}
-      <div className="pt-14">
-        {children}
+      {/* Right-side sliding panel */}
+      <div
+        className="fixed inset-y-0 right-0 z-[9000] w-72 bg-white flex flex-col shadow-2xl transition-transform duration-300 ease-in-out"
+        style={{ transform: menuOpen ? 'translateX(0)' : 'translateX(100%)' }}
+      >
+        <div className="flex items-center justify-between px-5 h-14 border-b border-black/10 shrink-0">
+          <span className="text-sm font-bold">PayParq</span>
+          <button onClick={close} className="text-black/40 hover:text-black text-xl leading-none">✕</button>
+        </div>
+
+        {user && (
+          <div className="px-5 py-3 border-b border-black/5">
+            <p className="text-[11px] text-black/40">Signed in as</p>
+            <p className="text-xs font-semibold text-black truncate">{user.email}</p>
+          </div>
+        )}
+
+        <nav className="flex-1 flex flex-col px-3 py-4 gap-1">
+          <a href="/app" onClick={close} className="px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">
+            Find Parking
+          </a>
+          <a
+            href="/members"
+            onClick={close}
+            className={`px-4 py-3 rounded-xl text-sm font-medium ${user ? 'hover:bg-black/5 text-black' : 'bg-black text-white'}`}
+            translate="no"
+          >
+            {user ? 'Upravljačka Ploča' : 'Upravljačka Ploča'}
+          </a>
+          <button
+            onClick={() => openExternal('https://www.payparq.com/main')}
+            className="px-4 py-3 rounded-xl text-sm font-medium text-black/50 text-left hover:bg-black/5"
+          >
+            Posjetite web stranicu
+          </button>
+        </nav>
+
+        <div className="px-4 pb-8 pt-2 shrink-0">
+          <button
+            onClick={() => openExternal('https://github.com/kzamic-prog/payparq.ai/releases/download/apk-latest/payparq-app.apk')}
+            className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+          >
+            Download App
+          </button>
+        </div>
       </div>
     </div>
   );
