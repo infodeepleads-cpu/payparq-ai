@@ -13,13 +13,20 @@ interface AirportBookingFlowProps {
 }
 
 type Step = null | 'arrival' | 'departure';
-type BookingType = 'hourly_daily' | 'monthly';
+type BookingType = 'hourly_daily' | 'monthly' | 'event';
+interface Event {
+  id: string;
+  name: string;
+  date: string;
+}
 
 export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: AirportBookingFlowProps) {
   const router = useRouter();
   const { locale } = useLocale();
   const [step, setStep] = useState<Step>(null);
   const [bookingType, setBookingType] = useState<BookingType>('hourly_daily');
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [arrivalDateTime, setArrivalDateTime] = useState(() => {
     const now = new Date();
     now.setHours(15, 0, 0, 0);
@@ -31,6 +38,22 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: Airp
     future.setHours(15, 0, 0, 0);
     return future.toISOString().slice(0, 16);
   });
+
+  useEffect(() => {
+    // Fetch upcoming events for this venue/city
+    const fetchEvents = async () => {
+      try {
+        const res = await fetch(`/api/events?location=${defaultName}`);
+        if (res.ok) {
+          const data = await res.json();
+          setUpcomingEvents(data);
+        }
+      } catch (error) {
+        console.log('No events available');
+      }
+    };
+    fetchEvents();
+  }, [defaultName]);
 
   useEffect(() => {
     if (step) {
@@ -92,7 +115,7 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: Airp
 
   return (
     <>
-      {/* Hourly/Daily vs Monthly Toggle */}
+      {/* Hourly/Daily vs Monthly vs Events Toggle */}
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => setBookingType('hourly_daily')}
@@ -114,10 +137,48 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: Airp
         >
           {locale === 'en' ? 'Monthly' : 'Mjesečno'}
         </button>
+        <button
+          onClick={() => setBookingType('event')}
+          className={`flex-1 px-4 py-3 text-sm font-semibold rounded transition ${
+            bookingType === 'event'
+              ? 'bg-gray-700 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          {locale === 'en' ? 'Events' : 'Događanja'}
+        </button>
       </div>
 
       {/* Widget Fields */}
       <div className="w-full space-y-3">
+        {/* Event Selector */}
+        {bookingType === 'event' && (
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
+              {locale === 'en' ? 'Select Event' : 'Odaberite događaj'}
+            </label>
+            <select
+              value={selectedEvent?.id || ''}
+              onChange={(e) => {
+                const event = upcomingEvents.find(ev => ev.id === e.target.value);
+                if (event) {
+                  setSelectedEvent(event);
+                  setArrivalDateTime(event.date);
+                  const departure = new Date(event.date);
+                  departure.setHours(departure.getHours() + 4);
+                  setDepartureDateTime(departure.toISOString().slice(0, 16));
+                }
+              }}
+              className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-gray-600"
+            >
+              <option value="">{locale === 'en' ? 'Choose event...' : 'Odaberite...'}</option>
+              {upcomingEvents.map(event => (
+                <option key={event.id} value={event.id}>{event.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Park at Location */}
         <div>
           <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
@@ -198,10 +259,34 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName }: Airp
           </div>
         )}
 
+        {/* Event: Event Dates Display (Read-only) */}
+        {bookingType === 'event' && selectedEvent && (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
+                {locale === 'en' ? 'Event Date' : 'Datum događaja'}
+              </label>
+              <div className="flex items-center gap-3 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3">
+                <Calendar size={18} className="text-gray-600 flex-shrink-0" />
+                <div className="text-sm font-medium text-black">{formatDateDisplay(selectedEvent.date)}</div>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
+                {locale === 'en' ? 'Checkout' : 'Odlazak'}
+              </label>
+              <div className="flex items-center gap-3 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3">
+                <Calendar size={18} className="text-gray-600 flex-shrink-0" />
+                <div className="text-sm font-medium text-black">{formatDateDisplay(departureDateTime)}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Search Button */}
         <button
           onClick={handleSearch}
-          disabled={!arrivalDateTime || !departureDateTime}
+          disabled={bookingType === 'event' ? !selectedEvent : (!arrivalDateTime || (bookingType === 'hourly_daily' && !departureDateTime))}
           className="w-full bg-black text-white font-semibold py-3 px-4 rounded-lg hover:bg-black/90 disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
           {locale === 'en' ? 'Show me the best parking deals' : 'Pokaži mi najbolje ponude parkinga'}
