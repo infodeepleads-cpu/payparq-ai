@@ -33,7 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-white">
       {/* App Top Bar */}
-      <header className="fixed inset-x-0 top-0 z-[2000] bg-white border-b border-black/10 px-4 h-14 flex items-center justify-between">
+      <header className="fixed inset-x-0 top-0 z-[2000] bg-white border-b border-black/10 px-4 h-14 flex items-center justify-end">
         <button
           onClick={() => setMenuOpen(true)}
           className="flex flex-col gap-[5px] p-2"
@@ -43,10 +43,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <span className="h-[2px] w-5 bg-black rounded" />
           <span className="h-[2px] w-5 bg-black rounded" />
         </button>
-
-        <span className="text-sm font-bold tracking-tight text-black">PayParq</span>
-
-        <div className="w-9" />
       </header>
 
       {/* Hamburger Drawer */}
@@ -58,8 +54,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           />
           <div className="fixed inset-y-0 left-0 z-[3001] w-72 bg-white shadow-2xl flex flex-col">
             {/* Header */}
-            <div className="h-14 flex items-center justify-between px-5 border-b border-black/10">
-              <span className="font-bold text-black">PayParq</span>
+            <div className="h-14 flex items-center justify-end px-5 border-b border-black/10">
               <button
                 onClick={() => setMenuOpen(false)}
                 className="text-black/60 hover:text-black text-xl leading-none"
@@ -85,67 +80,45 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <a
                 href="/app"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 transition text-sm font-medium text-black"
+                className="w-full px-4 py-3 rounded-xl hover:bg-black/5 transition text-sm font-medium text-black"
               >
-                <span>🏠</span> Find Parking
+                Find Parking
               </a>
 
               {user ? (
                 <a
                   href="/members"
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 transition text-sm font-medium text-black"
+                  className="w-full px-4 py-3 rounded-xl hover:bg-black/5 transition text-sm font-medium text-black"
                 >
-                  <span>🎫</span> My Bookings
+                  My Bookings
                 </a>
               ) : (
                 <a
                   href="/members"
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-black text-white transition text-sm font-medium"
+                  className="w-full px-4 py-3 rounded-xl bg-black text-white transition text-sm font-medium"
                 >
-                  <span>🔑</span> Log In
+                  Log In
                 </a>
               )}
 
-              <a
-                href="/locations"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 transition text-sm font-medium text-black"
-              >
-                <span>📍</span> Locations
-              </a>
-
-              <a
-                href="/support"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 transition text-sm font-medium text-black"
-              >
-                <span>💬</span> Support
-              </a>
-
               <button
                 onClick={() => openExternal('https://www.payparq.com')}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 transition text-sm font-medium text-black"
+                className="w-full text-left px-4 py-3 rounded-xl hover:bg-black/5 transition text-sm font-medium text-black/60 text-[11px]"
               >
-                <span>🌐</span> Visit Website
+                Visit www.payparq.com
               </button>
             </nav>
 
-            {/* Sign out */}
-            {user && (
-              <div className="px-3 py-4 border-t border-black/10">
-                <button
-                  onClick={handleSignOut}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 transition text-sm font-medium text-red-600"
-                >
-                  <span>👋</span> Sign Out
-                </button>
-              </div>
-            )}
-
-            <div className="px-5 py-3 border-t border-black/10">
-              <p className="text-[10px] text-black/30 text-center">PayParq v1.0.0</p>
+            {/* Download App */}
+            <div className="px-3 py-4 border-t border-black/10">
+              <button
+                onClick={() => openExternal('https://github.com/kzamic-prog/payparq.ai/releases/download/apk-latest/payparq-app.apk')}
+                className="w-full px-4 py-3 rounded-xl bg-blue-600 text-white transition text-sm font-semibold hover:bg-blue-700"
+              >
+                Download App
+              </button>
             </div>
           </div>
         </>
