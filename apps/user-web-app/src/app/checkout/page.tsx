@@ -605,8 +605,8 @@ function PaidCheckoutForm({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFree]);
 
-  // Service fee: 0.99€ + 5% of parking price
-  const serviceFeeEurCents = Math.round((99 + (displayAmountCents * 0.05)));
+  // Service fee: 0.99€ + 10% of parking price
+  const serviceFeeEurCents = Math.round((99 + (displayAmountCents * 0.10)));
   const totalWithFeeEurCents = displayAmountCents + serviceFeeEurCents;
 
   function calcAmountCents(durationHours: number): number {
