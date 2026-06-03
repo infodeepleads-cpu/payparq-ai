@@ -1246,7 +1246,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         />
                       </div>
                     </div>
-                    <p className="mb-2 text-[11px] text-gray-600">Note: You can book a ride after reserving parking. Uber integration is available.</p>
+                    <p className="mb-2 text-[11px] text-gray-600">Note: You can book a ride after reserving parking. Uber integration is available. For a Parq ride send a message to the Host at least 60 minutes prior.</p>
                     <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
                       <button
                         onClick={() => setActiveTab('reserve')}
@@ -1859,10 +1859,10 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
             <div className="hidden md:flex flex-col items-end md:sticky md:top-24">
             {/* Check Price Widget */}
             <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 w-full" ref={reserveRef}>
-              <h2 className="text-lg font-bold mb-4">Check price & availability</h2>
+              <h2 className="text-lg font-bold mb-4 text-black">Check price & availability</h2>
               
               {/* Tab Switcher */}
-              <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
+              <div className="flex bg-gray-100 p-1 rounded-xl mb-4 text-black">
                 <button
                   onClick={() => setActiveTab('reserve')}
                   className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-all ${
@@ -1909,7 +1909,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       />
                     </div>
                   </div>
-                  <p className="mb-3 text-xs text-gray-600">Note: You can book a ride after reserving parking. Uber integration is available.</p>
+                  <p className="mb-3 text-xs text-gray-600">Note: You can book a ride after reserving parking. Uber integration is available. For a Parq ride send a message to the Host at least 60 minutes prior.</p>
                   
                   <div className="border-t border-gray-100 mb-4 pt-3 flex justify-end">
                     <div className="p-3 w-full flex flex-col gap-0">
