@@ -23,13 +23,13 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          mkdir -p android/app/keystore
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore/payparq-release.jks
+          mkdir -p apps/user-web-app/android/app/keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > apps/user-web-app/android/app/keystore/payparq-release.jks
 
       - name: Build & Sign APK
-        working-directory: android
+        working-directory: apps/user-web-app/android
         env:
-          KEYSTORE_PATH: keystore/payparq-release.jks
+          KEYSTORE_PATH: app/keystore/payparq-release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -39,12 +39,12 @@ jobs:
 
       - name: Rename APK
         run: |
-          mv android/app/build/outputs/apk/release/app-release.apk \
-             android/app/build/outputs/apk/release/payparq-app.apk
+          mv apps/user-web-app/android/app/build/outputs/apk/release/app-release.apk \
+             apps/user-web-app/android/app/build/outputs/apk/release/payparq-app.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v3
         with:
           name: PayParq-APK
-          path: android/app/build/outputs/apk/release/payparq-app.apk
+          path: apps/user-web-app/android/app/build/outputs/apk/release/payparq-app.apk
           retention-days: 30
