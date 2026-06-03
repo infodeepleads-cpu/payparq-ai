@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { AuthScreen } from '@/components/AuthScreen';
 import type { User } from '@supabase/supabase-js';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -94,13 +96,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   My Bookings
                 </a>
               ) : (
-                <a
-                  href="/members"
-                  onClick={() => setMenuOpen(false)}
-                  className="w-full px-4 py-3 rounded-xl bg-black text-white transition text-sm font-medium"
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="w-full px-4 py-3 rounded-xl bg-black text-white transition text-sm font-medium hover:bg-black/90"
                 >
-                  Log In
-                </a>
+                  Register / Log In
+                </button>
               )}
 
               <button
@@ -128,6 +129,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="pt-14">
         {children}
       </div>
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-[4000] bg-black/50 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setShowAuthModal(false)}
+              className="absolute top-4 right-4 z-10 text-white/60 hover:text-white text-2xl leading-none"
+            >
+              ✕
+            </button>
+            <AuthScreen />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
