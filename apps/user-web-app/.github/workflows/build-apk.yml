@@ -23,21 +23,28 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          mkdir -p android/app
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/payparq-release.jks
+          mkdir -p android/app/keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore/payparq-release.jks
 
       - name: Build & Sign APK
         working-directory: android
+        env:
+          KEYSTORE_PATH: keystore/payparq-release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file="app/payparq-release.jks" \
-            -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASSWORD }}" \
-            -Pandroid.injected.signing.key.alias="${{ secrets.KEY_ALIAS }}" \
-            -Pandroid.injected.signing.key.password="${{ secrets.KEY_PASSWORD }}"
+          ./gradlew assembleRelease
 
-      - name: Upload APK
+      - name: Rename APK
+        run: |
+          mv android/app/build/outputs/apk/release/app-release.apk \
+             android/app/build/outputs/apk/release/payparq-app.apk
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v3
         with:
-          name: payparq-app
-          path: android/app/build/outputs/apk/release/app-release.apk
+          name: PayParq-APK
+          path: android/app/build/outputs/apk/release/payparq-app.apk
+          retention-days: 30
