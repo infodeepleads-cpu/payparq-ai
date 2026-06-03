@@ -45,7 +45,7 @@ jobs:
       - name: Build & Sign APK
         working-directory: apps/user-web-app/android
         env:
-          KEYSTORE_PATH: app/src/main/assets/keystore/payparq-release.jks
+          KEYSTORE_PATH: src/main/assets/keystore/payparq-release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
