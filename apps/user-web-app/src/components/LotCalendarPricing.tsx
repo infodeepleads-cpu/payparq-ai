@@ -10,6 +10,9 @@ interface LotCalendarPricingProps {
   lotName: string;
   lotAddress: string;
   lotCapacity: string;
+  basePriceHourly?: number | null;
+  basePriceDaily?: number | null;
+  basePriceMonthly?: number | null;
   onBack: () => void;
 }
 
@@ -61,7 +64,7 @@ const t = (key: string, locale: 'en' | 'hr'): string => {
   return trans ? trans[locale] : key;
 };
 
-export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, onBack }: LotCalendarPricingProps) {
+export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, basePriceHourly, basePriceDaily, basePriceMonthly, onBack }: LotCalendarPricingProps) {
   const { locale } = useLocale();
   const [loading, setLoading] = useState(true);
   const [calendarDate, setCalendarDate] = useState(() => new Date());
@@ -380,6 +383,9 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
               lotCapacity={parseInt(lotCapacity)}
               locale={locale}
               allConfigs={dateConfigs}
+              basePriceHourly={basePriceHourly}
+              basePriceDaily={basePriceDaily}
+              basePriceMonthly={basePriceMonthly}
               onSave={(config) => handleSaveDate(config)}
               onCancel={() => setSelectedDate(null)}
             />
@@ -435,9 +441,12 @@ interface DateConfigWidgetProps {
   onCancel: () => void;
   locale: 'en' | 'hr';
   allConfigs?: Record<string, DateConfig>;
+  basePriceHourly?: number | null;
+  basePriceDaily?: number | null;
+  basePriceMonthly?: number | null;
 }
 
-function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale, allConfigs = {} }: DateConfigWidgetProps) {
+function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale, allConfigs = {}, basePriceHourly, basePriceDaily, basePriceMonthly }: DateConfigWidgetProps) {
   const [capacity, setCapacity] = useState(config.capacity ? String(config.capacity) : '');
   const [isOpen, setIsOpen] = useState(config.isOpen);
   const [openTime, setOpenTime] = useState(config.openTime);
@@ -468,33 +477,64 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale, allCo
 
   return (
     <div className="space-y-4 md:space-y-5">
-      {/* Current Settings Summary */}
-      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-3">{locale === 'en' ? 'Current Settings' : 'Trenutne postavke'}</p>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700">{locale === 'en' ? 'Status' : 'Stanje'}:</span>
-            <span className={`text-sm font-semibold ${config.isOpen ? 'text-green-700' : 'text-red-700'}`}>
-              {config.isOpen ? (locale === 'en' ? '🟢 Open' : '🟢 Otvoreno') : (locale === 'en' ? '🔴 Closed' : '🔴 Zatvoreno')}
-            </span>
+      {/* Listing base prices — what customers see on search */}
+      {(basePriceHourly || basePriceDaily || basePriceMonthly) && (
+        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 mb-2">
+            {locale === 'en' ? 'Live listing prices (shown to customers)' : 'Cijene s oglasa (prikazane korisnicima)'}
+          </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            {basePriceHourly != null && (
+              <span className="text-sm font-bold text-blue-900">€{basePriceHourly}/h</span>
+            )}
+            {basePriceDaily != null && (
+              <span className="text-sm font-bold text-blue-900">€{basePriceDaily}/day</span>
+            )}
+            {basePriceMonthly != null && (
+              <span className="text-sm font-bold text-blue-900">€{basePriceMonthly}/mo</span>
+            )}
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700">{t('Prices', locale)}:</span>
-            <span className="text-sm font-semibold text-gray-900">
-              {config.priceHourly ? `€${config.priceHourly}/h` : '—'} • {config.priceDaily ? `€${config.priceDaily}/d` : '—'} • {config.priceMonthly ? `€${config.priceMonthly}/m` : '—'}
-            </span>
-          </div>
-        </div>
-        {getPreviousPrice() && (
           <button
             type="button"
-            onClick={handleCopyPreviousPrices}
-            className="mt-3 w-full px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
+            onClick={() => {
+              if (basePriceHourly != null) setPriceHourly(String(basePriceHourly));
+              if (basePriceDaily != null) setPriceDaily(String(basePriceDaily));
+              if (basePriceMonthly != null) setPriceMonthly(String(basePriceMonthly));
+              setPriceMode('manual');
+            }}
+            className="mt-3 w-full px-3 py-2 text-xs font-medium text-blue-700 bg-white hover:bg-blue-100 rounded-lg transition-colors border border-blue-300"
           >
-            {locale === 'en' ? '📋 Copy from previous date' : '📋 Preuzmi s prethodnog datuma'}
+            {locale === 'en' ? '↓ Use these prices for this date' : '↓ Koristi ove cijene za ovaj datum'}
           </button>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Date-specific override summary */}
+      {config.priceHourly != null && (
+        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+            {locale === 'en' ? 'Date override active' : 'Aktivno prilagođavanje za datum'}
+          </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className={`text-xs font-semibold ${config.isOpen ? 'text-green-700' : 'text-red-700'}`}>
+              {config.isOpen ? '🟢' : '🔴'} {config.isOpen ? t('Open', locale) : t('Closed', locale)}
+            </span>
+            {config.priceHourly != null && <span className="text-xs font-bold text-gray-800">€{config.priceHourly}/h</span>}
+            {config.priceDaily != null && <span className="text-xs font-bold text-gray-800">€{config.priceDaily}/day</span>}
+            {config.priceMonthly != null && <span className="text-xs font-bold text-gray-800">€{config.priceMonthly}/mo</span>}
+          </div>
+        </div>
+      )}
+
+      {getPreviousPrice() && !basePriceHourly && !basePriceDaily && !basePriceMonthly && (
+        <button
+          type="button"
+          onClick={handleCopyPreviousPrices}
+          className="w-full px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
+        >
+          {locale === 'en' ? '📋 Copy from previous date' : '📋 Preuzmi s prethodnog datuma'}
+        </button>
+      )}
       {/* Open/Close Toggle */}
       <div className="space-y-2">
         <label className="block text-sm md:text-base font-semibold text-gray-900">{t('Availability', locale)}</label>

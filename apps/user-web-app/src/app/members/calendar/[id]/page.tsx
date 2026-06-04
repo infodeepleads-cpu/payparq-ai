@@ -15,6 +15,9 @@ interface Listing {
   name: string;
   address: string;
   capacity: number;
+  base_price_hourly?: number | null;
+  base_price_daily?: number | null;
+  base_price_monthly?: number | null;
 }
 
 export default function CalendarPage() {
@@ -89,6 +92,9 @@ export default function CalendarPage() {
           lotName={listing.name}
           lotAddress={listing.address}
           lotCapacity={String(listing.capacity)}
+          basePriceHourly={listing.base_price_hourly ?? null}
+          basePriceDaily={listing.base_price_daily ?? null}
+          basePriceMonthly={listing.base_price_monthly ?? null}
           onBack={() => router.back()}
         />
       </div>
