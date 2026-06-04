@@ -831,7 +831,17 @@ export function SearchPage() {
 
     // Auto-refresh listings every 60 seconds
     const refreshInterval = setInterval(fetchListings, 60000);
-    return () => clearInterval(refreshInterval);
+
+    // Listen for pricing updates from calendar
+    const handlePricingUpdate = () => {
+      fetchListings();
+    };
+    window.addEventListener('pricing-updated', handlePricingUpdate);
+
+    return () => {
+      clearInterval(refreshInterval);
+      window.removeEventListener('pricing-updated', handlePricingUpdate);
+    };
   }, []);
 
   // Show arrival picker on load when hubId is present
