@@ -583,7 +583,18 @@ export default function MembersPage() {
   // Localhost bypass - force signed in state
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
   // Check if we're in Google OAuth flow (prevent showing auth screen after redirect)
-  const isInAuthFlow = typeof window !== 'undefined' && (window.location.hash.includes('access_token'));
+  const isInAuthFlow = typeof window !== 'undefined' && (
+    window.location.hash.includes('access_token') ||
+    sessionStorage.getItem('auth_in_progress') === 'true'
+  );
+
+  // Mark auth as complete once user loads
+  useEffect(() => {
+    if (user && isInAuthFlow) {
+      sessionStorage.removeItem('auth_in_progress');
+    }
+  }, [user, isInAuthFlow]);
+
   const isSignedIn = (!!user || devSignedIn || isLocalhost || isInAuthFlow);
   const normalizedMemberEmail = (user?.email ?? email ?? 'dev@localhost').trim().toLowerCase();
   const hasMemberIdentity = normalizedMemberEmail.length > 0;
@@ -3244,7 +3255,7 @@ export default function MembersPage() {
 
   if (!pageReady && isSignedIn) {
     return (
-      <div className="min-h-screen bg-[#05020A] flex items-center justify-center">
+      <div className="min-h-screen bg-[#05020A] flex items-center justify-center fixed inset-0 z-[9999]">
         <div className="relative flex items-center justify-center w-20 h-20">
           <div className="absolute inset-0 rounded-full border-4 border-white/10 border-t-white animate-spin" style={{ animationDuration: '1s' }} />
           <div className="animate-pulse w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg z-10">
@@ -3263,7 +3274,7 @@ export default function MembersPage() {
           : "min-h-screen bg-[#05020A] text-white flex flex-col"
       }
     >
-      {!isSignedIn && <SiteHeader />}
+      {!isSignedIn && <div className="hidden md:block"><SiteHeader /></div>}
 
       <main
         className={
@@ -3357,6 +3368,8 @@ export default function MembersPage() {
                       if (redirect) {
                         sessionStorage.setItem('authRedirect', redirect);
                       }
+                      // Mark auth as in progress so we don't show empty auth screen after redirect
+                      sessionStorage.setItem('auth_in_progress', 'true');
                       const callbackUrl = `${origin}/auth/callback`;
                       console.log('Starting Google OAuth with callback:', callbackUrl);
                       await supabase?.auth.signInWithOAuth({
@@ -3749,79 +3762,6 @@ export default function MembersPage() {
         </section>
       </main>
 
-      {!isSignedIn && (
-        <footer className="border-t border-white/10 bg-[#05020A] font-apple-ui">
-          <div className="max-w-6xl mx-auto px-6 py-16 md:py-20">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
-              <div className="space-y-3">
-                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                  Company
-                </p>
-                <Link href="/about" className="block hover:text-white transition-colors">
-                  About
-                </Link>
-                <Link href="/careers" className="block hover:text-white transition-colors">
-                  Careers
-                </Link>
-                <Link href="/news" className="block hover:text-white transition-colors">
-                  News
-                </Link>
-              </div>
-              <div className="space-y-3">
-                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                  Experience
-                </p>
-                <Link href="/product" className="block hover:text-white transition-colors">
-                  Product
-                </Link>
-                <Link href="/parking" className="block hover:text-white transition-colors">
-                  Parking
-                </Link>
-                <Link href="/security" className="block hover:text-white transition-colors">
-                  Security
-                </Link>
-              </div>
-              <div className="space-y-3">
-                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                  Policies
-                </p>
-                <Link href="/legal" className="block hover:text-white transition-colors">
-                  Legal
-                </Link>
-                <Link href="/privacy" className="block hover:text-white transition-colors">
-                  Privacy
-                </Link>
-                <Link href="/terms" className="block hover:text-white transition-colors">
-                  Terms
-                </Link>
-              </div>
-              <div className="space-y-3">
-                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                  Platform
-                </p>
-                <button
-                  type="button"
-                  className="block hover:text-white transition-colors text-left"
-                  onClick={() => {
-                    window.location.assign("/locations");
-                  }}
-                >
-                  Locations
-                </button>
-                <Link href="/members" className="block hover:text-white transition-colors">
-                  Members
-                </Link>
-                <Link href="/support" className="block hover:text-white transition-colors">
-                  Support
-                </Link>
-              </div>
-            </div>
-            <div className="mt-12 pt-6 border-t border-white/10">
-              <FooterBrand />
-            </div>
-          </div>
-        </footer>
-      )}
     </div>
   );
 }
