@@ -3180,12 +3180,7 @@ export default function MembersPage() {
     );
   }
 
-  // Show auth screen immediately if no user (don't wait for loading)
-  if (!user && typeof window !== 'undefined') {
-    return <AuthScreen />;
-  }
-
-  if (!pageReady) {
+  if (!pageReady && isSignedIn) {
     return (
       <div className="min-h-screen bg-[#05020A] flex items-center justify-center">
         <div className="relative flex items-center justify-center w-20 h-20">
