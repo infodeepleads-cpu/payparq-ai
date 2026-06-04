@@ -64,11 +64,12 @@ const t = (key: string, locale: 'en' | 'hr'): string => {
 export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, onBack }: LotCalendarPricingProps) {
   const { locale } = useLocale();
   const [loading, setLoading] = useState(true);
-  const [calendarDate, setCalendarDate] = useState(() => new Date(2026, 4, 1));
+  const [calendarDate, setCalendarDate] = useState(() => new Date());
   const [dateConfigs, setDateConfigs] = useState<Record<string, DateConfig>>({});
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [rangeStartDate, setRangeStartDate] = useState<string | null>(null);
   const [rangeEndDate, setRangeEndDate] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   // Load existing data
   useEffect(() => {
@@ -165,17 +166,19 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
       newConfigs[dateStr] = { date: dateStr, ...config };
     }
 
-    handleSaveBatch(newConfigs);
+    await handleSaveBatch(newConfigs, dateConfigs);
   };
 
-  const handleSaveBatch = async (newConfigs: Record<string, DateConfig>) => {
-    // Update local state immediately for UI feedback
+  const handleSaveBatch = async (newConfigs: Record<string, DateConfig>, prevConfigs: Record<string, DateConfig>) => {
     setDateConfigs(newConfigs);
+    setSaveStatus('saving');
 
     try {
       if (!supabase) {
         setRangeStartDate(null);
         setRangeEndDate(null);
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
         return;
       }
 
@@ -202,18 +205,20 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
 
       setRangeStartDate(null);
       setRangeEndDate(null);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err: any) {
       console.error('Failed to save date config:', err.message);
-      // Revert state on error
-      setDateConfigs((prev) => prev);
+      setDateConfigs(prevConfigs);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     }
   };
 
   const handleSaveDate = async (config: DateConfig) => {
+    const prev = { ...dateConfigs };
     const newConfigs = { ...dateConfigs, [config.date]: config };
-    // Wait for save to complete
-    await handleSaveBatch(newConfigs);
-    // Only close modal and trigger event AFTER save succeeds
+    await handleSaveBatch(newConfigs, prev);
     setSelectedDate(null);
     window.dispatchEvent(new CustomEvent('pricing-updated', { detail: { lotId } }));
   };
@@ -268,7 +273,12 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
     <div className="h-full bg-white flex flex-col w-full md:p-6 p-3 md:p-4 animate-in fade-in duration-300">
       {/* Header */}
       <div className="mb-4 md:mb-6">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-900">{lotName}</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900">{lotName}</h2>
+          {saveStatus === 'saving' && <span className="text-xs text-gray-500">Saving...</span>}
+          {saveStatus === 'saved' && <span className="text-xs text-green-600 font-medium">✓ Saved</span>}
+          {saveStatus === 'error' && <span className="text-xs text-red-600 font-medium">✕ Save failed</span>}
+        </div>
         <div className="text-xs md:text-sm text-gray-600 flex flex-col md:flex-row md:gap-2">
           <span>{lotAddress}</span>
           <span className="hidden md:inline">•</span>
@@ -365,6 +375,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
             </div>
 
             <DateConfigWidget
+              key={selectedDate}
               config={selectedDateConfig}
               lotCapacity={parseInt(lotCapacity)}
               locale={locale}

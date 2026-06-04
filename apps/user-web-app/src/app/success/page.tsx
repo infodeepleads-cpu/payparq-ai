@@ -1119,7 +1119,7 @@ function SuccessContent() {
   }
 
   return (
-    <div className="min-h-screen text-black flex flex-col" style={{ background: '#EBF0FA' }}>
+    <div className="min-h-screen text-black flex flex-col" style={{ background: '#05020A' }}>
 
       <div className="hidden md:block">
         <SiteHeader hideAnnouncementBar />
@@ -1383,34 +1383,6 @@ function SuccessContent() {
         </div>
       </main>
 
-      {/* Footer — matches home page */}
-      <footer className="bg-[#05020A] border-t border-white/10 print:hidden notranslate" translate="no" data-no-translate="true">
-        <div className="max-w-6xl mx-auto px-6 py-16">
-          <div className="grid gap-12 md:grid-cols-3 items-end">
-            <div className="space-y-3">
-              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Company</p>
-              <Link href="/about" className="block hover:text-white transition-colors text-[11px] text-white/70">About</Link>
-              <Link href="/careers" className="block hover:text-white transition-colors text-[11px] text-white/70">Careers</Link>
-              <Link href="/news" className="block hover:text-white transition-colors text-[11px] text-white/70">News</Link>
-            </div>
-            <div className="space-y-3">
-              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Vision</p>
-              <Link href="/product" className="block hover:text-white transition-colors text-[11px] text-white/70">Product</Link>
-              <Link href="/parking" className="block hover:text-white transition-colors text-[11px] text-white/70">Parking</Link>
-              <Link href="/security" className="block hover:text-white transition-colors text-[11px] text-white/70">Security</Link>
-            </div>
-            <div className="space-y-3">
-              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Policies</p>
-              <Link href="/legal" className="block hover:text-white transition-colors text-[11px] text-white/70">Legal</Link>
-              <Link href="/privacy" className="block hover:text-white transition-colors text-[11px] text-white/70">Privacy</Link>
-              <Link href="/terms" className="block hover:text-white transition-colors text-[11px] text-white/70">Terms</Link>
-            </div>
-          </div>
-          <div className="mt-12 pt-6 border-t border-white/10 hidden md:block">
-            <FooterBrand />
-          </div>
-        </div>
-      </footer>
 
       <style jsx global>{`
         @media print {
@@ -1425,7 +1397,7 @@ function SuccessContent() {
 export default function SuccessPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center text-black/30 text-sm" style={{ background: '#EBF0FA' }}>
+      <div className="min-h-screen flex items-center justify-center text-white/30 text-sm" style={{ background: '#05020A' }}>
         Učitavanje...
       </div>
     }>

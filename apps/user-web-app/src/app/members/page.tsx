@@ -1942,7 +1942,7 @@ export default function MembersPage() {
                       : 'border border-black/10 hover:bg-black/5'
                   }`}
                 >
-                  Engleski
+                  {locale === 'en' ? 'English' : 'Engleski'}
                 </button>
                 <button
                   type="button"
