@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
 
@@ -77,7 +77,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
 
   const displayText = `${formatDisplay(startTime)} → ${formatDisplay(endTime)}`;
 
-  const generateDateOptions = () => {
+  const dateOptions = useMemo(() => {
     const dates = [];
     const today = new Date();
     for (let i = 0; i < 365; i++) {
@@ -88,9 +88,9 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
       dates.push({ value: formatted, label });
     }
     return dates;
-  };
+  }, []);
 
-  const generateTimeOptions = () => {
+  const timeOptions = useMemo(() => {
     const times: Array<{ value: string; label: string }> = [];
     for (let h = 0; h < 24; h++) {
       for (let m of [0, 15, 30, 45]) {
@@ -99,7 +99,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
       }
     }
     return times;
-  };
+  }, []);
 
   const handleStartDateChange = (newDate: string) => {
     const [year, month, day] = newDate.split('-').map(Number);
@@ -151,7 +151,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
             className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black"
             translate="no"
           >
-            {generateDateOptions().map((opt) => (
+            {dateOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
@@ -163,7 +163,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
             onChange={(e) => handleStartTimeChange(e.target.value)}
             className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black"
           >
-            {generateTimeOptions().map((opt) => (
+            {timeOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
@@ -179,7 +179,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
             className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black"
             translate="no"
           >
-            {generateDateOptions().map((opt) => (
+            {dateOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
@@ -191,7 +191,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
             onChange={(e) => handleEndTimeChange(e.target.value)}
             className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black"
           >
-            {generateTimeOptions().map((opt) => (
+            {timeOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
