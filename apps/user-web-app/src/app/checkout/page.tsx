@@ -154,7 +154,8 @@ function SummaryPanel({
   locale: 'en' | 'hr';
 }) {
   const subtotalEur = originalAmountCents / 100;
-  const serviceFeeEur = promoDiscountPercent === 100 ? 0 : 0.99 + (subtotalEur * 0.10);
+  const serviceFeeEurCents = promoDiscountPercent === 100 ? 0 : Math.round(99 + (originalAmountCents * 0.10));
+  const serviceFeeEur = serviceFeeEurCents / 100;
   const discountEur = promoDiscountCents / 100;
   const isFree = amountEur <= 0;
 

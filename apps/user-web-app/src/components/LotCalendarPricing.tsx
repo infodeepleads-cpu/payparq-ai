@@ -171,6 +171,8 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
     const newConfigs = { ...dateConfigs, [config.date]: config };
     await handleSaveBatch(newConfigs);
     setSelectedDate(null);
+    // Trigger search results refresh by dispatching custom event
+    window.dispatchEvent(new CustomEvent('pricing-updated', { detail: { lotId } }));
   };
 
   const handleCloseDate = async (dateStr: string) => {
@@ -487,7 +489,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale }: Dat
           {priceMode === 'manual' && (
             <div className="grid grid-cols-3 gap-2 md:gap-3">
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">Sat (€)</label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700" translate="no">{locale === 'en' ? 'Hourly (€)' : 'Po satu (€)'}</label>
                 <input
                   type="number"
                   min="0"
@@ -504,7 +506,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale }: Dat
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">Dan (€)</label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700" translate="no">{locale === 'en' ? 'Daily (€)' : 'Po danu (€)'}</label>
                 <input
                   type="number"
                   min="0"
@@ -521,7 +523,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale }: Dat
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">Mjesec (€)</label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700" translate="no">{locale === 'en' ? 'Monthly (€)' : 'Mjesečno (€)'}</label>
                 <input
                   type="number"
                   min="0"
@@ -686,7 +688,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale }: RangeConf
           {priceMode === 'manual' && (
             <div className="grid grid-cols-3 gap-2 md:gap-3">
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">Sat (€)</label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700" translate="no">{locale === 'en' ? 'Hourly (€)' : 'Po satu (€)'}</label>
                 <input
                   type="number"
                   min="0"
@@ -703,7 +705,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale }: RangeConf
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">Dan (€)</label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700" translate="no">{locale === 'en' ? 'Daily (€)' : 'Po danu (€)'}</label>
                 <input
                   type="number"
                   min="0"
@@ -720,7 +722,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale }: RangeConf
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">Mjesec (€)</label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700" translate="no">{locale === 'en' ? 'Monthly (€)' : 'Mjesečno (€)'}</label>
                 <input
                   type="number"
                   min="0"

@@ -68,7 +68,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </a>
           <a
             href="/members"
-            onClick={close}
+            onClick={() => { close(); setTimeout(() => window.location.href = '/members', 50); }}
             className={`px-4 py-3 rounded-xl text-sm font-medium ${user ? 'hover:bg-black/5 text-black' : 'bg-black text-white'}`}
             translate="no"
           >

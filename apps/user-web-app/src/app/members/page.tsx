@@ -1949,7 +1949,7 @@ export default function MembersPage() {
               <p className="text-sm text-black/70">Brzi pregled i akcije.</p>
             </div>
             <div className="shrink-0 space-y-2">
-              <div className="rounded-lg border border-[black]/25 bg-[#F5F2FF] px-3 py-2 text-right">
+              <div className="rounded-lg border border-[black]/25 bg-[#EDE9FE] px-3 py-2 text-right">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-[#3E22C6]/70">Wallet</p>
                 <p className="text-sm font-semibold text-[#3E22C6]">
                   {formatMoneyFromCents(walletSummary?.balanceCents, walletSummary?.currency || "EUR")}
@@ -2136,7 +2136,7 @@ export default function MembersPage() {
               const valetCode = homeContext.valetCode ?? deriveValetCode(homeContext.stripeSessionId);
               const priceCents = Number(valetCfg?.price_cents ?? 500);
               return (
-                <div className="min-w-[210px] rounded-xl border border-[black]/20 bg-[#F5F2FF] p-3 space-y-2">
+                <div className="min-w-[210px] rounded-xl border border-[black]/20 bg-[#EDE9FE] p-3 space-y-2">
                   <p className="text-sm font-semibold text-[black]">Valet parking</p>
                   <p className="text-[11px] text-[black]/70">Uključeno u cijenu · kod <span className="font-mono font-bold">{valetCode}</span></p>
                   <p className="text-[10px] text-black/40">Vrijednost: {formatCents(priceCents)}</p>
@@ -2207,7 +2207,7 @@ export default function MembersPage() {
             const cfg = (homeContext.addonsConfig ?? {}) as Record<string, unknown>;
             const phoneSms = ((cfg.phone_sms as string | undefined) ?? '385915963139').replace(/\D/g, '') || '385915963139';
             const badgeMap: Record<string, { label: string; color: string; bg: string }> = {
-              valet: { label: 'VLT', color: 'black', bg: '#F5F2FF' },
+              valet: { label: 'VLT', color: 'black', bg: '#EDE9FE' },
               shuttle: { label: 'SHT', color: '#0F6E56', bg: '#E1F5EE' },
               ev_charging: { label: 'EV', color: '#2E7D32', bg: '#E8F5E9' },
               car_wash_basic: { label: 'WASH', color: '#1565C0', bg: '#E3F2FD' },
@@ -2297,7 +2297,7 @@ export default function MembersPage() {
                   {showBuyValet && (
                     <div className="flex items-center justify-between rounded-xl border border-black/10 p-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-[#F5F2FF] flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 rounded-lg bg-[#EDE9FE] flex items-center justify-center shrink-0">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/><rect x="9" y="11" width="14" height="10" rx="1"/><path d="M13 16v-1a2 2 0 1 1 4 0v1"/></svg>
                         </div>
                         <div className="min-w-0">
@@ -2802,8 +2802,8 @@ export default function MembersPage() {
       return (
         <div className="space-y-4">
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold tracking-tight text-black">Promotions</h2>
-            <p className="text-sm text-black/70">Share referral codes & earn 10% commission.</p>
+            <h2 className="text-lg font-semibold tracking-tight text-black">{membersT('Promocije', locale)}</h2>
+            <p className="text-sm text-black/70">{membersT('Share referral codes & earn 10% commission.', locale)}</p>
           </div>
 
           {referralCodesLoading ? (
@@ -2860,7 +2860,7 @@ export default function MembersPage() {
           <p className="text-sm text-black/70">
             Track rewards and benefits earned across the Payparq network.
           </p>
-          <div className="rounded-xl border border-[black]/20 bg-[#F5F2FF] p-4 space-y-2">
+          <div className="rounded-xl border border-[black]/20 bg-[#EDE9FE] p-4 space-y-2">
             <p className="text-sm font-semibold text-[#3E22C6]">
               {formatLoyaltyLevelLabel(loyaltySummary?.level)}
             </p>
@@ -3723,6 +3723,12 @@ export default function MembersPage() {
                       >
                         Account Settings
                       </button>
+                      <a
+                        href="/app"
+                        className="w-full inline-flex items-center justify-center px-3 py-2 rounded-xl text-[11px] font-semibold shadow-sm transition-colors bg-white/5 text-white hover:bg-white/10"
+                      >
+                        Home
+                      </a>
                       <button
                         type="button"
                         onClick={handleSignOut}
