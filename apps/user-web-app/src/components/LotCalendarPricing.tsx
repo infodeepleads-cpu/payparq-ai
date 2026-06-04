@@ -95,9 +95,8 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
     };
     loadData();
 
-    // Reload data when calendar is opened (every time component mounts)
     return () => {};
-  }, [lotId, supabase]);
+  }, [lotId]);
 
   const months = locale === 'en'
     ? ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -212,9 +211,10 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
 
   const handleSaveDate = async (config: DateConfig) => {
     const newConfigs = { ...dateConfigs, [config.date]: config };
+    // Wait for save to complete
     await handleSaveBatch(newConfigs);
+    // Only close modal and trigger event AFTER save succeeds
     setSelectedDate(null);
-    // Trigger search results refresh by dispatching custom event
     window.dispatchEvent(new CustomEvent('pricing-updated', { detail: { lotId } }));
   };
 
