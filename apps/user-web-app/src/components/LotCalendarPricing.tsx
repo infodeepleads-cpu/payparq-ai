@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import { Clock, X } from 'lucide-react';
 import { useLocale } from './LocaleProvider';
 
@@ -74,20 +73,15 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, ba
   const [rangeEndDate, setRangeEndDate] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  // Load existing data
+  // Load existing data via API (uses supabaseAdmin, bypasses RLS)
   useEffect(() => {
     const loadData = async () => {
       try {
-        if (!supabase) return;
-        const { data: lot, error: err } = await supabase
-          .from('locations')
-          .select('verification_metadata')
-          .eq('id', lotId)
-          .single();
-
-        if (err) throw err;
-        if (lot?.verification_metadata?.dateConfigs) {
-          setDateConfigs(lot.verification_metadata.dateConfigs);
+        const res = await fetch(`/api/listings/${lotId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { location } = await res.json();
+        if (location?.verification_metadata?.dateConfigs) {
+          setDateConfigs(location.verification_metadata.dateConfigs);
         } else {
           setDateConfigs({});
         }
@@ -98,8 +92,6 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, ba
       }
     };
     loadData();
-
-    return () => {};
   }, [lotId]);
 
   const months = locale === 'en'
@@ -177,34 +169,16 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, ba
     setSaveStatus('saving');
 
     try {
-      if (!supabase) {
-        setRangeStartDate(null);
-        setRangeEndDate(null);
-        setSaveStatus('saved');
-        setTimeout(() => setSaveStatus('idle'), 2000);
-        return;
+      const res = await fetch(`/api/listings/${lotId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dateConfigs: newConfigs }),
+      });
+
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(error);
       }
-
-      const { data: existing, error: fetchErr } = await supabase
-        .from('locations')
-        .select('verification_metadata')
-        .eq('id', lotId)
-        .single();
-
-      if (fetchErr) throw fetchErr;
-
-      const meta = existing?.verification_metadata || {};
-      const { error: updateErr } = await supabase
-        .from('locations')
-        .update({
-          verification_metadata: {
-            ...meta,
-            dateConfigs: newConfigs,
-          },
-        })
-        .eq('id', lotId);
-
-      if (updateErr) throw updateErr;
 
       setRangeStartDate(null);
       setRangeEndDate(null);
@@ -227,33 +201,11 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, ba
   };
 
   const handleCloseDate = async (dateStr: string) => {
+    const prev = { ...dateConfigs };
     const newConfigs = { ...dateConfigs };
     delete newConfigs[dateStr];
-    setDateConfigs(newConfigs);
-
-    try {
-      if (!supabase) return;
-      const { data: existing } = await supabase
-        .from('locations')
-        .select('verification_metadata')
-        .eq('id', lotId)
-        .single();
-
-      const meta = existing?.verification_metadata || {};
-      await supabase
-        .from('locations')
-        .update({
-          verification_metadata: {
-            ...meta,
-            dateConfigs: newConfigs,
-          },
-        })
-        .eq('id', lotId);
-
-      setSelectedDate(null);
-    } catch (err: any) {
-      console.error('Failed to delete date config:', err.message);
-    }
+    await handleSaveBatch(newConfigs, prev);
+    setSelectedDate(null);
   };
 
   if (loading) {

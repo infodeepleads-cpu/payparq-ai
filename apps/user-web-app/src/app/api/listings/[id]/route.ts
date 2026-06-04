@@ -26,3 +26,44 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'internal_error' }, { status: 500 });
   }
 }
+
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const client = supabaseAdmin;
+    if (!client) {
+      return NextResponse.json({ error: 'supabase_not_configured' }, { status: 500 });
+    }
+
+    const body = await req.json();
+    const { dateConfigs } = body;
+
+    if (!dateConfigs || typeof dateConfigs !== 'object') {
+      return NextResponse.json({ error: 'invalid_payload' }, { status: 400 });
+    }
+
+    const { data: existing, error: fetchErr } = await client
+      .from('locations')
+      .select('verification_metadata')
+      .eq('id', id)
+      .single();
+
+    if (fetchErr) {
+      return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    }
+
+    const meta = existing?.verification_metadata || {};
+    const { error: updateErr } = await client
+      .from('locations')
+      .update({ verification_metadata: { ...meta, dateConfigs } })
+      .eq('id', id);
+
+    if (updateErr) {
+      return NextResponse.json({ error: updateErr.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return NextResponse.json({ error: 'internal_error' }, { status: 500 });
+  }
+}
