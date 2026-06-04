@@ -2455,13 +2455,14 @@ export default function MembersPage() {
                   formatCroatianDateTime(row.end_time),
                 ].join(" — ");
                 const statusValue = (row.status ?? "active").toString().trim().toUpperCase();
+                const statusDisplay = statusValue === "PROĆE" ? "VALIDNO" : statusValue;
                 return (
                   <div key={row.id} className="rounded-lg border border-black/10 px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs font-semibold text-black">
                         {row.plate || membersT('Unknown plate', locale)} · {row.location_display_id || row.location_id || membersT('Unknown location', locale)}
                       </p>
-                      <p className="text-[11px] text-black/60">{statusValue}</p>
+                      <p className="text-[11px] text-black/60">{statusDisplay}</p>
                     </div>
                     <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
                       <span>{sourceType}</span>
