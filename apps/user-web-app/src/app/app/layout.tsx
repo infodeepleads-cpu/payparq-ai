@@ -81,7 +81,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </a>
           <button
             onClick={() => openExternal('https://www.payparq.com/main')}
-            className="px-4 py-3 rounded-xl text-sm font-medium text-black text-left hover:bg-black/5"
+            className="px-4 py-3 rounded-xl text-sm font-medium text-black text-center hover:bg-black/5"
           >
             {locale === 'en' ? 'Visit Website' : 'Posjetite web stranicu'}
           </button>
