@@ -88,6 +88,7 @@ const CHECKOUT_TRANSLATIONS = {
   'Secure Checkout': { en: 'Secure Checkout', hr: 'Sigurna kupnja' },
   'Contact Info': { en: 'Contact Info', hr: 'Kontaktni podaci' },
   'Email Address': { en: 'Email Address', hr: 'Email adresa' },
+  'Service fee helps us provide best-in-market service': { en: 'Service fee helps us provide best-in-market service', hr: 'Naknada za uslugu omogućuje nam pružanje najbolje usluge na tržištu' },
 } as const;
 
 const checkoutT = (key: string, locale: 'en' | 'hr'): string => {
@@ -466,6 +467,12 @@ function SummaryPanel({
               <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
             </span>
             <span>{checkoutT('Jednostavno promijenite rezervaciju', locale)}</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
+            <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
+              <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+            </span>
+            <span>{checkoutT('Service fee helps us provide best-in-market service', locale)}</span>
           </div>
         </div>
 
