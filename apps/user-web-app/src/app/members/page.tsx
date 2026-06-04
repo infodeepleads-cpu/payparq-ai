@@ -498,7 +498,6 @@ const MEMBERS_TRANSLATIONS = {
   'No listings yet. Click + to add.': { en: 'No listings yet. Click + to add.', hr: 'Nemaš objavljenih prostora. Klikni + za dodavanje.' },
   'Back': { en: 'Back', hr: 'Povratak' },
   'Apply': { en: 'Apply', hr: 'Apliciraj' },
-  'ACTIVE': { en: 'ACTIVE', hr: 'AKTIVNO' },
   'VALIDNO': { en: 'VALID', hr: 'VALIDNO' },
 } as const;
 
