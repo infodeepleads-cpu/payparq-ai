@@ -3272,6 +3272,13 @@ export default function MembersPage() {
                   type="button"
                   onClick={async () => {
                     try {
+                      setAuthError('');
+                      // Clear OAuth state from previous attempts
+                      Object.keys(sessionStorage).forEach(key => {
+                        if (key.includes('auth') || key.includes('supabase')) {
+                          sessionStorage.removeItem(key);
+                        }
+                      });
                       const redirect = searchParams.get('redirect') || '';
                       const origin = typeof window !== 'undefined' ? window.location.origin : '';
                       if (redirect) {
