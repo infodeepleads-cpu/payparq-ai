@@ -493,7 +493,6 @@ const MEMBERS_TRANSLATIONS = {
   // Arrivals panel
   'Live': { en: 'Live', hr: 'Uživo' },
   'Upcoming': { en: 'Upcoming', hr: 'Nadolazeće' },
-  'Expired': { en: 'Expired', hr: 'Završeno' },
   'Updated': { en: 'Updated', hr: 'Ažurirano' },
   'No active sessions.': { en: 'No active sessions.', hr: 'Nema aktivnih sesija.' },
   'No listings yet. Click + to add.': { en: 'No listings yet. Click + to add.', hr: 'Nemaš objavljenih prostora. Klikni + za dodavanje.' },
