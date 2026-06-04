@@ -38,7 +38,7 @@ export default function AuthCallbackPage() {
     const timeout = setTimeout(() => {
       subscription.unsubscribe();
       router.replace(redirectTo);
-    }, 5000);
+    }, 15000);
 
     return () => {
       clearTimeout(timeout);

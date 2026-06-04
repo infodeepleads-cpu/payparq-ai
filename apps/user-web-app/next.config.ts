@@ -11,9 +11,7 @@ try {
 }
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    root: path.join(__dirname, "..", ".."),
-  },
+  turbopack: {},
   images: {
     remotePatterns: [
       ...(supabaseHost ? [{ protocol: "https" as const, hostname: supabaseHost, pathname: "/storage/**" }, { protocol: "https" as const, hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }] : []),
@@ -78,8 +76,11 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
-  org: "payparq",
-  project: "javascript-nextjs",
-  silent: true,
-});
+const isBuildTime = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+export default isBuildTime
+  ? withSentryConfig(nextConfig, {
+      org: "payparq",
+      project: "javascript-nextjs",
+      silent: true,
+    })
+  : nextConfig;

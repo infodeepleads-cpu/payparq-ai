@@ -10,7 +10,6 @@ import { ManagementPanel } from "@/components/ManagementPanel";
 import { CampaignsPanel } from "@/components/CampaignsPanel";
 import { SocialPanel } from "@/components/SocialPanel";
 import { ShuttleReservationCard } from "@/components/ShuttleReservationCard";
-import { LotCalendarPricing } from "@/components/LotCalendarPricing";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { ArrivalsPanel } from "@/components/ArrivalsPanel";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
@@ -582,20 +581,23 @@ export default function MembersPage() {
 
   // Localhost bypass - force signed in state
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-  // Check if we're in Google OAuth flow (prevent showing auth screen after redirect)
+  // Check if we're in Google OAuth flow — only used to show spinner, NOT to fake isSignedIn
   const isInAuthFlow = typeof window !== 'undefined' && (
     window.location.hash.includes('access_token') ||
     sessionStorage.getItem('auth_in_progress') === 'true'
   );
 
-  // Mark auth as complete once user loads
+  // Clear auth_in_progress once user is confirmed
   useEffect(() => {
-    if (user && isInAuthFlow) {
+    if (user) {
       sessionStorage.removeItem('auth_in_progress');
     }
-  }, [user, isInAuthFlow]);
+  }, [user]);
 
-  const isSignedIn = (!!user || devSignedIn || isLocalhost || isInAuthFlow);
+  // Show full-screen spinner while waiting for OAuth session to hydrate
+  const isAwaitingOAuthSession = isInAuthFlow && !user && !devSignedIn;
+
+  const isSignedIn = (!!user || devSignedIn || isLocalhost);
   const normalizedMemberEmail = (user?.email ?? email ?? 'dev@localhost').trim().toLowerCase();
   const hasMemberIdentity = normalizedMemberEmail.length > 0;
 
@@ -3266,6 +3268,22 @@ export default function MembersPage() {
     );
   }
 
+  if (isAwaitingOAuthSession) {
+    return (
+      <div className="fixed inset-0 bg-[#05020A] z-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative flex items-center justify-center w-20 h-20">
+            <div className="absolute inset-0 rounded-full border-4 border-white/10 border-t-white animate-spin" style={{ animationDuration: '1s' }} />
+            <div className="animate-pulse w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg z-10">
+              <span className="text-lg font-black tracking-tight text-[#05020A] select-none">P</span>
+            </div>
+          </div>
+          <p className="text-white/60 text-sm">Signing you in...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={
@@ -3290,21 +3308,7 @@ export default function MembersPage() {
               : "w-full px-4 md:px-0 py-10 md:py-12 flex flex-col items-center"
           }
         >
-          {googleAuthLoading && (
-            <div className="fixed inset-0 bg-[#05020A] z-50 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-4">
-                <div className="relative flex items-center justify-center w-20 h-20">
-                  <div className="absolute inset-0 rounded-full border-4 border-white/10 border-t-white animate-spin" style={{ animationDuration: '1s' }} />
-                  <div className="animate-pulse w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg z-10">
-                    <span className="text-lg font-black tracking-tight text-[#05020A] select-none">P</span>
-                  </div>
-                </div>
-                <p className="text-white/60 text-sm">Redirecting to Google...</p>
-              </div>
-            </div>
-          )}
-
-          {!isSignedIn && !googleAuthLoading && (
+          {!isSignedIn && (
             <div className="w-full max-w-md">
               <div className="rounded-3xl border border-white/10 bg-white text-black p-6 md:p-8 shadow-lg">
                 <p className="text-[11px] uppercase tracking-[0.24em] text-black/50 mb-3">

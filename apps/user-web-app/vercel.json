@@ -1,6 +1,8 @@
 {
   "buildCommand": "npm run build",
+  "installCommand": "npm ci",
   "framework": "nextjs",
+  "cacheDirectories": [".next/cache"],
   "crons": [
     {
       "path": "/api/cron/review-emails",

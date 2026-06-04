@@ -1,9 +1,14 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { PayparqPageHeader } from '@/components/PayparqPageHeader';
-import { LotCalendarPricing } from '@/components/LotCalendarPricing';
+
+const LotCalendarPricing = dynamic(() => import('@/components/LotCalendarPricing').then(mod => ({ default: mod.LotCalendarPricing })), {
+  ssr: false,
+  loading: () => <div className="min-h-screen bg-white flex items-center justify-center"><div className="text-center"><div className="w-8 h-8 border-4 border-gray-200 border-t-black rounded-full animate-spin mx-auto mb-4" /></div></div>
+});
 
 interface Listing {
   id: string;

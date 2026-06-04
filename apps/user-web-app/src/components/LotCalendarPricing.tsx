@@ -53,6 +53,7 @@ const TRANSLATIONS = {
   'Sunday': { en: 'Su', hr: 'Ne' },
   'Settings for': { en: 'Settings for', hr: 'Postavke za' },
   'Range settings': { en: 'Range settings', hr: 'Postavke za periode' },
+  'Save': { en: 'Save', hr: 'Spremi' },
 } as const;
 
 const t = (key: string, locale: 'en' | 'hr'): string => {
@@ -199,17 +200,6 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
         .eq('id', lotId);
 
       if (updateErr) throw updateErr;
-
-      // Reload data after successful save to ensure consistency
-      const { data: updated } = await supabase
-        .from('locations')
-        .select('verification_metadata')
-        .eq('id', lotId)
-        .single();
-
-      if (updated?.verification_metadata?.dateConfigs) {
-        setDateConfigs(updated.verification_metadata.dateConfigs);
-      }
 
       setRangeStartDate(null);
       setRangeEndDate(null);
@@ -619,7 +609,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale }: Dat
           })}
           className="flex-1 px-3 md:px-4 py-2.5 md:py-3 bg-black text-white rounded-lg text-xs md:text-sm font-medium hover:bg-gray-800 transition-colors"
         >
-          Spremi
+          {t('Save', locale)}
         </button>
       </div>
     </div>

@@ -395,9 +395,10 @@ export function SearchPage() {
     const d = new Date(isoDatetime);
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const dayConfig = listing.dateConfigs?.[dateStr];
+    const useCalendar = dayConfig?.priceMode === 'manual';
     return {
-      hourly: (dayConfig?.priceHourly ?? listing.baseHourlyRate) || listing.pricePerHour,
-      daily:  (dayConfig?.priceDaily  ?? listing.baseDailyRate)  || listing.pricePerDay,
+      hourly: useCalendar ? (dayConfig?.priceHourly ?? listing.baseHourlyRate ?? listing.pricePerHour) : (listing.baseHourlyRate ?? listing.pricePerHour),
+      daily:  useCalendar ? (dayConfig?.priceDaily  ?? listing.baseDailyRate  ?? listing.pricePerDay)  : (listing.baseDailyRate  ?? listing.pricePerDay),
     };
   };
 
@@ -709,11 +710,11 @@ export function SearchPage() {
               const dateConfigs = metadata?.dateConfigs || {};
               const dayConfig = dateConfigs[dateStr];
 
-              if (dayConfig) {
+              if (dayConfig && dayConfig.priceMode === 'manual') {
                 return {
-                  hourly: dayConfig.priceHourly || pricePerHour,
-                  daily: dayConfig.priceDaily || pricePerDay,
-                  monthly: dayConfig.priceMonthly || pricePerMonth,
+                  hourly: dayConfig.priceHourly ?? pricePerHour,
+                  daily: dayConfig.priceDaily ?? pricePerDay,
+                  monthly: dayConfig.priceMonthly ?? pricePerMonth,
                 };
               }
               return { hourly: pricePerHour, daily: pricePerDay, monthly: pricePerMonth };
