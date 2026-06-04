@@ -499,6 +499,8 @@ const MEMBERS_TRANSLATIONS = {
   'Back': { en: 'Back', hr: 'Povratak' },
   'Apply': { en: 'Apply', hr: 'Apliciraj' },
   'VALIDNO': { en: 'VALID', hr: 'VALIDNO' },
+  'Ride': { en: 'Ride', hr: 'Vožnja' },
+  'Pick up and ride': { en: 'Pick up and ride', hr: 'Ukrcaj i vožnja' },
 } as const;
 
 const membersT = (key: string, locale: 'en' | 'hr'): string => {
@@ -2067,7 +2069,7 @@ export default function MembersPage() {
                       <span className="text-[9px] font-bold text-white">2</span>
                     </div>
                     <div>
-                      <p className="font-semibold text-black">Ukrcaj i vožnja</p>
+                      <p className="font-semibold text-black">{membersT('Pick up and ride', locale)}</p>
                       <p className="text-black/60 mt-0.5">{membersT('Driver scans code', locale)} <span className="font-mono font-bold text-[#0F6E56]">{shtCode}</span>. {membersT('Shuttle drives directly — no stops', locale)}</p>
                     </div>
                   </div>
@@ -2128,7 +2130,7 @@ export default function MembersPage() {
               </div>
             ) : (
               <div className="min-w-[210px] rounded-xl border border-black/10 bg-white p-3 space-y-2">
-                <p className="text-sm font-semibold text-black">Vožnja</p>
+                <p className="text-sm font-semibold text-black">{membersT('Ride', locale)}</p>
                 <button
                   type="button"
                   onClick={handleUberAction}
