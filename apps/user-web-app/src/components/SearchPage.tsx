@@ -292,7 +292,7 @@ export function SearchPage() {
   const [showTotalPrice, setShowTotalPrice] = useState(false);
   const [allParkingDropdownOpen, setAllParkingDropdownOpen] = useState(false);
   const [showMobileSearchEdit, setShowMobileSearchEdit] = useState(false);
-  const [datePickerKey, setDatePickerKey] = useState(0);
+  const [datePickerResetTrigger, setDatePickerResetTrigger] = useState(0);
   const [showMobileDetails, setShowMobileDetails] = useState(false);
   const locationInputRef = useRef<HTMLInputElement>(null);
   const allParkingDropdownRef = useRef<HTMLDivElement>(null);
@@ -622,10 +622,11 @@ export function SearchPage() {
     );
   }, [searchParams, isLoaded]);
 
-  // Reset date picker key when modal opens to unmount/remount component
+
+  // Reset date picker when modal opens
   useEffect(() => {
     if (showMobileSearchEdit) {
-      setDatePickerKey(prev => prev + 1);
+      setDatePickerResetTrigger(t => t + 1);
     }
   }, [showMobileSearchEdit]);
 
@@ -1691,11 +1692,11 @@ export function SearchPage() {
                   />
                 ) : (
                   <DateTimePickerDropdown
-                    key={`date-picker-${datePickerKey}`}
                     startTime={startTime}
                     endTime={endTime}
                     onStartTimeChange={setStartTime}
                     onEndTimeChange={setEndTime}
+                    resetTrigger={datePickerResetTrigger}
                   />
                 )}
               </div>

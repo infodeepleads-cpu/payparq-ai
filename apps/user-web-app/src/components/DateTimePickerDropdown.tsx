@@ -8,6 +8,7 @@ interface Props {
   endTime: string;
   onStartTimeChange: (value: string) => void;
   onEndTimeChange: (value: string) => void;
+  resetTrigger?: number;
 }
 
 const toLocalISOString = (date: Date) => {
@@ -16,9 +17,14 @@ const toLocalISOString = (date: Date) => {
   return `${y}-${mo}-${d}T${h}:${m}`;
 };
 
-export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, onEndTimeChange }: Props) {
+export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, onEndTimeChange, resetTrigger }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when reset trigger changes
+  useEffect(() => {
+    setIsOpen(false);
+  }, [resetTrigger]);
 
   // Parse local time strings directly
   const startDate = new Date(startTime);
