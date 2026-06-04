@@ -1919,7 +1919,7 @@ export default function MembersPage() {
                       : 'border border-black/10 hover:bg-black/5'
                   }`}
                 >
-                  English
+                  Engleski
                 </button>
                 <button
                   type="button"
@@ -3119,7 +3119,7 @@ export default function MembersPage() {
                           loc.verification_status === 'pending' ? 'bg-black/20 text-black' :
                           'bg-black/10 text-black/60'
                         }`}>
-                          {loc.verification_status === 'verified' ? 'Aktivno' : loc.verification_status === 'pending' ? 'Na čekanju' : 'Neverificirano'}
+                          {loc.verification_status === 'verified' ? (locale === 'en' ? 'Active' : 'Aktivno') : loc.verification_status === 'pending' ? (locale === 'en' ? 'Pending' : 'Na čekanju') : (locale === 'en' ? 'Unverified' : 'Neverificirano')}
                         </span>
                       </div>
 
@@ -3723,12 +3723,12 @@ export default function MembersPage() {
                         : activeItem === "promotions"
                         ? "Promotions"
                         : activeItem === "rewards"
-                        ? "Rewards"
+                        ? membersT('Rewards', locale)
                         : activeItem === "reviews"
-                        ? "Recenzije"
+                        ? membersT('Recenzije', locale)
                         : activeItem === "list-lot"
                         ? "List your parking"
-                        : "Help"}
+                        : membersT('Help', locale)}
                     </div>
                     <div className="bg-white p-5 md:p-6 shadow-sm min-h-0 flex-1 flex flex-col overflow-hidden">
                       <div className="min-h-0 flex-1 overflow-y-auto">
