@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { supabase } from "@/lib/supabase";
 import { REGION_CONFIG } from "@/lib/regionMap";
+import { CITIES } from "@/data/cities";
 
 const staticRoutes = [
   "/",
@@ -117,5 +118,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }));
 
-  return [...staticEntries, ...regionEntries, ...cityGuideEntries, ...blogEntries, ...locationEntries];
+  const cityEntries: MetadataRoute.Sitemap = Object.keys(CITIES).map((slug) => ({
+    url: `${siteUrl}/city/${slug}`,
+    lastModified: now,
+    changeFrequency: "weekly" as const,
+    priority: 0.9,
+  }));
+
+  return [...staticEntries, ...regionEntries, ...cityGuideEntries, ...cityEntries, ...blogEntries, ...locationEntries];
 }

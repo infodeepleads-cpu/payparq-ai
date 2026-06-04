@@ -21,7 +21,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    document.body.style.overflowY = menuOpen ? 'scroll' : '';
+    return () => { document.body.style.overflow = ''; document.body.style.overflowY = ''; };
   }, [menuOpen]);
 
   const close = () => setMenuOpen(false);
@@ -75,21 +76,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           >
             {locale === 'en' ? 'Dashboard' : 'Upravljačka Ploča'}
           </a>
+          <a
+            href="/members?tab=help"
+            onClick={() => { close(); setTimeout(() => window.location.href = '/members?tab=help', 50); }}
+            className="px-4 py-3 rounded-xl text-sm font-medium text-black hover:bg-black/5"
+          >
+            {locale === 'en' ? 'Contact Us' : 'Kontaktirajte nas'}
+          </a>
           <button
             onClick={() => openExternal('https://www.payparq.com/main')}
             className="px-4 py-3 rounded-xl text-sm font-medium text-black text-left hover:bg-black/5"
           >
-            Posjetite web stranicu
+            {locale === 'en' ? 'Visit Website' : 'Posjetite web stranicu'}
           </button>
         </nav>
 
         <div className="px-4 pb-8 pt-2 shrink-0">
-          <button
-            onClick={() => openExternal('https://play.google.com/store/apps/details?id=com.payparq.app')}
-            className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+          <a
+            href="/app-release.apk"
+            download="payparq.apk"
+            className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition block text-center"
           >
             Download App
-          </button>
+          </a>
         </div>
       </div>
     </div>

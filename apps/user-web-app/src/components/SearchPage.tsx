@@ -1289,7 +1289,7 @@ export function SearchPage() {
 
   if (loading || !locationReady) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-white">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white">
         <div className="relative flex items-center justify-center w-20 h-20">
           {/* Rotating white ring */}
           <div className="absolute inset-0 rounded-full border-4 border-gray-100 border-t-white animate-spin" style={{ animationDuration: '1s' }} />
@@ -2537,72 +2537,6 @@ export function SearchPage() {
         )}
 
         {/* Vehicle Modal - Centered Overlay */}
-        {showVehicleModal && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full">
-              <div className="p-6">
-                {/* Close Button */}
-                <button
-                  onClick={() => {
-                    setShowVehicleModal(false);
-                    setVehicleInput('');
-                    setSelectedVehicle(null);
-                    setVehicleCheckResult(null);
-                  }}
-                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-
-                {/* Height Restriction Info */}
-                {selectedListing?.maxHeight ? (
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <svg className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 2v20M2 12h20"/>
-                        <path d="M12 2L8 8M12 2l4 6"/>
-                      </svg>
-                      <div>
-                        <p className="text-lg font-bold text-gray-900">Max Height Restriction</p>
-                        <p className="text-3xl font-bold text-amber-600 mt-2">{selectedListing.maxHeight.toFixed(2)}m</p>
-                        <p className="text-sm text-gray-600 mt-3">Additional charges or access restrictions may apply if this limit is exceeded</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setShowVehicleModal(false);
-                        setVehicleInput('');
-                        setSelectedVehicle(null);
-                        setVehicleCheckResult(null);
-                      }}
-                      className="w-full mt-6 px-4 py-3 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-900 transition-colors"
-                    >
-                      {t('Zatvori', locale)}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="text-center py-4 space-y-4">
-                    <p className="text-gray-700">No height restriction data available for this lot.</p>
-                    <button
-                      onClick={() => {
-                        setShowVehicleModal(false);
-                        setVehicleInput('');
-                        setSelectedVehicle(null);
-                        setVehicleCheckResult(null);
-                      }}
-                      className="w-full px-4 py-3 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-900 transition-colors"
-                    >
-                      {t('Zatvori', locale)}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Map 65% RIGHT (normal) or flex-1 RIGHT (details) */}
         <div className={`bg-gray-100 ${showDetailsView ? 'flex-1' : 'w-[65%]'}`}>
           {!isLoaded ? (
@@ -3073,7 +3007,9 @@ export function SearchPage() {
 
               {/* Vehicle Size Restrictions - Clickable */}
               <button
+                type="button"
                 onClick={() => {
+                  console.log('Restrictions widget clicked');
                   setShowVehicleModal(true);
                   setVehicleCheckResult(null);
                 }}
@@ -3451,8 +3387,73 @@ export function SearchPage() {
         />
       )}
 
-      {/* Auto-opening booking flow on page load */}
-      <HomeBookingFlow autoOpen={!searchParams.get('hubId')} hideButton={true} />
+      {/* Vehicle Size Restrictions Modal - Rendered after mobile details so it appears on top */}
+      {showVehicleModal && selectedListing && (
+        <div className="fixed inset-0 bg-black/50 z-[9998] flex items-end md:items-center justify-center p-4">
+          <div className="bg-white rounded-t-3xl md:rounded-lg shadow-2xl max-w-sm w-full md:max-h-[90vh] max-h-[90vh] overflow-auto">
+            <div className="p-6">
+              {/* Close Button */}
+              <button
+                onClick={() => {
+                  setShowVehicleModal(false);
+                  setVehicleInput('');
+                  setSelectedVehicle(null);
+                  setVehicleCheckResult(null);
+                }}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              {/* Height Restriction Info */}
+              {selectedListing?.maxHeight ? (
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <svg className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2v20M2 12h20"/>
+                      <path d="M12 2L8 8M12 2l4 6"/>
+                    </svg>
+                    <div>
+                      <p className="text-lg font-bold text-gray-900">Max Height Restriction</p>
+                      <p className="text-3xl font-bold text-amber-600 mt-2">{selectedListing.maxHeight.toFixed(2)}m</p>
+                      <p className="text-sm text-gray-600 mt-3">Additional charges or access restrictions may apply if this limit is exceeded</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowVehicleModal(false);
+                      setVehicleInput('');
+                      setSelectedVehicle(null);
+                      setVehicleCheckResult(null);
+                    }}
+                    className="w-full mt-6 px-4 py-3 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-900 transition-colors"
+                  >
+                    {t('Zatvori', locale)}
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-4 space-y-4">
+                  <p className="text-gray-700">{locale === 'en' ? 'No size restrictions for this location' : 'Nema ograničenja za ovu lokaciju'}</p>
+                  <button
+                    onClick={() => {
+                      setShowVehicleModal(false);
+                      setVehicleInput('');
+                      setSelectedVehicle(null);
+                      setVehicleCheckResult(null);
+                    }}
+                    className="w-full px-4 py-3 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-900 transition-colors"
+                  >
+                    {t('Zatvori', locale)}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

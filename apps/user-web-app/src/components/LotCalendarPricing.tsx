@@ -26,7 +26,33 @@ interface DateConfig {
 }
 
 const TRANSLATIONS = {
-  'Odustani': { en: 'Cancel', hr: 'Odustani' },
+  'Capacity': { en: 'Capacity', hr: 'Kapacitet' },
+  'spaces': { en: 'spaces', hr: 'mjesta' },
+  'space': { en: 'space', hr: 'mjesto' },
+  'Previous': { en: '← Previous', hr: '← Prethodna' },
+  'Next': { en: 'Next →', hr: 'Dalje →' },
+  'Availability': { en: 'Availability', hr: 'Dostupnost' },
+  'Open': { en: 'Open', hr: 'Otvoreno' },
+  'Closed': { en: 'Closed', hr: 'Zatvoreno' },
+  'From': { en: 'From', hr: 'Od' },
+  'To': { en: 'To', hr: 'Kraj' },
+  'Prices': { en: 'Prices', hr: 'Cijene' },
+  'Manual': { en: 'Manual', hr: 'Ručno' },
+  'Hourly': { en: 'Hourly', hr: 'Satna' },
+  'Daily': { en: 'Daily', hr: 'Dnevna' },
+  'Monthly': { en: 'Monthly', hr: 'Mjesečna' },
+  'Apply': { en: 'Apply', hr: 'Primijeni' },
+  'Cancel': { en: 'Cancel', hr: 'Odustani' },
+  'Delete': { en: 'Delete', hr: 'Obriši' },
+  'Monday': { en: 'Mo', hr: 'Po' },
+  'Tuesday': { en: 'Tu', hr: 'U' },
+  'Wednesday': { en: 'We', hr: 'Sr' },
+  'Thursday': { en: 'Th', hr: 'Č' },
+  'Friday': { en: 'Fr', hr: 'Pe' },
+  'Saturday': { en: 'Sa', hr: 'Su' },
+  'Sunday': { en: 'Su', hr: 'Ne' },
+  'Settings for': { en: 'Settings for', hr: 'Postavke za' },
+  'Range settings': { en: 'Range settings', hr: 'Postavke za periode' },
 } as const;
 
 const t = (key: string, locale: 'en' | 'hr'): string => {
@@ -72,7 +98,9 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
     return () => {};
   }, [lotId, supabase]);
 
-  const croatianMonths = ['siječnja','veljače','ožujka','travnja','svibnja','lipnja','srpnja','kolovoza','rujna','listopada','studenog','prosinca'];
+  const months = locale === 'en'
+    ? ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    : ['siječnja','veljače','ožujka','travnja','svibnja','lipnja','srpnja','kolovoza','rujna','listopada','studenog','prosinca'];
   const year = calendarDate.getFullYear();
   const month = calendarDate.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -141,21 +169,26 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
   };
 
   const handleSaveBatch = async (newConfigs: Record<string, DateConfig>) => {
+    // Update local state immediately for UI feedback
     setDateConfigs(newConfigs);
+
     try {
       if (!supabase) {
         setRangeStartDate(null);
         setRangeEndDate(null);
         return;
       }
-      const { data: existing } = await supabase
+
+      const { data: existing, error: fetchErr } = await supabase
         .from('locations')
         .select('verification_metadata')
         .eq('id', lotId)
         .single();
 
+      if (fetchErr) throw fetchErr;
+
       const meta = existing?.verification_metadata || {};
-      await supabase
+      const { error: updateErr } = await supabase
         .from('locations')
         .update({
           verification_metadata: {
@@ -165,10 +198,25 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
         })
         .eq('id', lotId);
 
+      if (updateErr) throw updateErr;
+
+      // Reload data after successful save to ensure consistency
+      const { data: updated } = await supabase
+        .from('locations')
+        .select('verification_metadata')
+        .eq('id', lotId)
+        .single();
+
+      if (updated?.verification_metadata?.dateConfigs) {
+        setDateConfigs(updated.verification_metadata.dateConfigs);
+      }
+
       setRangeStartDate(null);
       setRangeEndDate(null);
     } catch (err: any) {
       console.error('Failed to save date config:', err.message);
+      // Revert state on error
+      setDateConfigs((prev) => prev);
     }
   };
 
@@ -234,7 +282,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
         <div className="text-xs md:text-sm text-gray-600 flex flex-col md:flex-row md:gap-2">
           <span>{lotAddress}</span>
           <span className="hidden md:inline">•</span>
-          <span>Kapacitet: {lotCapacity} mjesta</span>
+          <span>{t('Capacity', locale)}: {lotCapacity} {parseInt(lotCapacity) === 1 ? t('space', locale) : t('spaces', locale)}</span>
         </div>
       </div>
 
@@ -245,20 +293,20 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
           <button
             onClick={() => setCalendarDate(new Date(year, month - 1, 1))}
             className="text-black hover:text-gray-700 font-medium text-sm md:text-base"
-          >← Prethodna</button>
-          <h3 className="text-lg md:text-xl font-semibold text-gray-900">{croatianMonths[month]} {year}</h3>
+          >{t('Previous', locale)}</button>
+          <h3 className="text-lg md:text-xl font-semibold text-gray-900">{months[month]} {year}</h3>
           <button
             onClick={() => setCalendarDate(new Date(year, month + 1, 1))}
             className="text-black hover:text-gray-700 font-medium text-sm md:text-base"
-          >Dalje →</button>
+          >{t('Next', locale)}</button>
         </div>
 
         {/* Calendar Grid */}
         <div className="border border-gray-200 rounded-lg p-2 md:p-6">
           <div className="grid grid-cols-7 gap-1.5 md:gap-2">
-            {[['Ponedjeljak', 'Po'], ['Utorak', 'U'], ['Srijeda', 'Sr'], ['Četvrtak', 'Č'], ['Petak', 'Pe'], ['Subota', 'Su'], ['Nedjelja', 'Ne']].map(([fullDay, shortLabel]) => (
+            {[['Monday', 'Monday'], ['Tuesday', 'Tuesday'], ['Wednesday', 'Wednesday'], ['Thursday', 'Thursday'], ['Friday', 'Friday'], ['Saturday', 'Saturday'], ['Sunday', 'Sunday']].map(([fullDay, key]) => (
               <div key={fullDay} className="text-center font-semibold text-xs md:text-sm text-gray-700 py-2 md:py-3 flex-shrink-0">
-                <span translate="no">{shortLabel}</span>
+                <span translate="no">{t(key, locale)}</span>
               </div>
             ))}
             {[...Array(emptyBefore)].map((_, i) => (
@@ -295,10 +343,10 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
                   <p className={`font-bold ${isClosed ? 'text-white' : 'text-gray-900'}`}>{date}</p>
                   {!isClosed && (
                     <>
-                      <p className={`text-[9px] md:text-xs mt-0.5 md:mt-1 font-medium hidden md:block ${isClosed ? 'text-white/80' : 'text-gray-700'}`}>{config?.capacity || lotCapacity} {parseInt(String(config?.capacity || lotCapacity)) === 1 ? 'mjesto' : 'mjesta'}</p>
+                      <p className={`text-[9px] md:text-xs mt-0.5 md:mt-1 font-medium hidden md:block ${isClosed ? 'text-white/80' : 'text-gray-700'}`}>{config?.capacity || lotCapacity} {parseInt(String(config?.capacity || lotCapacity)) === 1 ? t('space', locale) : t('spaces', locale)}</p>
                       <div className={`flex items-center gap-0.5 md:gap-1 mt-0.5 md:mt-1 text-[8px] md:text-xs hidden md:flex ${isClosed ? 'text-white/60' : 'text-gray-600'}`}>
                         <Clock className="w-2 h-2 md:w-3 md:h-3" />
-                        <span className="hidden lg:inline">{config ? (config.isOpen ? `${config.openTime} - ${config.closeTime}` : 'Zatvoreno') : '00:00 - 24:00'}</span>
+                        <span className="hidden lg:inline">{config ? (config.isOpen ? `${config.openTime} - ${config.closeTime}` : t('Closed', locale)) : '00:00 - 24:00'}</span>
                       </div>
                       {config && (
                         <p className="text-[8px] md:text-[10px] text-green-700 font-semibold mt-0.5 md:mt-1">✓ {config.priceMode === 'auto' ? 'Auto' : `${config.priceHourly ?? ''}€/h`}</p>
@@ -317,7 +365,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
         <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-0">
           <div className="bg-white rounded-t-3xl md:rounded-xl p-5 md:p-8 w-full md:w-96 md:max-h-[90vh] overflow-auto shadow-2xl md:shadow-2xl max-h-[90vh]">
             <div className="flex items-center justify-between mb-4 md:mb-6">
-              <h3 className="text-base md:text-lg font-bold text-gray-900">Postavke za {selectedDay}. {croatianMonths[month]}</h3>
+              <h3 className="text-base md:text-lg font-bold text-gray-900">{t('Settings for', locale)} {selectedDay}. {months[month]}</h3>
               <button
                 onClick={() => setSelectedDate(null)}
                 className="text-gray-400 hover:text-gray-600"
@@ -343,7 +391,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
           <div className="bg-white rounded-t-3xl md:rounded-xl p-5 md:p-8 w-full md:w-96 md:max-h-[90vh] overflow-auto shadow-2xl max-h-[90vh]">
             <div className="flex items-center justify-between mb-4 md:mb-6">
               <h3 className="text-base md:text-lg font-bold text-gray-900">
-                Postavke za periode
+                {t('Range settings', locale)}
               </h3>
               <button
                 onClick={() => {
@@ -358,7 +406,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
 
             <div className="mb-4">
               <p className="text-sm text-gray-600">
-                {rangeStartDate.split('-')[2]}. - {rangeEndDate.split('-')[2]}. {croatianMonths[month]}
+                {rangeStartDate.split('-')[2]}. - {rangeEndDate.split('-')[2]}. {months[month]}
               </p>
             </div>
 
@@ -400,12 +448,12 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale }: Dat
     <div className="space-y-4 md:space-y-5">
       {/* Open/Close Toggle */}
       <div className="space-y-2">
-        <label className="block text-sm md:text-base font-semibold text-gray-900">Dostupnost</label>
+        <label className="block text-sm md:text-base font-semibold text-gray-900">{t('Availability', locale)}</label>
         <div className="flex gap-2 md:gap-3">
           {[
-            { id: 'open', label: 'Otvoreno' },
-            { id: 'close', label: 'Zatvoreno' },
-          ].map(({ id, label }) => (
+            { id: 'open', key: 'Open' },
+            { id: 'close', key: 'Closed' },
+          ].map(({ id, key }) => (
             <button
               key={id}
               onClick={() => setIsOpen(id === 'open')}
@@ -416,7 +464,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale }: Dat
                 color: (isOpen && id === 'open') || (!isOpen && id === 'close') ? '#000000' : '#6B7280',
               }}
             >
-              {label}
+              {t(key, locale)}
             </button>
           ))}
         </div>
@@ -424,7 +472,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale }: Dat
 
       {/* Capacity */}
       <div className="space-y-2">
-        <label className="block text-sm md:text-base font-semibold text-gray-900">Kapacitet (mjesta)</label>
+        <label className="block text-sm md:text-base font-semibold text-gray-900">{t('Capacity', locale)} ({t('spaces', locale)})</label>
         <input
           type="number"
           min="1"
@@ -446,7 +494,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale }: Dat
       {isOpen && (
         <div className="space-y-3 md:space-y-4">
           <div className="space-y-2">
-            <label className="block text-sm md:text-base font-semibold text-gray-900">Od</label>
+            <label className="block text-sm md:text-base font-semibold text-gray-900">{t('From', locale)}</label>
             <input
               type="time"
               value={openTime}
@@ -455,7 +503,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale }: Dat
             />
           </div>
           <div className="space-y-2">
-            <label className="block text-sm md:text-base font-semibold text-gray-900"><span translate="no">Kraj</span></label>
+            <label className="block text-sm md:text-base font-semibold text-gray-900">{t('To', locale)}</label>
             <input
               type="time"
               value={closeTime}
@@ -470,9 +518,9 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale }: Dat
       {isOpen && (
         <div className="space-y-3 md:space-y-4">
           <div className="flex items-center justify-between">
-            <label className="block text-sm md:text-base font-semibold text-gray-900">Cijene</label>
+            <label className="block text-sm md:text-base font-semibold text-gray-900">{t('Prices', locale)}</label>
             <div className="flex items-center gap-2 md:gap-3">
-              <span className={`text-sm md:text-base font-medium ${priceMode === 'auto' ? 'text-black' : 'text-gray-500'}`}>Auto</span>
+              <span className={`text-sm md:text-base font-medium ${priceMode === 'auto' ? 'text-black' : 'text-gray-500'}`}>{locale === 'en' ? 'Auto' : 'Auto'}</span>
               <button
                 onClick={() => setPriceMode(priceMode === 'auto' ? 'manual' : 'auto')}
                 className="relative inline-flex h-6 md:h-7 w-12 md:w-14 items-center rounded-full transition-colors"
@@ -487,14 +535,14 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale }: Dat
                   }}
                 />
               </button>
-              <span className={`text-sm md:text-base font-medium ${priceMode === 'manual' ? 'text-black' : 'text-gray-500'}`}>Ručno</span>
+              <span className={`text-sm md:text-base font-medium ${priceMode === 'manual' ? 'text-black' : 'text-gray-500'}`}>{t('Manual', locale)}</span>
             </div>
           </div>
 
           {priceMode === 'manual' && (
             <div className="grid grid-cols-3 gap-2 md:gap-3">
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700" translate="no">{locale === 'en' ? 'Hourly (€)' : 'Po satu (€)'}</label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Hourly', locale)} (€)</label>
                 <input
                   type="number"
                   min="0"
@@ -511,7 +559,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale }: Dat
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700" translate="no">{locale === 'en' ? 'Daily (€)' : 'Po danu (€)'}</label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Daily', locale)} (€)</label>
                 <input
                   type="number"
                   min="0"
@@ -528,7 +576,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale }: Dat
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700" translate="no">{locale === 'en' ? 'Monthly (€)' : 'Mjesečno (€)'}</label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Monthly', locale)} (€)</label>
                 <input
                   type="number"
                   min="0"
@@ -599,12 +647,12 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale }: RangeConf
     <div className="space-y-4 md:space-y-5">
       {/* Open/Close Toggle */}
       <div className="space-y-2">
-        <label className="block text-sm md:text-base font-semibold text-gray-900">Dostupnost</label>
+        <label className="block text-sm md:text-base font-semibold text-gray-900">{t('Availability', locale)}</label>
         <div className="flex gap-2 md:gap-3">
           {[
-            { id: 'open', label: 'Otvoreno' },
-            { id: 'close', label: 'Zatvoreno' },
-          ].map(({ id, label }) => (
+            { id: 'open', key: 'Open' },
+            { id: 'close', key: 'Closed' },
+          ].map(({ id, key }) => (
             <button
               key={id}
               onClick={() => setIsOpen(id === 'open')}
@@ -615,7 +663,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale }: RangeConf
                 color: (isOpen && id === 'open') || (!isOpen && id === 'close') ? '#000000' : '#6B7280',
               }}
             >
-              {label}
+              {t(key, locale)}
             </button>
           ))}
         </div>
@@ -623,7 +671,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale }: RangeConf
 
       {/* Capacity */}
       <div className="space-y-2">
-        <label className="block text-sm md:text-base font-semibold text-gray-900">Kapacitet (mjesta)</label>
+        <label className="block text-sm md:text-base font-semibold text-gray-900">{t('Capacity', locale)} ({t('spaces', locale)})</label>
         <input
           type="number"
           min="1"
@@ -645,7 +693,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale }: RangeConf
       {isOpen && (
         <div className="space-y-3 md:space-y-4">
           <div className="space-y-2">
-            <label className="block text-sm md:text-base font-semibold text-gray-900">Od</label>
+            <label className="block text-sm md:text-base font-semibold text-gray-900">{t('From', locale)}</label>
             <input
               type="time"
               value={openTime}
@@ -654,7 +702,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale }: RangeConf
             />
           </div>
           <div className="space-y-2">
-            <label className="block text-sm md:text-base font-semibold text-gray-900"><span translate="no">Kraj</span></label>
+            <label className="block text-sm md:text-base font-semibold text-gray-900">{t('To', locale)}</label>
             <input
               type="time"
               value={closeTime}
@@ -669,9 +717,9 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale }: RangeConf
       {isOpen && (
         <div className="space-y-3 md:space-y-4">
           <div className="flex items-center justify-between">
-            <label className="block text-sm md:text-base font-semibold text-gray-900">Cijene</label>
+            <label className="block text-sm md:text-base font-semibold text-gray-900">{t('Prices', locale)}</label>
             <div className="flex items-center gap-2 md:gap-3">
-              <span className={`text-sm md:text-base font-medium ${priceMode === 'auto' ? 'text-black' : 'text-gray-500'}`}>Auto</span>
+              <span className={`text-sm md:text-base font-medium ${priceMode === 'auto' ? 'text-black' : 'text-gray-500'}`}>{locale === 'en' ? 'Auto' : 'Auto'}</span>
               <button
                 onClick={() => setPriceMode(priceMode === 'auto' ? 'manual' : 'auto')}
                 className="relative inline-flex h-6 md:h-7 w-12 md:w-14 items-center rounded-full transition-colors"
@@ -686,14 +734,14 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale }: RangeConf
                   }}
                 />
               </button>
-              <span className={`text-sm md:text-base font-medium ${priceMode === 'manual' ? 'text-black' : 'text-gray-500'}`}>Ručno</span>
+              <span className={`text-sm md:text-base font-medium ${priceMode === 'manual' ? 'text-black' : 'text-gray-500'}`}>{t('Manual', locale)}</span>
             </div>
           </div>
 
           {priceMode === 'manual' && (
             <div className="grid grid-cols-3 gap-2 md:gap-3">
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700" translate="no">{locale === 'en' ? 'Hourly (€)' : 'Po satu (€)'}</label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Hourly', locale)} (€)</label>
                 <input
                   type="number"
                   min="0"
@@ -710,7 +758,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale }: RangeConf
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700" translate="no">{locale === 'en' ? 'Daily (€)' : 'Po danu (€)'}</label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Daily', locale)} (€)</label>
                 <input
                   type="number"
                   min="0"
@@ -727,7 +775,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale }: RangeConf
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700" translate="no">{locale === 'en' ? 'Monthly (€)' : 'Mjesečno (€)'}</label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Monthly', locale)} (€)</label>
                 <input
                   type="number"
                   min="0"

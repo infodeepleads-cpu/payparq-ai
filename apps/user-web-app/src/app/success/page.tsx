@@ -1121,7 +1121,9 @@ function SuccessContent() {
   return (
     <div className="min-h-screen text-black flex flex-col" style={{ background: '#EBF0FA' }}>
 
-      <SiteHeader hideAnnouncementBar />
+      <div className="hidden md:block">
+        <SiteHeader hideAnnouncementBar />
+      </div>
 
       <main className="flex-1 pt-24 pb-16">
         <div className="max-w-md mx-auto px-4 space-y-3">
@@ -1416,7 +1418,7 @@ function SuccessContent() {
               </div>
             </div>
           </div>
-          <div className="mt-12 pt-6 border-t border-white/10">
+          <div className="mt-12 pt-6 border-t border-white/10 hidden md:block">
             <FooterBrand />
           </div>
         </div>
