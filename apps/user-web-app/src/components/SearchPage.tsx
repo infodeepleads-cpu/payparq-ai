@@ -230,7 +230,7 @@ interface Parking {
   spots?: number;
   baseHourlyRate?: number;
   baseDailyRate?: number;
-  dateConfigs?: Record<string, { priceHourly?: number; priceDaily?: number; priceMonthly?: number }>;
+  dateConfigs?: Record<string, { priceHourly?: number; priceDaily?: number; priceMonthly?: number; priceMode?: 'auto' | 'manual' }>;
 }
 
 export function SearchPage() {
