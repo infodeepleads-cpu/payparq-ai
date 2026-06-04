@@ -4,6 +4,27 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { PayparqPageHeader } from '@/components/PayparqPageHeader';
+import { useLocale } from '@/components/LocaleProvider';
+
+const TRANSLATIONS = {
+  'Loading': { en: 'Loading...', hr: 'Učitavanje...' },
+  'Listing not found': { en: 'Listing not found', hr: 'Popis nije pronađen' },
+  'Dashboard': { en: 'Dashboard', hr: 'Upravljačka ploča' },
+  'Capacity': { en: 'Capacity', hr: 'Kapacitet' },
+  'spaces': { en: 'spaces', hr: 'mjesta' },
+  'Status': { en: 'Status', hr: 'Status' },
+  'ID': { en: 'ID', hr: 'ID' },
+  'Active': { en: 'Active', hr: 'Aktivno' },
+  'Pending': { en: 'Pending', hr: 'Na čekanju' },
+  'Unverified': { en: 'Unverified', hr: 'Neverificirano' },
+  'Manage Calendar': { en: 'Manage Calendar', hr: 'Upravljaj kalendarom' },
+  'Edit Listing': { en: 'Edit Listing', hr: 'Uredi popis' },
+} as const;
+
+const t = (key: string, locale: 'en' | 'hr'): string => {
+  const trans = TRANSLATIONS[key as keyof typeof TRANSLATIONS];
+  return trans ? trans[locale] : key;
+};
 
 interface Listing {
   id: string;
@@ -18,6 +39,7 @@ export default function ListingPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { locale } = useLocale();
   const id = params.id as string;
 
   const [listing, setListing] = useState<Listing | null>(null);
@@ -68,7 +90,7 @@ export default function ListingPage() {
               <span className="text-lg font-black tracking-tight text-white select-none">P</span>
             </div>
           </div>
-          <p className="text-black/60 text-sm">Učitavanje...</p>
+          <p className="text-black/60 text-sm">{t('Loading', locale)}</p>
         </div>
       </div>
     );
@@ -77,7 +99,7 @@ export default function ListingPage() {
   if (!listing) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-red-600">Popis nije pronađen</p>
+        <p className="text-red-600">{t('Listing not found', locale)}</p>
       </div>
     );
   }
@@ -89,9 +111,9 @@ export default function ListingPage() {
   };
 
   const getStatusLabel = (status: string) => {
-    if (status === 'verified') return 'Aktivno';
-    if (status === 'pending') return 'Na čekanju';
-    return 'Neverificirano';
+    if (status === 'verified') return t('Active', locale);
+    if (status === 'pending') return t('Pending', locale);
+    return t('Unverified', locale);
   };
 
   return (
@@ -103,7 +125,7 @@ export default function ListingPage() {
       />
 
       <div className="max-w-2xl mx-auto p-4 sm:p-6">
-        <h2 className="hidden md:block text-2xl font-bold text-black mb-6">Upravljačka ploča</h2>
+        <h2 className="hidden md:block text-2xl font-bold text-black mb-6">{t('Dashboard', locale)}</h2>
 
         <div className="bg-white rounded-xl border border-black/10 p-6">
           <div className="mb-6">
@@ -113,17 +135,17 @@ export default function ListingPage() {
 
           <div className="grid grid-cols-3 gap-4 mb-6 pb-6 border-b border-black/10">
             <div>
-              <p className="text-xs font-semibold text-black/60 uppercase mb-1">Kapacitet</p>
-              <p className="text-lg font-bold text-black">{listing.capacity} mjesta</p>
+              <p className="text-xs font-semibold text-black/60 uppercase mb-1">{t('Capacity', locale)}</p>
+              <p className="text-lg font-bold text-black">{listing.capacity} {t('spaces', locale)}</p>
             </div>
             <div>
-              <p className="text-xs font-semibold text-black/60 uppercase mb-1">Status</p>
+              <p className="text-xs font-semibold text-black/60 uppercase mb-1">{t('Status', locale)}</p>
               <span className={`text-sm px-2 py-1 rounded-full font-semibold inline-block ${getStatusColor(listing.verification_status)}`}>
                 {getStatusLabel(listing.verification_status)}
               </span>
             </div>
             <div>
-              <p className="text-xs font-semibold text-black/60 uppercase mb-1">ID</p>
+              <p className="text-xs font-semibold text-black/60 uppercase mb-1">{t('ID', locale)}</p>
               <p className="text-xs font-mono text-black/50 break-all">{listing.display_id ? String(listing.display_id).padStart(5, '0') : listing.id}</p>
             </div>
           </div>
@@ -136,7 +158,7 @@ export default function ListingPage() {
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M6 2a1 1 0 00-1 1v2H4a2 2 0 00-2 2v2h16V7a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v2H7V3a1 1 0 00-1-1zm0 5H4v9a2 2 0 002 2h12a2 2 0 002-2V7h-2v1a1 1 0 11-2 0V7H9v1a1 1 0 11-2 0V7H6v1a1 1 0 11-2 0V7z" />
               </svg>
-              Upravljaj kalendarom
+              {t('Manage Calendar', locale)}
             </button>
 
             <button
@@ -146,7 +168,7 @@ export default function ListingPage() {
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
               </svg>
-              Uredi popis
+              {t('Edit Listing', locale)}
             </button>
           </div>
         </div>
