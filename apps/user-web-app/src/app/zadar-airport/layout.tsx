@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title: 'Parking at Zadar Airport | Affordable Rates | Payparq',
   description:
     'Book parking at Zadar Airport (ZAD). Find secure, affordable parking spots with instant confirmation. Compare rates and reserve your spot now on Payparq.',
-  canonical: 'https://www.payparq.com/zadar-airport',
+  alternates: { canonical: 'https://www.payparq.com/zadar-airport' },
   openGraph: {
     title: 'Parking at Zadar Airport | Payparq',
     description:

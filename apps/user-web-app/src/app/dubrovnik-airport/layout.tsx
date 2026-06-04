@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title: 'Parking at Dubrovnik Airport | Affordable Rates | Payparq',
   description:
     'Book parking at Dubrovnik Airport (DBV). Find secure, affordable parking spots with instant confirmation. Compare rates and reserve your spot now on Payparq.',
-  canonical: 'https://www.payparq.com/dubrovnik-airport',
+  alternates: { canonical: 'https://www.payparq.com/dubrovnik-airport' },
   openGraph: {
     title: 'Parking at Dubrovnik Airport | Payparq',
     description:
