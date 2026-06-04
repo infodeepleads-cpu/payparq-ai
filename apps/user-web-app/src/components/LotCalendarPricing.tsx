@@ -628,61 +628,59 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale, allCo
             </div>
           </div>
 
-          {priceMode === 'manual' && (
-            <div className="grid grid-cols-3 gap-2 md:gap-3">
-              <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Hourly', locale)} (€)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={priceHourly}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === '') { setPriceHourly(''); return; }
-                    const stripped = val.replace(/^0+/, '') || '0';
-                    const num = parseFloat(stripped);
-                    if (!isNaN(num) && num >= 0) setPriceHourly(stripped);
-                  }}
-                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Daily', locale)} (€)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={priceDaily}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === '') { setPriceDaily(''); return; }
-                    const stripped = val.replace(/^0+/, '') || '0';
-                    const num = parseFloat(stripped);
-                    if (!isNaN(num) && num >= 0) setPriceDaily(stripped);
-                  }}
-                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Monthly', locale)} (€)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={priceMonthly}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === '') { setPriceMonthly(''); return; }
-                    const stripped = val.replace(/^0+/, '') || '0';
-                    const num = parseFloat(stripped);
-                    if (!isNaN(num) && num >= 0) setPriceMonthly(stripped);
-                  }}
-                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
-                />
-              </div>
+          <div className="grid grid-cols-3 gap-2 md:gap-3">
+            <div className="space-y-2">
+              <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Hourly', locale)} (€)</label>
+              <input
+                type="number"
+                min="0"
+                value={priceHourly}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') { setPriceHourly(''); return; }
+                  const stripped = val.replace(/^0+/, '') || '0';
+                  const num = parseFloat(stripped);
+                  if (!isNaN(num) && num >= 0) setPriceHourly(stripped);
+                }}
+                className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+              />
             </div>
-          )}
+            <div className="space-y-2">
+              <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Daily', locale)} (€)</label>
+              <input
+                type="number"
+                min="0"
+                value={priceDaily}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') { setPriceDaily(''); return; }
+                  const stripped = val.replace(/^0+/, '') || '0';
+                  const num = parseFloat(stripped);
+                  if (!isNaN(num) && num >= 0) setPriceDaily(stripped);
+                }}
+                className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Monthly', locale)} (€)</label>
+              <input
+                type="number"
+                min="0"
+                value={priceMonthly}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') { setPriceMonthly(''); return; }
+                  const stripped = val.replace(/^0+/, '') || '0';
+                  const num = parseFloat(stripped);
+                  if (!isNaN(num) && num >= 0) setPriceMonthly(stripped);
+                }}
+                className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+              />
+            </div>
+          </div>
         </div>
       )}
 
@@ -827,61 +825,59 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale }: RangeConf
             </div>
           </div>
 
-          {priceMode === 'manual' && (
-            <div className="grid grid-cols-3 gap-2 md:gap-3">
-              <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Hourly', locale)} (€)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={priceHourly}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === '') { setPriceHourly(''); return; }
-                    const stripped = val.replace(/^0+/, '') || '0';
-                    const num = parseFloat(stripped);
-                    if (!isNaN(num) && num >= 0) setPriceHourly(stripped);
-                  }}
-                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Daily', locale)} (€)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={priceDaily}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === '') { setPriceDaily(''); return; }
-                    const stripped = val.replace(/^0+/, '') || '0';
-                    const num = parseFloat(stripped);
-                    if (!isNaN(num) && num >= 0) setPriceDaily(stripped);
-                  }}
-                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Monthly', locale)} (€)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={priceMonthly}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === '') { setPriceMonthly(''); return; }
-                    const stripped = val.replace(/^0+/, '') || '0';
-                    const num = parseFloat(stripped);
-                    if (!isNaN(num) && num >= 0) setPriceMonthly(stripped);
-                  }}
-                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
-                />
-              </div>
+          <div className="grid grid-cols-3 gap-2 md:gap-3">
+            <div className="space-y-2">
+              <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Hourly', locale)} (€)</label>
+              <input
+                type="number"
+                min="0"
+                value={priceHourly}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') { setPriceHourly(''); return; }
+                  const stripped = val.replace(/^0+/, '') || '0';
+                  const num = parseFloat(stripped);
+                  if (!isNaN(num) && num >= 0) setPriceHourly(stripped);
+                }}
+                className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+              />
             </div>
-          )}
+            <div className="space-y-2">
+              <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Daily', locale)} (€)</label>
+              <input
+                type="number"
+                min="0"
+                value={priceDaily}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') { setPriceDaily(''); return; }
+                  const stripped = val.replace(/^0+/, '') || '0';
+                  const num = parseFloat(stripped);
+                  if (!isNaN(num) && num >= 0) setPriceDaily(stripped);
+                }}
+                className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-xs md:text-sm font-medium text-gray-700">{t('Monthly', locale)} (€)</label>
+              <input
+                type="number"
+                min="0"
+                value={priceMonthly}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') { setPriceMonthly(''); return; }
+                  const stripped = val.replace(/^0+/, '') || '0';
+                  const num = parseFloat(stripped);
+                  if (!isNaN(num) && num >= 0) setPriceMonthly(stripped);
+                }}
+                className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+              />
+            </div>
+          </div>
         </div>
       )}
 

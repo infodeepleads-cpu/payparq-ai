@@ -1473,8 +1473,8 @@ export function SearchPage() {
 
             {homeDropdownOpen && (
               <div className="absolute top-full mt-2 right-0 bg-white border border-gray-300 rounded-lg shadow-xl z-50 min-w-[200px]">
-                <a href="/members" className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 rounded-t-lg" translate="no">
-                  Upravljačka Ploča
+                <a href="/members" className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 rounded-t-lg">
+                  {locale === 'en' ? 'Dashboard' : 'Upravljačka Ploča'}
                 </a>
                 <a href="/host" className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200">
                   List your lot
@@ -1525,8 +1525,8 @@ export function SearchPage() {
                 <a href="/main" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 rounded-t-lg" onClick={() => setMobileMenuOpen(false)}>
                   {locale === 'en' ? 'Home' : 'Početna'}
                 </a>
-                <a href="/members" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200" translate="no">
-                  Upravljačka Ploča
+                <a href="/members" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200">
+                  {locale === 'en' ? 'Dashboard' : 'Upravljačka Ploča'}
                 </a>
               </div>
             </div>

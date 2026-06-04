@@ -1119,7 +1119,7 @@ function SuccessContent() {
   }
 
   return (
-    <div className="min-h-screen text-black flex flex-col" style={{ background: '#05020A' }}>
+    <div className="min-h-screen text-black flex flex-col" style={{ background: '#EBF0FA' }}>
 
       <div className="hidden md:block">
         <SiteHeader hideAnnouncementBar />
@@ -1397,7 +1397,7 @@ function SuccessContent() {
 export default function SuccessPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center text-white/30 text-sm" style={{ background: '#05020A' }}>
+      <div className="min-h-screen flex items-center justify-center text-black/30 text-sm" style={{ background: '#EBF0FA' }}>
         Učitavanje...
       </div>
     }>
