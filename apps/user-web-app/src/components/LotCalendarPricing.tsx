@@ -154,7 +154,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
     }
   };
 
-  const handleApplyRangeConfig = (config: Omit<DateConfig, 'date'>) => {
+  const handleApplyRangeConfig = async (config: Omit<DateConfig, 'date'>) => {
     if (!rangeStartDate || !rangeEndDate) return;
 
     const start = new Date(rangeStartDate);
