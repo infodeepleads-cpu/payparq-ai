@@ -509,6 +509,7 @@ export default function MembersPage() {
   const [role, setRole] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
+  const [googleAuthLoading, setGoogleAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
   const [loginNotice, setLoginNotice] = useState("");
   const [verificationLoading, setVerificationLoading] = useState(false);
@@ -1949,12 +1950,12 @@ export default function MembersPage() {
               <p className="text-sm text-black/70">Brzi pregled i akcije.</p>
             </div>
             <div className="shrink-0 space-y-2">
-              <div className="rounded-lg border border-[black]/25 bg-[#EDE9FE] px-3 py-2 text-right">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5F3DFC]/70">Wallet</p>
-                <p className="text-sm font-semibold text-[#5F3DFC]">
+              <div className="rounded-lg border border-[black]/25 bg-[#EFF6FF] px-3 py-2 text-right">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#2563EB]/70">Wallet</p>
+                <p className="text-sm font-semibold text-[#2563EB]">
                   {formatMoneyFromCents(walletSummary?.balanceCents, walletSummary?.currency || "EUR")}
                 </p>
-                <p className="text-[11px] text-[#5F3DFC]/85">
+                <p className="text-[11px] text-[#2563EB]/85">
                   {formatLoyaltyLevelLabel(loyaltySummary?.level)}
                   {(loyaltySummary?.pointsYear ?? 0) > 0 ? ` · ${loyaltySummary?.pointsYear ?? 0} pts` : ""}
                 </p>
@@ -2052,7 +2053,7 @@ export default function MembersPage() {
                       <span className="text-[9px] font-bold text-white">3</span>
                     </div>
                     <div>
-                      <p className="font-semibold text-black">Povratak</p>
+                      <p className="font-semibold text-black">{locale === 'en' ? 'Back' : 'Povratak'}</p>
                       <p className="text-black/60 mt-0.5">Pozovite shuttle putem gumba &ldquo;Pozovi shuttle&rdquo; ispod.</p>
                     </div>
                   </div>
@@ -2136,7 +2137,7 @@ export default function MembersPage() {
               const valetCode = homeContext.valetCode ?? deriveValetCode(homeContext.stripeSessionId);
               const priceCents = Number(valetCfg?.price_cents ?? 500);
               return (
-                <div className="min-w-[210px] rounded-xl border border-[black]/20 bg-[#EDE9FE] p-3 space-y-2">
+                <div className="min-w-[210px] rounded-xl border border-[black]/20 bg-[#EFF6FF] p-3 space-y-2">
                   <p className="text-sm font-semibold text-[black]">Valet parking</p>
                   <p className="text-[11px] text-[black]/70">Uključeno u cijenu · kod <span className="font-mono font-bold">{valetCode}</span></p>
                   <p className="text-[10px] text-black/40">Vrijednost: {formatCents(priceCents)}</p>
@@ -2150,7 +2151,7 @@ export default function MembersPage() {
                     <button
                       type="button"
                       onClick={() => callService('valet', valetCode, homeContext.plate ?? null)}
-                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-[black] text-white text-xs font-semibold hover:bg-[#5F3DFC] transition-colors"
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-[black] text-white text-xs font-semibold hover:bg-[#2563EB] transition-colors"
                     >
                       Pozovi auto
                     </button>
@@ -2207,7 +2208,7 @@ export default function MembersPage() {
             const cfg = (homeContext.addonsConfig ?? {}) as Record<string, unknown>;
             const phoneSms = ((cfg.phone_sms as string | undefined) ?? '385915963139').replace(/\D/g, '') || '385915963139';
             const badgeMap: Record<string, { label: string; color: string; bg: string }> = {
-              valet: { label: 'VLT', color: 'black', bg: '#EDE9FE' },
+              valet: { label: 'VLT', color: 'black', bg: '#EFF6FF' },
               shuttle: { label: 'SHT', color: '#0F6E56', bg: '#E1F5EE' },
               ev_charging: { label: 'EV', color: '#2E7D32', bg: '#E8F5E9' },
               car_wash_basic: { label: 'WASH', color: '#1565C0', bg: '#E3F2FD' },
@@ -2297,7 +2298,7 @@ export default function MembersPage() {
                   {showBuyValet && (
                     <div className="flex items-center justify-between rounded-xl border border-black/10 p-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-[#EDE9FE] flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 rounded-lg bg-[#EFF6FF] flex items-center justify-center shrink-0">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/><rect x="9" y="11" width="14" height="10" rx="1"/><path d="M13 16v-1a2 2 0 1 1 4 0v1"/></svg>
                         </div>
                         <div className="min-w-0">
@@ -2455,7 +2456,7 @@ export default function MembersPage() {
                   formatCroatianDateTime(row.end_time),
                 ].join(" — ");
                 const statusValue = (row.status ?? "active").toString().trim().toUpperCase();
-                const statusDisplay = statusValue === "PROĆE" ? "VALIDNO" : statusValue;
+                const statusDisplay = statusValue === "PROĆE" || statusValue === "VALID" ? "VALIDNO" : statusValue === "ACTIVE" ? "AKTIVNO" : statusValue;
                 return (
                   <div key={row.id} className="rounded-lg border border-black/10 px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
@@ -2861,22 +2862,22 @@ export default function MembersPage() {
           <p className="text-sm text-black/70">
             Track rewards and benefits earned across the Payparq network.
           </p>
-          <div className="rounded-xl border border-[black]/20 bg-[#EDE9FE] p-4 space-y-2">
-            <p className="text-sm font-semibold text-[#5F3DFC]">
+          <div className="rounded-xl border border-[black]/20 bg-[#EFF6FF] p-4 space-y-2">
+            <p className="text-sm font-semibold text-[#2563EB]">
               {formatLoyaltyLevelLabel(loyaltySummary?.level)}
             </p>
-            <p className="text-xs text-[#5F3DFC]/80">
+            <p className="text-xs text-[#2563EB]/80">
               Points this year: <span className="font-semibold">{loyaltySummary?.pointsYear ?? 0}</span>
             </p>
-            <p className="text-xs text-[#5F3DFC]/80">
+            <p className="text-xs text-[#2563EB]/80">
               Total points: <span className="font-semibold">{loyaltySummary?.pointsTotal ?? 0}</span>
             </p>
-            <p className="text-xs text-[#5F3DFC]/80">
+            <p className="text-xs text-[#2563EB]/80">
               Bonus bands: L2 {loyaltySummary?.bonusRangeByLevel?.level_2 ?? "1% - 15%"} · L3{" "}
               {loyaltySummary?.bonusRangeByLevel?.level_3 ?? "5% - 20%"}
             </p>
             {loyaltySummary?.nextLevel && (
-              <p className="text-[11px] text-[#5F3DFC]/70">
+              <p className="text-[11px] text-[#2563EB]/70">
                 Next level: {formatLoyaltyLevelLabel(loyaltySummary.nextLevel)} ·{" "}
                 {loyaltySummary.nextLevelProgressPercent}% complete
               </p>
@@ -2915,11 +2916,18 @@ export default function MembersPage() {
 
     if (activeItem === "reviews") {
       const CATEGORY_LABELS: Record<string, string> = {
-        score_security: 'Sigurnost', score_accessibility: 'Pristupačnost',
-        score_cleanliness: 'Čistoća', score_staff: 'Osoblje',
-        score_value: 'Vrijednost', score_location: 'Lokacija',
+        score_security: locale === 'en' ? 'Security' : 'Sigurnost',
+        score_accessibility: locale === 'en' ? 'Accessibility' : 'Pristupačnost',
+        score_cleanliness: locale === 'en' ? 'Cleanliness' : 'Čistoća',
+        score_staff: locale === 'en' ? 'Staff' : 'Osoblje',
+        score_value: locale === 'en' ? 'Value' : 'Vrijednost',
+        score_location: locale === 'en' ? 'Location' : 'Lokacija',
       };
       function scoreLabel(v: number) {
+        if (locale === 'en') {
+          if (v >= 9) return 'Excellent'; if (v >= 8) return 'Very Good';
+          if (v >= 7) return 'Good'; if (v >= 6) return 'Satisfactory'; return 'Poor';
+        }
         if (v >= 9) return 'Izvrsno'; if (v >= 8) return 'Odlično';
         if (v >= 7) return 'Dobro'; if (v >= 6) return 'Zadovoljava'; return 'Loše';
       }
@@ -2928,17 +2936,17 @@ export default function MembersPage() {
       }
       return (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold tracking-tight text-black">Moje recenzije</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-black">{locale === 'en' ? 'My Reviews' : 'Moje recenzije'}</h2>
           <p className="text-sm text-black/70">{membersT('Reviews you gave for parking on PayParq locations', locale)}</p>
           {reviewsLoading && (
             <div className="flex items-center gap-2 text-sm text-black/50">
               <div className="w-4 h-4 border-2 border-[black] border-t-transparent rounded-full animate-spin" />
-              Učitavanje...
+              {locale === 'en' ? 'Loading...' : 'Učitavanje...'}
             </div>
           )}
           {!reviewsLoading && reviewsRows.length === 0 && (
-            <div className="rounded-xl border border-black/10 bg-[#EDE9FE] p-4 text-sm text-black/60">
-              Još niste dali nijednu recenziju. Nakon završetka parkinga dobit ćete e-mail s linkom za recenziju.
+            <div className="rounded-xl border border-black/10 bg-white p-4 text-sm text-black/60">
+              {locale === 'en' ? "You haven't given any reviews yet. After completing a parking session, you'll receive an email with a link to review." : 'Još niste dali nijednu recenziju. Nakon završetka parkinga dobit ćete e-mail s linkom za recenziju.'}
             </div>
           )}
           {!reviewsLoading && reviewsRows.map((row) => (
@@ -3206,16 +3214,16 @@ export default function MembersPage() {
     return (
       <div className="space-y-4">
         <h2 className="text-lg font-semibold tracking-tight text-black">
-          Resources
+          {locale === 'en' ? 'Resources' : 'Resursi'}
         </h2>
 
         <div className="space-y-2 bg-white border border-black/10 rounded-xl p-4">
-          <h3 className="text-sm font-semibold text-black">For Hosts</h3>
+          <h3 className="text-sm font-semibold text-black">{locale === 'en' ? 'For Hosts' : 'Za domaćine'}</h3>
           <Link
             href="/list-your-parking"
             className="block px-3 py-2 rounded-lg text-sm text-black/70 hover:bg-black/5 transition-colors"
           >
-            + Navedite svoje parkiralište
+            + {locale === 'en' ? 'List your parking space' : 'Navedite svoje parkiralište'}
           </Link>
         </div>
 
@@ -3269,7 +3277,21 @@ export default function MembersPage() {
               : "w-full px-4 md:px-0 py-10 md:py-12 flex flex-col items-center"
           }
         >
-          {!isSignedIn && (
+          {googleAuthLoading && (
+            <div className="fixed inset-0 bg-[#05020A] z-50 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative flex items-center justify-center w-20 h-20">
+                  <div className="absolute inset-0 rounded-full border-4 border-white/10 border-t-white animate-spin" style={{ animationDuration: '1s' }} />
+                  <div className="animate-pulse w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg z-10">
+                    <span className="text-lg font-black tracking-tight text-[#05020A] select-none">P</span>
+                  </div>
+                </div>
+                <p className="text-white/60 text-sm">Redirecting to Google...</p>
+              </div>
+            </div>
+          )}
+
+          {!isSignedIn && !googleAuthLoading && (
             <div className="w-full max-w-md">
               <div className="rounded-3xl border border-white/10 bg-white text-black p-6 md:p-8 shadow-lg">
                 <p className="text-[11px] uppercase tracking-[0.24em] text-black/50 mb-3">
@@ -3327,6 +3349,7 @@ export default function MembersPage() {
                   onClick={async () => {
                     try {
                       setAuthError('');
+                      setGoogleAuthLoading(true);
                       const redirect = searchParams.get('redirect') || '';
                       const origin = typeof window !== 'undefined' ? window.location.origin : '';
                       if (redirect) {
@@ -3345,6 +3368,7 @@ export default function MembersPage() {
                       const errorMsg = err instanceof Error ? err.message : 'Failed to sign in with Google';
                       console.error('Google OAuth error:', errorMsg, err);
                       setAuthError(errorMsg);
+                      setGoogleAuthLoading(false);
                     }
                   }}
                   className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-white border border-black/10 text-black text-xs font-semibold shadow-md hover:bg-gray-50 transition-colors"
