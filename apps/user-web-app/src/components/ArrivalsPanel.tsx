@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useLocale } from './LocaleProvider';
 
 type Session = {
   id: string;
@@ -53,10 +54,26 @@ function fmtAmount(price: number | null, currency: string | null): string {
   return `€${price.toFixed(2)}`;
 }
 
-function StatusBadge({ computedStatus }: { computedStatus: 'active' | 'upcoming' | 'expired' }) {
-  if (computedStatus === 'active') return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">Uživo</span>;
-  if (computedStatus === 'upcoming') return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">Nadolazeće</span>;
-  return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">Završeno</span>;
+const ARRIVALS_TRANSLATIONS = {
+  'Live': { en: 'Live', hr: 'Uživo' },
+  'Upcoming': { en: 'Upcoming', hr: 'Nadolazeće' },
+  'Expired': { en: 'Expired', hr: 'Završeno' },
+  'History': { en: 'History', hr: 'povijest' },
+  'Updated': { en: 'Updated', hr: 'Ažurirano' },
+  'No active sessions': { en: 'No active sessions', hr: 'Nema aktivnih sesija' },
+  'No upcoming sessions': { en: 'No upcoming sessions', hr: 'Nema nadolazećih sesija' },
+  'No history': { en: 'No history', hr: 'Nema povijesti' },
+} as const;
+
+const arrivalsT = (key: string, locale: 'en' | 'hr'): string => {
+  const trans = ARRIVALS_TRANSLATIONS[key as keyof typeof ARRIVALS_TRANSLATIONS];
+  return trans ? trans[locale] : key;
+};
+
+function StatusBadge({ computedStatus, locale }: { computedStatus: 'active' | 'upcoming' | 'expired'; locale: 'en' | 'hr' }) {
+  if (computedStatus === 'active') return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">{arrivalsT('Live', locale)}</span>;
+  if (computedStatus === 'upcoming') return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">{arrivalsT('Upcoming', locale)}</span>;
+  return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">{arrivalsT('Expired', locale)}</span>;
 }
 
 interface ArrivalsPanelProps {
@@ -64,6 +81,7 @@ interface ArrivalsPanelProps {
 }
 
 export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
+  const { locale } = useLocale();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [locationNames, setLocationNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -154,7 +172,7 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
         <div className="flex items-center justify-between mb-3">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">Dolasci</p>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-black/40">Ažurirano {fmtTime(lastRefresh.toISOString())}</span>
+            <span className="text-[10px] text-black/40">{arrivalsT('Updated', locale)} {fmtTime(lastRefresh.toISOString())}</span>
             <button onClick={fetchSessions} className="text-[10px] text-black/40 hover:text-black px-2 py-0.5 rounded border border-black/10 transition-colors">↻</button>
           </div>
         </div>
@@ -162,9 +180,9 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
         {/* Tabs */}
         <div className="flex items-center gap-2">
           {([
-            ['live', `Uživo (${live.length})`, 'bg-[#2563EB] text-white', 'text-[#2563EB] border border-[#2563EB]/30'],
-            ['upcoming', `Nadolazeće (${upcoming.length})`, 'bg-[#2563EB] text-white', 'text-[#2563EB] border border-[#2563EB]/30'],
-            ['history', `Povijest (${history.length})`, 'bg-black text-white', 'text-black/60 border border-black/15'],
+            ['live', `${arrivalsT('Live', locale)} (${live.length})`, 'bg-[#2563EB] text-white', 'text-[#2563EB] border border-[#2563EB]/30'],
+            ['upcoming', `${arrivalsT('Upcoming', locale)} (${upcoming.length})`, 'bg-[#2563EB] text-white', 'text-[#2563EB] border border-[#2563EB]/30'],
+            ['history', `${arrivalsT('History', locale)} (${history.length})`, 'bg-black text-white', 'text-black/60 border border-black/15'],
           ] as const).map(([id, label, activeClass, inactiveClass]) => (
             <button
               key={id}
@@ -196,7 +214,7 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
           <div className="flex items-center justify-center h-40 text-black/40 text-sm">Učitavanje...</div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 gap-2 text-black/40">
-            <p className="text-sm">{tab === 'live' ? 'Nema aktivnih sesija' : tab === 'upcoming' ? 'Nema nadolazećih sesija' : 'Nema povijesti'}</p>
+            <p className="text-sm">{tab === 'live' ? arrivalsT('No active sessions', locale) : tab === 'upcoming' ? arrivalsT('No upcoming sessions', locale) : arrivalsT('No history', locale)}</p>
           </div>
         ) : (
           <div className="space-y-2 mt-2">
@@ -204,7 +222,7 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
               <div key={s.id} className="rounded-xl border border-black/10 bg-white p-3 hover:border-[#2563EB]/30 hover:bg-[#2563EB]/5 transition-all">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="font-mono font-bold text-sm text-[#2563EB]">{s.plate || '—'}</span>
-                  <StatusBadge computedStatus={getComputedStatus(s)} />
+                  <StatusBadge computedStatus={getComputedStatus(s)} locale={locale} />
                 </div>
                 <p className="text-xs font-semibold text-black truncate">{s.location_name || '—'}</p>
                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">

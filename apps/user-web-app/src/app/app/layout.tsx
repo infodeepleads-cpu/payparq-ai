@@ -53,17 +53,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         className="fixed inset-y-0 right-0 z-[9000] w-72 bg-white flex flex-col shadow-2xl transition-transform duration-300 ease-in-out"
         style={{ transform: menuOpen ? 'translateX(0)' : 'translateX(100%)' }}
       >
-        <div className="flex items-center justify-between px-5 h-14 border-b border-black/10 shrink-0">
-          <span className="text-sm font-bold">PayParq</span>
-          <button onClick={close} className="text-black/40 hover:text-black text-xl leading-none">✕</button>
-        </div>
-
-        {user && (
-          <div className="px-5 py-3 border-b border-black/5">
-            <p className="text-[11px] text-black/40">Signed in as</p>
-            <p className="text-xs font-semibold text-black truncate">{user.email}</p>
+        <div className="flex items-center justify-between px-5 h-14 border-b border-black/10 shrink-0 gap-3">
+          <div className="flex-1 min-w-0">
+            <span className="text-sm font-bold block">PayParq</span>
+            {user && <p className="text-[10px] text-black/50 truncate">{user.email}</p>}
           </div>
-        )}
+          <button onClick={close} className="text-black/40 hover:text-black text-xl leading-none shrink-0">✕</button>
+        </div>
 
         <nav className="flex-1 flex flex-col px-3 py-4 gap-1">
           <a href="/app" onClick={close} className="px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">

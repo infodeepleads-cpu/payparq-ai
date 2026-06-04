@@ -47,10 +47,14 @@ export default function AuthCallbackPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-4" />
-        <p className="text-sm text-gray-600">Prijava u tijeku...</p>
+    <div className="fixed inset-0 bg-[#05020A] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="relative flex items-center justify-center w-20 h-20">
+          <div className="absolute inset-0 rounded-full border-4 border-white/10 border-t-white animate-spin" style={{ animationDuration: '1s' }} />
+          <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg z-10">
+            <span className="text-lg font-black tracking-tight text-[#05020A] select-none">P</span>
+          </div>
+        </div>
       </div>
     </div>
   );

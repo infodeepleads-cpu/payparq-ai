@@ -490,6 +490,17 @@ const MEMBERS_TRANSLATIONS = {
   'For Hosts': { en: 'For Hosts', hr: 'Za domaćine' },
   'Support': { en: 'Support', hr: 'Podrška' },
   'Log out': { en: 'Log out', hr: 'Odjava' },
+  // Arrivals panel
+  'Live': { en: 'Live', hr: 'Uživo' },
+  'Upcoming': { en: 'Upcoming', hr: 'Nadolazeće' },
+  'Expired': { en: 'Expired', hr: 'Završeno' },
+  'Updated': { en: 'Updated', hr: 'Ažurirano' },
+  'No active sessions.': { en: 'No active sessions.', hr: 'Nema aktivnih sesija.' },
+  'No listings yet. Click + to add.': { en: 'No listings yet. Click + to add.', hr: 'Nemaš objavljenih prostora. Klikni + za dodavanje.' },
+  'Back': { en: 'Back', hr: 'Povratak' },
+  'Apply': { en: 'Apply', hr: 'Apliciraj' },
+  'ACTIVE': { en: 'ACTIVE', hr: 'AKTIVNO' },
+  'VALIDNO': { en: 'VALID', hr: 'VALIDNO' },
 } as const;
 
 const membersT = (key: string, locale: 'en' | 'hr'): string => {
@@ -508,7 +519,6 @@ export default function MembersPage() {
   const [role, setRole] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
-  const [googleAuthLoading, setGoogleAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
   const [loginNotice, setLoginNotice] = useState("");
   const [verificationLoading, setVerificationLoading] = useState(false);
@@ -2068,7 +2078,7 @@ export default function MembersPage() {
                       <span className="text-[9px] font-bold text-white">3</span>
                     </div>
                     <div>
-                      <p className="font-semibold text-black">{locale === 'en' ? 'Back' : 'Povratak'}</p>
+                      <p className="font-semibold text-black">{membersT('Back', locale)}</p>
                       <p className="text-black/60 mt-0.5">Pozovite shuttle putem gumba &ldquo;Pozovi shuttle&rdquo; ispod.</p>
                     </div>
                   </div>
@@ -2137,7 +2147,7 @@ export default function MembersPage() {
                 onClick={handleInsuranceAction}
                 className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
               >
-                Apliciraj
+                {membersT('Apply', locale)}
               </button>
               {homeFeedback.insurance && (
                 <p className={`text-[11px] ${homeFeedback.insurance.type === "error" ? "text-red-600" : "text-black/70"}`}>
@@ -2471,7 +2481,7 @@ export default function MembersPage() {
                   formatCroatianDateTime(row.end_time),
                 ].join(" — ");
                 const statusValue = (row.status ?? "active").toString().trim().toUpperCase();
-                const statusDisplay = statusValue === "PROĆE" || statusValue === "VALID" ? "VALIDNO" : statusValue === "ACTIVE" ? "AKTIVNO" : statusValue;
+                const statusDisplay = statusValue === "PROĆE" || statusValue === "VALID" ? membersT('VALIDNO', locale) : statusValue === "ACTIVE" ? membersT('ACTIVE', locale) : statusValue;
                 return (
                   <div key={row.id} className="rounded-lg border border-black/10 px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
@@ -3102,7 +3112,7 @@ export default function MembersPage() {
             {ownerListingsLoading ? (
               <p className="text-xs text-black/50">Učitavanje...</p>
             ) : ownerListings.length === 0 ? (
-              <p className="text-xs text-black/50">Nemaš objavljenih prostora. Klikni <span className="font-semibold text-[black]">+</span> za dodavanje.</p>
+              <p className="text-xs text-black/50">{membersT('No listings yet. Click + to add.', locale).split('+')[0]}<span className="font-semibold text-[black]">+</span> {membersT('No listings yet. Click + to add.', locale).split('+')[1]}</p>
             ) : (
               <div className="space-y-3">
                 {ownerListings.map((loc) => (
@@ -3366,7 +3376,6 @@ export default function MembersPage() {
                   onClick={async () => {
                     try {
                       setAuthError('');
-                      setGoogleAuthLoading(true);
                       const redirect = searchParams.get('redirect') || '';
                       const origin = typeof window !== 'undefined' ? window.location.origin : '';
                       if (redirect) {
@@ -3387,7 +3396,6 @@ export default function MembersPage() {
                       const errorMsg = err instanceof Error ? err.message : 'Failed to sign in with Google';
                       console.error('Google OAuth error:', errorMsg, err);
                       setAuthError(errorMsg);
-                      setGoogleAuthLoading(false);
                     }
                   }}
                   className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-white border border-black/10 text-black text-xs font-semibold shadow-md hover:bg-gray-50 transition-colors"
@@ -3711,7 +3719,7 @@ export default function MembersPage() {
                         href="/app"
                         className="w-full inline-flex items-center justify-center px-3 py-2 rounded-xl text-[11px] font-semibold shadow-sm transition-colors bg-white/5 text-white hover:bg-white/10"
                       >
-                        Povratak
+                        {membersT('Back', locale)}
                       </a>
                       <button
                         type="button"
