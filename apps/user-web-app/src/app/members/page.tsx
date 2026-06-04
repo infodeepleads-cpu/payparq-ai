@@ -29,6 +29,7 @@ type NavItemId =
   | "rewards"
   | "reviews"
   | "help"
+  | "admin"
   | "operations"
   | "management"
   | "campaigns"
@@ -36,7 +37,6 @@ type NavItemId =
   | "arrivals"
   | "moji-prostori"
   | "payouts"
-  | "calendars"
   | "list-lot";
 type FlowType = "park_now" | "monthly" | "reserve";
 type HomeWidgetId = "insurance" | "ride" | "extend" | "invoice";
@@ -2977,6 +2977,57 @@ export default function MembersPage() {
       );
     }
 
+    if (activeItem === "admin" && role === "super_admin") {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-black">
+              Admin Panel
+            </h2>
+            <p className="text-sm text-black/70">Manage platform features and communications.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              onClick={() => setActiveItem("operations")}
+              className="rounded-xl border border-black/10 bg-white p-6 text-left hover:border-black/20 hover:bg-black/5 transition-all"
+            >
+              <div className="text-2xl mb-2">⚙️</div>
+              <h3 className="text-sm font-semibold text-black mb-1">{membersT('Operacije', locale)}</h3>
+              <p className="text-xs text-black/60">Platform operations and management</p>
+            </button>
+
+            <button
+              onClick={() => setActiveItem("campaigns")}
+              className="rounded-xl border border-black/10 bg-white p-6 text-left hover:border-black/20 hover:bg-black/5 transition-all"
+            >
+              <div className="text-2xl mb-2">✉️</div>
+              <h3 className="text-sm font-semibold text-black mb-1">{membersT('Kampanje', locale)}</h3>
+              <p className="text-xs text-black/60">Email campaigns and communications</p>
+            </button>
+
+            <button
+              onClick={() => setActiveItem("social")}
+              className="rounded-xl border border-black/10 bg-white p-6 text-left hover:border-black/20 hover:bg-black/5 transition-all"
+            >
+              <div className="text-2xl mb-2">📱</div>
+              <h3 className="text-sm font-semibold text-black mb-1">{membersT('Društvene mreže', locale)}</h3>
+              <p className="text-xs text-black/60">Social media management</p>
+            </button>
+
+            <a
+              href="/resources"
+              className="rounded-xl border border-black/10 bg-white p-6 text-left hover:border-black/20 hover:bg-black/5 transition-all"
+            >
+              <div className="text-2xl mb-2">📚</div>
+              <h3 className="text-sm font-semibold text-black mb-1">Resursi</h3>
+              <p className="text-xs text-black/60">Platform resources</p>
+            </a>
+          </div>
+        </div>
+      );
+    }
+
     if (activeItem === "operations") {
       return <OperationsPanel />;
     }
@@ -3235,6 +3286,12 @@ export default function MembersPage() {
                     Authentication is not configured. Add the required environment variables and restart the server.
                   </div>
                 )}
+                {authError && (
+                  <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    <p className="font-semibold mb-1">Sign-in failed</p>
+                    <p className="text-xs">{authError}</p>
+                  </div>
+                )}
                 <form className="space-y-4" onSubmit={handleAuth}>
                   <div className="space-y-1">
                     <label className="block text-xs font-semibold text-black/70">
@@ -3249,9 +3306,6 @@ export default function MembersPage() {
                       placeholder="you@company.com"
                     />
                   </div>
-                  {authError && (
-                    <p className="text-[11px] text-red-600">{authError}</p>
-                  )}
                   {loginNotice && (
                     <p className="text-[11px] text-black/70">{loginNotice}</p>
                   )}
@@ -3273,26 +3327,24 @@ export default function MembersPage() {
                   onClick={async () => {
                     try {
                       setAuthError('');
-                      // Clear OAuth state from previous attempts
-                      Object.keys(sessionStorage).forEach(key => {
-                        if (key.includes('auth') || key.includes('supabase')) {
-                          sessionStorage.removeItem(key);
-                        }
-                      });
                       const redirect = searchParams.get('redirect') || '';
                       const origin = typeof window !== 'undefined' ? window.location.origin : '';
                       if (redirect) {
                         sessionStorage.setItem('authRedirect', redirect);
                       }
                       const callbackUrl = `${origin}/auth/callback`;
+                      console.log('Starting Google OAuth with callback:', callbackUrl);
                       await supabase?.auth.signInWithOAuth({
                         provider: 'google',
                         options: {
-                          redirectTo: callbackUrl
+                          redirectTo: callbackUrl,
+                          skipBrowserRedirect: false
                         }
                       });
                     } catch (err) {
-                      setAuthError(err instanceof Error ? err.message : 'Failed to sign in with Google');
+                      const errorMsg = err instanceof Error ? err.message : 'Failed to sign in with Google';
+                      console.error('Google OAuth error:', errorMsg, err);
+                      setAuthError(errorMsg);
                     }
                   }}
                   className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-white border border-black/10 text-black text-xs font-semibold shadow-md hover:bg-gray-50 transition-colors"
@@ -3386,7 +3438,7 @@ export default function MembersPage() {
 
               {sidebarOpen && <div className="md:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setSidebarOpen(false)} />}
               <div className="min-h-0 flex-1 flex bg-[#05020A] overflow-hidden">
-                <aside className={`${sidebarOpen ? 'fixed md:static' : 'hidden md:flex'} md:flex w-72 border-r border-white/10 bg-[#05020A] flex-col z-40 md:z-0 h-full md:h-auto left-0 top-0 pt-16 md:pt-0 overflow-y-auto md:overflow-hidden`}>
+                <aside className={`${sidebarOpen ? 'fixed md:static' : 'hidden md:flex'} md:flex w-72 border-r border-white/10 bg-[#05020A] flex-col z-40 md:z-0 h-screen md:h-auto left-0 top-0 md:pt-0 overflow-hidden`}>
                   <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0 border-b border-white/10">
                     <div className="w-7 h-7 rounded-full bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
                       <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#020617] to-[#020617] flex items-center justify-center border border-white/40">
@@ -3395,7 +3447,7 @@ export default function MembersPage() {
                     </div>
                     <div className="text-sm font-black tracking-tight text-white select-none">payparq</div>
                   </div>
-                  <nav className="px-2 py-0 space-y-0 text-[12px] flex-1 overflow-y-auto flex flex-col">
+                  <nav className="px-2 py-0 space-y-0 text-[12px] flex-1 overflow-hidden flex flex-col">
                     {/* HOME */}
                     <button
                       type="button"
@@ -3469,61 +3521,18 @@ export default function MembersPage() {
                         {role === 'super_admin' && (
                           <button
                             type="button"
-                            onClick={() => setActiveItem("operations")}
+                            onClick={() => setActiveItem("admin")}
                             className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
-                              activeItem === "operations"
+                              activeItem === "admin"
                                 ? "bg-white text-black"
                                 : "text-white/70 hover:bg-white/5"
                             }`}
                           >
                             <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                              O
+                              ⚙
                             </span>
-                            <span>{membersT('Operacije', locale)}</span>
+                            <span>Admin</span>
                           </button>
-                        )}
-                        {role === 'super_admin' && (
-                          <button
-                            type="button"
-                            onClick={() => setActiveItem("campaigns")}
-                            className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
-                              activeItem === "campaigns"
-                                ? "bg-white text-black"
-                                : "text-white/70 hover:bg-white/5"
-                            }`}
-                          >
-                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                              ✉
-                            </span>
-                            <span>{membersT('Kampanje', locale)}</span>
-                          </button>
-                        )}
-                        {role === 'super_admin' && (
-                          <button
-                            type="button"
-                            onClick={() => setActiveItem("social")}
-                            className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
-                              activeItem === "social"
-                                ? "bg-white text-black"
-                                : "text-white/70 hover:bg-white/5"
-                            }`}
-                          >
-                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                              📱
-                            </span>
-                            <span>{membersT('Društvene mreže', locale)}</span>
-                          </button>
-                        )}
-                        {role === 'super_admin' && (
-                          <Link
-                            href="/resources"
-                            className="flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors text-white/70 hover:bg-white/5"
-                          >
-                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                              S
-                            </span>
-                            <span>Resursi</span>
-                          </Link>
                         )}
                       </div>
 
