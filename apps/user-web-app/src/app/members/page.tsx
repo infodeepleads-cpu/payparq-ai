@@ -3753,8 +3753,24 @@ export default function MembersPage() {
                         ? membersT('Rewards', locale)
                         : activeItem === "reviews"
                         ? membersT('Recenzije', locale)
+                        : activeItem === "moji-prostori"
+                        ? membersT('Moji prostori', locale)
+                        : activeItem === "arrivals"
+                        ? membersT('Arrivals', locale)
+                        : activeItem === "payouts"
+                        ? "Payouts"
                         : activeItem === "list-lot"
                         ? "List your parking"
+                        : activeItem === "operations"
+                        ? "Operations"
+                        : activeItem === "management"
+                        ? "Management"
+                        : activeItem === "campaigns"
+                        ? "Campaigns"
+                        : activeItem === "social"
+                        ? "Social"
+                        : activeItem === "admin"
+                        ? "Admin"
                         : membersT('Help', locale)}
                     </div>
                     <div className="bg-white p-5 md:p-6 shadow-sm min-h-0 flex-1 flex flex-col overflow-hidden">
