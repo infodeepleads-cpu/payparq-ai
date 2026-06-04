@@ -1683,6 +1683,7 @@ export function SearchPage() {
                   />
                 ) : (
                   <DateTimePickerDropdown
+                    key={showMobileSearchEdit ? 'open' : 'closed'}
                     startTime={startTime}
                     endTime={endTime}
                     onStartTimeChange={setStartTime}
