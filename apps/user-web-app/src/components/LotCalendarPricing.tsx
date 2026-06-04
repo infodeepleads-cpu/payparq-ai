@@ -379,6 +379,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
               config={selectedDateConfig}
               lotCapacity={parseInt(lotCapacity)}
               locale={locale}
+              allConfigs={dateConfigs}
               onSave={(config) => handleSaveDate(config)}
               onCancel={() => setSelectedDate(null)}
             />
@@ -433,9 +434,10 @@ interface DateConfigWidgetProps {
   onSave: (config: DateConfig) => void;
   onCancel: () => void;
   locale: 'en' | 'hr';
+  allConfigs?: Record<string, DateConfig>;
 }
 
-function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale }: DateConfigWidgetProps) {
+function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale, allConfigs = {} }: DateConfigWidgetProps) {
   const [capacity, setCapacity] = useState(config.capacity ? String(config.capacity) : '');
   const [isOpen, setIsOpen] = useState(config.isOpen);
   const [openTime, setOpenTime] = useState(config.openTime);
@@ -445,8 +447,54 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale }: Dat
   const [priceDaily, setPriceDaily] = useState(config.priceDaily != null ? String(config.priceDaily) : '');
   const [priceMonthly, setPriceMonthly] = useState(config.priceMonthly != null ? String(config.priceMonthly) : '');
 
+  const getPreviousPrice = () => {
+    const dates = Object.keys(allConfigs).sort().reverse();
+    for (const d of dates) {
+      if (d < config.date && allConfigs[d]?.priceHourly) {
+        return allConfigs[d];
+      }
+    }
+    return null;
+  };
+
+  const handleCopyPreviousPrices = () => {
+    const prev = getPreviousPrice();
+    if (prev) {
+      setPriceHourly(prev.priceHourly ? String(prev.priceHourly) : '');
+      setPriceDaily(prev.priceDaily ? String(prev.priceDaily) : '');
+      setPriceMonthly(prev.priceMonthly ? String(prev.priceMonthly) : '');
+    }
+  };
+
   return (
     <div className="space-y-4 md:space-y-5">
+      {/* Current Settings Summary */}
+      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-3">{locale === 'en' ? 'Current Settings' : 'Trenutne postavke'}</p>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-700">{locale === 'en' ? 'Status' : 'Stanje'}:</span>
+            <span className={`text-sm font-semibold ${config.isOpen ? 'text-green-700' : 'text-red-700'}`}>
+              {config.isOpen ? (locale === 'en' ? '🟢 Open' : '🟢 Otvoreno') : (locale === 'en' ? '🔴 Closed' : '🔴 Zatvoreno')}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-700">{t('Prices', locale)}:</span>
+            <span className="text-sm font-semibold text-gray-900">
+              {config.priceHourly ? `€${config.priceHourly}/h` : '—'} • {config.priceDaily ? `€${config.priceDaily}/d` : '—'} • {config.priceMonthly ? `€${config.priceMonthly}/m` : '—'}
+            </span>
+          </div>
+        </div>
+        {getPreviousPrice() && (
+          <button
+            type="button"
+            onClick={handleCopyPreviousPrices}
+            className="mt-3 w-full px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
+          >
+            {locale === 'en' ? '📋 Copy from previous date' : '📋 Preuzmi s prethodnog datuma'}
+          </button>
+        )}
+      </div>
       {/* Open/Close Toggle */}
       <div className="space-y-2">
         <label className="block text-sm md:text-base font-semibold text-gray-900">{t('Availability', locale)}</label>
