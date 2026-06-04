@@ -84,7 +84,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         <div className="px-4 pb-8 pt-2 shrink-0">
           <button
-            onClick={() => openExternal('https://github.com/kzamic-prog/payparq.ai/releases/download/apk-latest/payparq-app.apk')}
+            onClick={() => openExternal('https://github.com/kzamic-prog/payparq.ai/releases')}
             className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
           >
             Download App

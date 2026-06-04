@@ -303,31 +303,6 @@ export function SearchPage() {
   const [error, setError] = useState<string>('');
   const filterModalRef = useRef<HTMLDivElement>(null);
   const [sortBy, setSortBy] = useState<'relevance' | 'distance' | 'price' | 'price-low' | 'price-high' | 'rating' | 'walk' | 'value'>('distance');
-  const [pwaPrompt, setPwaPrompt] = useState<any>(null);
-
-  // PWA install prompt
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: any) => {
-      e.preventDefault();
-      setPwaPrompt(e);
-    };
-    const handleAppInstalled = () => {
-      setPwaPrompt(null);
-    };
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
-  }, []);
-
-  const handleInstallPWA = async () => {
-    if (!pwaPrompt) return;
-    pwaPrompt.prompt();
-    await pwaPrompt.userChoice;
-    setPwaPrompt(null);
-  };
 
   // Debug: log sortBy changes
   useEffect(() => {
@@ -1552,11 +1527,6 @@ export function SearchPage() {
                 <a href="/members" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200" translate="no">
                   Upravljačka Ploča
                 </a>
-                {pwaPrompt && (
-                  <button onClick={handleInstallPWA} className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
-                    Install App
-                  </button>
-                )}
               </div>
             </div>
           </div>
