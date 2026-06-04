@@ -673,8 +673,8 @@ export default function EditListingPage() {
             </CollapsibleSection>
 
             <CollapsibleSection title="Fotografije (Neobavezno)" defaultOpen={false}>
-              <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
-                <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> Povećajte konverzije</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-blue-600 flex-shrink-0" /> Povećajte konverzije</p>
                 <p className="text-xs text-black leading-relaxed">Ogledni parkingi s fotografijama imaju 33-72% veće stope konverzije. Preporučujemo dodavanje 3-5 kvalitetnih fotografija vašeg parking mjesta.</p>
               </div>
 

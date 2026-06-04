@@ -1950,11 +1950,11 @@ export default function MembersPage() {
             </div>
             <div className="shrink-0 space-y-2">
               <div className="rounded-lg border border-[black]/25 bg-[#EDE9FE] px-3 py-2 text-right">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#3E22C6]/70">Wallet</p>
-                <p className="text-sm font-semibold text-[#3E22C6]">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#5F3DFC]/70">Wallet</p>
+                <p className="text-sm font-semibold text-[#5F3DFC]">
                   {formatMoneyFromCents(walletSummary?.balanceCents, walletSummary?.currency || "EUR")}
                 </p>
-                <p className="text-[11px] text-[#3E22C6]/85">
+                <p className="text-[11px] text-[#5F3DFC]/85">
                   {formatLoyaltyLevelLabel(loyaltySummary?.level)}
                   {(loyaltySummary?.pointsYear ?? 0) > 0 ? ` · ${loyaltySummary?.pointsYear ?? 0} pts` : ""}
                 </p>
@@ -2150,7 +2150,7 @@ export default function MembersPage() {
                     <button
                       type="button"
                       onClick={() => callService('valet', valetCode, homeContext.plate ?? null)}
-                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-[black] text-white text-xs font-semibold hover:bg-[#4e2fdb] transition-colors"
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-[black] text-white text-xs font-semibold hover:bg-[#5F3DFC] transition-colors"
                     >
                       Pozovi auto
                     </button>
@@ -2861,21 +2861,21 @@ export default function MembersPage() {
             Track rewards and benefits earned across the Payparq network.
           </p>
           <div className="rounded-xl border border-[black]/20 bg-[#EDE9FE] p-4 space-y-2">
-            <p className="text-sm font-semibold text-[#3E22C6]">
+            <p className="text-sm font-semibold text-[#5F3DFC]">
               {formatLoyaltyLevelLabel(loyaltySummary?.level)}
             </p>
-            <p className="text-xs text-[#3E22C6]/80">
+            <p className="text-xs text-[#5F3DFC]/80">
               Points this year: <span className="font-semibold">{loyaltySummary?.pointsYear ?? 0}</span>
             </p>
-            <p className="text-xs text-[#3E22C6]/80">
+            <p className="text-xs text-[#5F3DFC]/80">
               Total points: <span className="font-semibold">{loyaltySummary?.pointsTotal ?? 0}</span>
             </p>
-            <p className="text-xs text-[#3E22C6]/80">
+            <p className="text-xs text-[#5F3DFC]/80">
               Bonus bands: L2 {loyaltySummary?.bonusRangeByLevel?.level_2 ?? "1% - 15%"} · L3{" "}
               {loyaltySummary?.bonusRangeByLevel?.level_3 ?? "5% - 20%"}
             </p>
             {loyaltySummary?.nextLevel && (
-              <p className="text-[11px] text-[#3E22C6]/70">
+              <p className="text-[11px] text-[#5F3DFC]/70">
                 Next level: {formatLoyaltyLevelLabel(loyaltySummary.nextLevel)} ·{" "}
                 {loyaltySummary.nextLevelProgressPercent}% complete
               </p>
@@ -2936,7 +2936,7 @@ export default function MembersPage() {
             </div>
           )}
           {!reviewsLoading && reviewsRows.length === 0 && (
-            <div className="rounded-xl border border-black/10 bg-[#FBFAFF] p-4 text-sm text-black/60">
+            <div className="rounded-xl border border-black/10 bg-[#EDE9FE] p-4 text-sm text-black/60">
               Još niste dali nijednu recenziju. Nakon završetka parkinga dobit ćete e-mail s linkom za recenziju.
             </div>
           )}
@@ -2998,68 +2998,6 @@ export default function MembersPage() {
 
     if (activeItem === "payouts" && (user || devSignedIn)) {
       return <PayoutsPanel user={user} locale={locale} />;
-    }
-
-    if (activeItem === "calendars" && (user || devSignedIn)) {
-      return (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight text-black">
-              Upravljaj kalendarima
-            </h2>
-            <p className="text-sm text-black/70">Postavi dostupnost, kapacitet i cijene za vaše prostore.</p>
-          </div>
-
-          {/* Calendar Management for Single Lot */}
-          {selectedLotForManagement ? (
-            <div className="rounded-xl border border-black/10 bg-white overflow-hidden" style={{ height: '600px' }}>
-              <LotCalendarPricing
-                lotId={selectedLotForManagement}
-                lotName={ownerListings.find(l => l.id === selectedLotForManagement)?.name || 'Unknown'}
-                lotAddress={ownerListings.find(l => l.id === selectedLotForManagement)?.address || 'Unknown'}
-                lotCapacity={String(ownerListings.find(l => l.id === selectedLotForManagement)?.capacity || '1')}
-                onBack={() => setSelectedLotForManagement(null)}
-              />
-            </div>
-          ) : (
-            <div className="rounded-xl border border-black/10 bg-white p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60 mb-3">Dostupni prostori</p>
-              {ownerListingsLoading ? (
-                <p className="text-xs text-black/50">Učitavanje...</p>
-              ) : ownerListings.filter(l => l.verification_status === 'verified').length === 0 ? (
-                <p className="text-xs text-black/50">{membersT('Nemaš verificiranih prostora. Provjeri status u Moji prostori.', locale)}</p>
-              ) : (
-                <div className="space-y-2">
-                  {ownerListings
-                    .filter(loc => loc.verification_status === 'verified')
-                    .map((loc) => (
-                      <button
-                        key={loc.id}
-                        onClick={() => setSelectedLotForManagement(loc.id)}
-                        className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-black/10 bg-black/2 hover:bg-purple-50 hover:border-purple-300 transition-all group"
-                      >
-                        <div className="text-left flex-1">
-                          <p className="text-xs font-semibold text-black">{loc.name}</p>
-                          <p className="text-[10px] text-black/50">{loc.address}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-black/50">{loc.capacity} mjesta</span>
-                          <svg className="w-4 h-4 text-purple-500 group-hover:text-purple-700 transition-colors" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M6 2a1 1 0 00-1 1v2H4a2 2 0 00-2 2v2h16V7a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v2H7V3a1 1 0 00-1-1zm0 5H4v9a2 2 0 002 2h12a2 2 0 002-2V7h-2v1a1 1 0 11-2 0V7H9v1a1 1 0 11-2 0V7H6v1a1 1 0 11-2 0V7z" />
-                          </svg>
-                        </div>
-                      </button>
-                    ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {actionError && (
-            <p className="text-[11px] text-red-600">{actionError}</p>
-          )}
-        </div>
-      );
     }
 
     if (activeItem === "moji-prostori" && (user || devSignedIn)) {
@@ -3240,6 +3178,11 @@ export default function MembersPage() {
         </div>
       </div>
     );
+  }
+
+  // Show auth screen immediately if no user (don't wait for loading)
+  if (!user && typeof window !== 'undefined') {
+    return <AuthScreen />;
   }
 
   if (!pageReady) {
@@ -3508,20 +3451,6 @@ export default function MembersPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setActiveItem("calendars")}
-                          className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
-                            activeItem === "calendars"
-                              ? "bg-white text-black"
-                              : "text-white/70 hover:bg-white/5"
-                          }`}
-                        >
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                            C
-                          </span>
-                          <span>{membersT('Upravljaj kalendarima', locale)}</span>
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => setActiveItem("payouts")}
                           className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
                             activeItem === "payouts"
@@ -3534,7 +3463,7 @@ export default function MembersPage() {
                           </span>
                           <span>Payouts</span>
                         </button>
-                        {isAdmin && (
+                        {role === 'super_admin' && (
                           <button
                             type="button"
                             onClick={() => setActiveItem("operations")}
@@ -3582,7 +3511,7 @@ export default function MembersPage() {
                             <span>{membersT('Društvene mreže', locale)}</span>
                           </button>
                         )}
-                        {isAdmin && (
+                        {role === 'super_admin' && (
                           <Link
                             href="/resources"
                             className="flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors text-white/70 hover:bg-white/5"
