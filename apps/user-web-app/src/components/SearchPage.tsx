@@ -1488,7 +1488,7 @@ export function SearchPage() {
       </div>
 
       {/* Mobile Header */}
-      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-4 relative" style={{ zIndex: 50 }}>
+      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-4 sticky top-0" style={{ zIndex: 50 }}>
         {/* Logo Row with Menu */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 flex-shrink-0">

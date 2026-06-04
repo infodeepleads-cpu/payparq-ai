@@ -162,8 +162,8 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
         {/* Tabs */}
         <div className="flex items-center gap-2">
           {([
-            ['live', `Uživo (${live.length})`, 'bg-[#5F3DFC] text-white', 'text-[#5F3DFC] border border-[#5F3DFC]/30'],
-            ['upcoming', `Nadolazeće (${upcoming.length})`, 'bg-[#5F3DFC] text-white', 'text-[#5F3DFC] border border-[#5F3DFC]/30'],
+            ['live', `Uživo (${live.length})`, 'bg-[#2563EB] text-white', 'text-[#2563EB] border border-[#2563EB]/30'],
+            ['upcoming', `Nadolazeće (${upcoming.length})`, 'bg-[#2563EB] text-white', 'text-[#2563EB] border border-[#2563EB]/30'],
             ['history', `Povijest (${history.length})`, 'bg-black text-white', 'text-black/60 border border-black/15'],
           ] as const).map(([id, label, activeClass, inactiveClass]) => (
             <button
@@ -185,7 +185,7 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
             placeholder="Pretraži tablicu, email, lokaciju..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full bg-black/5 text-black text-xs placeholder-black/30 rounded-lg px-3 py-2 outline-none border border-black/10 focus:border-[#5F3DFC]/50"
+            className="w-full bg-black/5 text-black text-xs placeholder-black/30 rounded-lg px-3 py-2 outline-none border border-black/10 focus:border-[#2563EB]/50"
           />
         </div>
       )}
@@ -201,16 +201,16 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
         ) : (
           <div className="space-y-2 mt-2">
             {filtered.map((s) => (
-              <div key={s.id} className="rounded-xl border border-black/10 bg-white p-3 hover:border-[#5F3DFC]/30 hover:bg-[#5F3DFC]/5 transition-all">
+              <div key={s.id} className="rounded-xl border border-black/10 bg-white p-3 hover:border-[#2563EB]/30 hover:bg-[#2563EB]/5 transition-all">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-mono font-bold text-sm text-[#5F3DFC]">{s.plate || '—'}</span>
+                  <span className="font-mono font-bold text-sm text-[#2563EB]">{s.plate || '—'}</span>
                   <StatusBadge computedStatus={getComputedStatus(s)} />
                 </div>
                 <p className="text-xs font-semibold text-black truncate">{s.location_name || '—'}</p>
                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
                   <span className="text-[10px] text-black/50">Ulaz: <span className="text-black font-medium">{fmt(s.entry_time)}</span></span>
                   {s.exit_time && <span className="text-[10px] text-black/50">Izlaz: <span className="text-black font-medium">{fmt(s.exit_time)}</span></span>}
-                  {s.duration_minutes && <span className="text-[10px] text-black/50">Trajanje: <span className="text-[#5F3DFC] font-semibold">{fmtDuration(s.duration_minutes)}</span></span>}
+                  {s.duration_minutes && <span className="text-[10px] text-black/50">Trajanje: <span className="text-[#2563EB] font-semibold">{fmtDuration(s.duration_minutes)}</span></span>}
                   {s.price !== null && <span className="text-[10px] text-black/50">Iznos: <span className="text-black font-semibold">{fmtAmount(s.price, s.currency)}</span></span>}
                   {s.email && <span className="text-[10px] text-black/50 truncate max-w-[180px]">Email: <span className="text-black/70">{s.email}</span></span>}
                 </div>

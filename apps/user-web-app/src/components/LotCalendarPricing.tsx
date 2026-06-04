@@ -57,6 +57,8 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
         if (err) throw err;
         if (lot?.verification_metadata?.dateConfigs) {
           setDateConfigs(lot.verification_metadata.dateConfigs);
+        } else {
+          setDateConfigs({});
         }
       } catch (err: any) {
         console.error('Failed to load lot data:', err.message);
@@ -65,7 +67,10 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
       }
     };
     loadData();
-  }, [lotId]);
+
+    // Reload data when calendar is opened (every time component mounts)
+    return () => {};
+  }, [lotId, supabase]);
 
   const croatianMonths = ['siječnja','veljače','ožujka','travnja','svibnja','lipnja','srpnja','kolovoza','rujna','listopada','studenog','prosinca'];
   const year = calendarDate.getFullYear();

@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { useLocale } from '@/components/LocaleProvider';
 import type { User } from '@supabase/supabase-js';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const { locale } = useLocale();
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
@@ -29,7 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen">
       {children}
 
-      {/* Floating hamburger button — top right, no bar */}
+      {/* Floating hamburger button — top right, fixed */}
       <button
         onClick={() => setMenuOpen(true)}
         className="fixed top-4 right-4 z-[1100] flex flex-col gap-[5px] p-2 md:top-[22px] md:py-[13px] bg-white rounded-lg shadow-md border border-black/10"
@@ -70,13 +72,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             href="/members"
             onClick={() => { close(); setTimeout(() => window.location.href = '/members', 50); }}
             className={`px-4 py-3 rounded-xl text-sm font-medium ${user ? 'hover:bg-black/5 text-black' : 'bg-black text-white'}`}
-            translate="no"
           >
-            {user ? 'Upravljačka Ploča' : 'Upravljačka Ploča'}
+            {locale === 'en' ? 'Dashboard' : 'Upravljačka Ploča'}
           </a>
           <button
             onClick={() => openExternal('https://www.payparq.com/main')}
-            className="px-4 py-3 rounded-xl text-sm font-medium text-black/50 text-left hover:bg-black/5"
+            className="px-4 py-3 rounded-xl text-sm font-medium text-black text-left hover:bg-black/5"
           >
             Posjetite web stranicu
           </button>
@@ -84,7 +85,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         <div className="px-4 pb-8 pt-2 shrink-0">
           <button
-            onClick={() => openExternal('https://github.com/kzamic-prog/payparq.ai/releases')}
+            onClick={() => openExternal('https://play.google.com/store/apps/details?id=com.payparq.app')}
             className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
           >
             Download App

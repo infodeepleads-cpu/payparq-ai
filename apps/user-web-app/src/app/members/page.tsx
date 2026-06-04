@@ -582,7 +582,9 @@ export default function MembersPage() {
 
   // Localhost bypass - force signed in state
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-  const isSignedIn = (!!user || devSignedIn || isLocalhost);
+  // Check if we're in Google OAuth flow (prevent showing auth screen after redirect)
+  const isInAuthFlow = typeof window !== 'undefined' && (window.location.hash.includes('access_token'));
+  const isSignedIn = (!!user || devSignedIn || isLocalhost || isInAuthFlow);
   const normalizedMemberEmail = (user?.email ?? email ?? 'dev@localhost').trim().toLowerCase();
   const hasMemberIdentity = normalizedMemberEmail.length > 0;
 
@@ -3490,7 +3492,7 @@ export default function MembersPage() {
 
                     {/* HOST SECTION */}
                     <div className="space-y-0.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 px-3 pt-0">Host / Domaćin</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 px-3 pt-0">{locale === 'en' ? 'Host' : 'Domaćin'}</p>
                         <button
                           type="button"
                           onClick={() => setActiveItem("moji-prostori")}
