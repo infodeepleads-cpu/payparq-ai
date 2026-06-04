@@ -62,26 +62,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 flex flex-col px-3 py-4 gap-1">
-          <a href="/app" onClick={close} className="px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">
+          <a href="/app" onClick={close} className="px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black text-center">
             Find Parking
           </a>
           <a
             href="/members"
             onClick={() => { close(); setTimeout(() => window.location.href = '/members', 50); }}
-            className={`px-4 py-3 rounded-xl text-sm font-medium ${user ? 'hover:bg-black/5 text-black' : 'bg-black text-white'}`}
+            className={`px-4 py-3 rounded-xl text-sm font-medium text-center ${user ? 'hover:bg-black/5 text-black' : 'bg-black text-white'}`}
           >
             {locale === 'en' ? 'Dashboard' : 'Upravljačka Ploča'}
           </a>
           <a
             href="/members?tab=help"
             onClick={() => { close(); setTimeout(() => window.location.href = '/members?tab=help', 50); }}
-            className="px-4 py-3 rounded-xl text-sm font-medium text-black hover:bg-black/5"
+            className="px-4 py-3 rounded-xl text-sm font-medium text-black text-center hover:bg-black/5"
           >
             {locale === 'en' ? 'Contact Us' : 'Kontaktirajte nas'}
           </a>
           <button
             onClick={() => openExternal('https://www.payparq.com/main')}
-            className="px-4 py-3 rounded-xl text-sm font-medium text-black text-center hover:bg-black/5"
+            className="px-4 py-3 rounded-xl text-sm font-medium text-black text-center hover:bg-black/5 w-full"
           >
             {locale === 'en' ? 'Visit Website' : 'Posjetite web stranicu'}
           </button>
