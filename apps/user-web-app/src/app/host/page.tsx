@@ -104,6 +104,12 @@ const HOST_TRANSLATIONS = {
   'By submitting you agree with our': { en: 'By submitting you agree with our', hr: 'Slanjem se slažete s našim' },
   'Terms of Use': { en: 'Terms of Use', hr: 'Uvjetima korištenja' },
   'Owner comment': { en: 'Owner comment', hr: 'Komentar Vlasnika' },
+  'Previous': { en: '← Previous', hr: '← Prethodna' },
+  'Next': { en: 'Next →', hr: 'Dalje →' },
+  'space': { en: 'space', hr: 'mjesto' },
+  'spaces': { en: 'spaces', hr: 'mjesta' },
+  'Number of spots': { en: 'Number of spots', hr: 'Broj mjesta' },
+  'Spot types': { en: 'Spot types', hr: 'Vrsta mjesta' },
 } as const;
 
 const hostT = (key: string, locale: string): string => {
@@ -414,14 +420,14 @@ function CalendarScheduler({ baseSpots, onConfigsChange, locale }: { baseSpots: 
         <button
           type="button"
           onClick={() => setCalendarDate(new Date(year, month - 1, 1))}
-          className="text-xs font-semibold text-gray-600 hover:text-gray-900" translate="no"
-        >← Prethodna</button>
+          className="text-xs font-semibold text-gray-600 hover:text-gray-900"
+        >{hostT('Previous', locale)}</button>
         <h3 className="text-sm font-semibold text-gray-900" translate="no">{croatianMonths[month]} {year}</h3>
         <button
           type="button"
           onClick={() => setCalendarDate(new Date(year, month + 1, 1))}
-          className="text-xs font-semibold text-gray-600 hover:text-gray-900" translate="no"
-        >Dalje →</button>
+          className="text-xs font-semibold text-gray-600 hover:text-gray-900"
+        >{hostT('Next', locale)}</button>
       </div>
 
       {/* Calendar Grid */}
@@ -461,7 +467,7 @@ function CalendarScheduler({ baseSpots, onConfigsChange, locale }: { baseSpots: 
                 {!isClosed && (
                   <>
                     <p className={`text-[7px] mt-0.5 font-medium w-full text-center ${isClosed ? 'text-white/80' : 'text-gray-700'}`}>
-                      {displayCapacity} {parseInt(String(displayCapacity)) === 1 ? 'mjesto' : 'mjesta'}
+                      {displayCapacity} {parseInt(String(displayCapacity)) === 1 ? hostT('space', locale) : hostT('spaces', locale)}
                     </p>
                     <div className={`flex items-center gap-0.5 mt-0.5 text-[6px] w-full justify-center ${isClosed ? 'text-white/60' : 'text-gray-600'}`}>
                       <Clock className="w-2 h-2" />
@@ -1107,7 +1113,7 @@ export default function HostPage() {
               {/* 3.4 Kapacitet */}
               <CollapsibleSection title={locale === 'en' ? 'Capacity' : 'Kapacitet'} defaultOpen={false}>
                 <div>
-                  <label className={labelClass}>{locale === 'en' ? 'Number of spots' : 'Broj mjesta'}</label>
+                  <label className={labelClass}>{hostT('Number of spots', locale)}</label>
                   <input type="number" placeholder="10" min="1" value={baseSpots} onChange={(e) => setBaseSpots(e.target.value)} className={inputClass} required />
                 </div>
 
@@ -1117,7 +1123,7 @@ export default function HostPage() {
               </CollapsibleSection>
 
               {/* 3.5 Vrsta mjesta */}
-              <CollapsibleSection title={locale === 'en' ? 'Spot types' : 'Vrsta mjesta'} defaultOpen={false}>
+              <CollapsibleSection title={hostT('Spot types', locale)} defaultOpen={false}>
                 <p className="text-xs text-gray-600 mb-3 leading-relaxed">{locale === 'en' ? 'Differentiate spot categories — select which you offer with a standard price multiplier' : 'Razlikujte kategoriju mjesta — odaberite koje ćete smjestiti uz množitelj standardne cijene'}</p>
                 <div className="space-y-2">
                   {SPOT_TYPES.map((st) => (
