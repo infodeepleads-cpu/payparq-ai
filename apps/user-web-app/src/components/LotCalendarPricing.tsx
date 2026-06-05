@@ -388,6 +388,9 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
                 setRangeEndDate(null);
               }}
               locale={locale}
+              basePriceHourly={liveBaseHourly}
+              basePriceDaily={liveBaseDaily}
+              basePriceMonthly={liveBaseMonthly}
             />
           </div>
         </div>
@@ -680,17 +683,20 @@ interface RangeConfigWidgetProps {
   onApply: (config: Omit<DateConfig, 'date'>) => void;
   onCancel: () => void;
   locale: 'en' | 'hr';
+  basePriceHourly?: number | null;
+  basePriceDaily?: number | null;
+  basePriceMonthly?: number | null;
 }
 
-function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale }: RangeConfigWidgetProps) {
+function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale, basePriceHourly, basePriceDaily, basePriceMonthly }: RangeConfigWidgetProps) {
   const [capacity, setCapacity] = useState(String(lotCapacity));
   const [isOpen, setIsOpen] = useState(true);
   const [openTime, setOpenTime] = useState('00:00');
   const [closeTime, setCloseTime] = useState('23:59');
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto');
-  const [priceHourly, setPriceHourly] = useState('');
-  const [priceDaily, setPriceDaily] = useState('');
-  const [priceMonthly, setPriceMonthly] = useState('');
+  const [priceHourly, setPriceHourly] = useState(basePriceHourly != null ? String(basePriceHourly) : '');
+  const [priceDaily, setPriceDaily] = useState(basePriceDaily != null ? String(basePriceDaily) : '');
+  const [priceMonthly, setPriceMonthly] = useState(basePriceMonthly != null ? String(basePriceMonthly) : '');
 
   return (
     <div className="space-y-4 md:space-y-5">

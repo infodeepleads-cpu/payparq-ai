@@ -128,6 +128,11 @@ const localHrOverrides = new Map<string, string>([
   ["Calendar", "Kalendar"],
   ["Manage calendar and pricing", "Upravljaj kalendarom i cijenama"],
   ["Manage calendar", "Upravljaj kalendarom"],
+  // UI labels that must not be auto-translated
+  ["Promocije", "Promocije"],
+  ["English", "English"],
+  ["Engleski", "Engleski"],
+  ["Hrvatski", "Hrvatski"],
   // Day abbreviations (must not be auto-translated)
   ["pon", "pon"],
   ["uto", "uto"],

@@ -53,9 +53,42 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const meta = existing?.verification_metadata || {};
+
+    // Check if any manually-priced date config exists — update base price columns so search reflects the change
+    const today = new Date().toISOString().slice(0, 10);
+    const todayConfig = dateConfigs[today];
+    const locationUpdate: Record<string, unknown> = { verification_metadata: { ...meta, dateConfigs } };
+
+    // Find the most recent manual price (prefer today, else latest date in configs)
+    let latestManualHourly: number | null = null;
+    let latestManualDaily: number | null = null;
+    let latestManualMonthly: number | null = null;
+
+    if (todayConfig?.priceMode === 'manual') {
+      latestManualHourly = todayConfig.priceHourly ?? null;
+      latestManualDaily = todayConfig.priceDaily ?? null;
+      latestManualMonthly = todayConfig.priceMonthly ?? null;
+    } else {
+      // Use nearest future date with manual pricing
+      const futureDates = Object.keys(dateConfigs)
+        .filter(d => d >= today && dateConfigs[d].priceMode === 'manual')
+        .sort();
+      if (futureDates.length > 0) {
+        const nearest = dateConfigs[futureDates[0]];
+        latestManualHourly = nearest.priceHourly ?? null;
+        latestManualDaily = nearest.priceDaily ?? null;
+        latestManualMonthly = nearest.priceMonthly ?? null;
+      }
+    }
+
+    if (latestManualHourly != null) locationUpdate.rate_per_hour = latestManualHourly;
+    if (latestManualHourly != null) locationUpdate.base_price_hourly = latestManualHourly;
+    if (latestManualDaily != null) locationUpdate.base_price_daily = latestManualDaily;
+    if (latestManualMonthly != null) locationUpdate.base_price_monthly = latestManualMonthly;
+
     const { error: updateErr } = await client
       .from('locations')
-      .update({ verification_metadata: { ...meta, dateConfigs } })
+      .update(locationUpdate)
       .eq('id', id);
 
     if (updateErr) {

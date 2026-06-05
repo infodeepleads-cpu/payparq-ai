@@ -1962,7 +1962,7 @@ export default function MembersPage() {
                       : 'border border-black/10 hover:bg-black/5'
                   }`}
                 >
-                  <span translate="no">{locale === 'en' ? 'English' : 'Engleski'}</span>
+                  <span data-no-translate="true">{locale === 'en' ? 'English' : 'Engleski'}</span>
                 </button>
                 <button
                   type="button"
@@ -1973,7 +1973,7 @@ export default function MembersPage() {
                       : 'border border-black/10 hover:bg-black/5'
                   }`}
                 >
-                  <span translate="no">Hrvatski</span>
+                  <span data-no-translate="true">Hrvatski</span>
                 </button>
               </div>
             </div>
@@ -2809,7 +2809,7 @@ export default function MembersPage() {
       if (!isEmailVerified) {
         return (
           <div className="space-y-3">
-            <h2 className="text-lg font-semibold tracking-tight text-black" translate="no">
+            <h2 className="text-lg font-semibold tracking-tight text-black" data-no-translate="true">
               {membersT('Promocije', locale)}
             </h2>
             <p className="text-sm text-black/70">
@@ -2847,7 +2847,7 @@ export default function MembersPage() {
       return (
         <div className="space-y-4">
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold tracking-tight text-black" translate="no">{membersT('Promocije', locale)}</h2>
+            <h2 className="text-lg font-semibold tracking-tight text-black" data-no-translate="true">{membersT('Promocije', locale)}</h2>
             <p className="text-sm text-black/70">{membersT('Share referral codes & earn 10% commission.', locale)}</p>
           </div>
 
@@ -3676,7 +3676,7 @@ export default function MembersPage() {
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                           %
                         </span>
-                        <span translate="no">{membersT('Promocije', locale)}</span>
+                        <span data-no-translate="true">{membersT('Promocije', locale)}</span>
                       </button>
                       <button
                         type="button"

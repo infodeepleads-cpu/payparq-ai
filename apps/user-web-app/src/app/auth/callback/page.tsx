@@ -11,6 +11,14 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     if (!supabase) return;
 
+    // OAuth state error — retry sign-in from the beginning
+    const errorCode = searchParams.get('error_code');
+    if (errorCode === 'bad_oauth_state') {
+      sessionStorage.removeItem('pkce_code_verifier');
+      router.replace('/members?auth_retry=1');
+      return;
+    }
+
     const redirectTo =
       sessionStorage.getItem('authRedirect') ||
       searchParams.get('redirect') ||

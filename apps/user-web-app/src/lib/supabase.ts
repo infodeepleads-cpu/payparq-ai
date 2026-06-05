@@ -19,6 +19,8 @@ export const supabase = isSupabaseConfigured && supabaseUrl && supabaseAnonKey &
       auth: {
         persistSession: true,
         autoRefreshToken: true,
+        flowType: 'implicit',
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
       },
     })
   : null;
