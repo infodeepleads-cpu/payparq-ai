@@ -154,7 +154,6 @@ async function sendFCMNotifications(
       },
     };
 
-    // Send to each token individually
     let successCount = 0;
     let failureCount = 0;
     const failedTokens: string[] = [];
@@ -176,7 +175,6 @@ async function sendFCMNotifications(
       `FCM sent: ${successCount} succeeded, ${failureCount} failed`
     );
 
-    // Handle failed tokens
     if (failedTokens.length > 0) {
       console.warn('Failed FCM tokens:', failedTokens);
     }

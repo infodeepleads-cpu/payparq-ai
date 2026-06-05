@@ -604,6 +604,24 @@ export default function MembersPage() {
     }
   }, [user]);
 
+  // Lock scroll when sidebar open
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
+  }, [sidebarOpen]);
+
   // Show full-screen spinner while waiting for OAuth session to hydrate
   const isAwaitingOAuthSession = isInAuthFlow && !user && !devSignedIn;
 
@@ -1944,7 +1962,7 @@ export default function MembersPage() {
                       : 'border border-black/10 hover:bg-black/5'
                   }`}
                 >
-                  {locale === 'en' ? 'English' : 'Engleski'}
+                  <span translate="no">{locale === 'en' ? 'English' : 'Engleski'}</span>
                 </button>
                 <button
                   type="button"
@@ -1955,7 +1973,7 @@ export default function MembersPage() {
                       : 'border border-black/10 hover:bg-black/5'
                   }`}
                 >
-                  Hrvatski
+                  <span translate="no">Hrvatski</span>
                 </button>
               </div>
             </div>
@@ -2791,7 +2809,7 @@ export default function MembersPage() {
       if (!isEmailVerified) {
         return (
           <div className="space-y-3">
-            <h2 className="text-lg font-semibold tracking-tight text-black">
+            <h2 className="text-lg font-semibold tracking-tight text-black" translate="no">
               {membersT('Promocije', locale)}
             </h2>
             <p className="text-sm text-black/70">
@@ -2829,7 +2847,7 @@ export default function MembersPage() {
       return (
         <div className="space-y-4">
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold tracking-tight text-black">{membersT('Promocije', locale)}</h2>
+            <h2 className="text-lg font-semibold tracking-tight text-black" translate="no">{membersT('Promocije', locale)}</h2>
             <p className="text-sm text-black/70">{membersT('Share referral codes & earn 10% commission.', locale)}</p>
           </div>
 
@@ -3658,7 +3676,7 @@ export default function MembersPage() {
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                           %
                         </span>
-                        <span>{membersT('Promocije', locale)}</span>
+                        <span translate="no">{membersT('Promocije', locale)}</span>
                       </button>
                       <button
                         type="button"

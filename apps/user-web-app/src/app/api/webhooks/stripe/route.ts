@@ -14,7 +14,6 @@ const supabase = createClient(
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 
-// Initialize Firebase
 let firebaseApp: admin.app.App | null = null;
 try {
   if (admin.apps.length > 0) {
@@ -23,16 +22,6 @@ try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
     firebaseApp = admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-    });
-  } else if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
-    firebaseApp = admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKeyId: process.env.FIREBASE_PRIVATE_KEY_ID,
-      } as any),
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     });
   }
@@ -71,34 +60,28 @@ async function sendPaymentNotification(ownerId: string, session: SessionData) {
     });
     console.log('[webhook] Notification saved to DB');
 
-    // Get device tokens
+    // Send Firebase push to mobile app
     const { data: tokens, error: tokensError } = await supabase
       .from('device_tokens')
       .select('token')
       .eq('user_id', ownerId);
 
-    console.log('[webhook] Device tokens found:', tokens?.length ?? 0, 'error:', tokensError?.message);
-
-    if (!tokens || tokens.length === 0 || !firebaseApp) {
-      console.log('[webhook] Skipping FCM send - no tokens, firebaseApp, or tokens empty');
-      return;
+    if (tokens && tokens.length > 0 && firebaseApp) {
+      const messaging = admin.messaging(firebaseApp);
+      const results = await Promise.all(
+        tokens.map((t) =>
+          messaging.send({
+            token: t.token,
+            notification: { title, body },
+            data: { type: 'payment', location: session.location },
+          }).catch((err) => {
+            console.error('[webhook] FCM send failed for token:', err);
+            return null;
+          })
+        )
+      );
+      console.log('[webhook] FCM sent to', results.filter(Boolean).length, 'devices');
     }
-
-    // Send Firebase push
-    const messaging = admin.messaging(firebaseApp);
-    const results = await Promise.all(
-      tokens.map((t) =>
-        messaging.send({
-          token: t.token,
-          notification: { title, body },
-          data: { type: 'payment', location: session.location },
-        }).catch((err) => {
-          console.error('[webhook] FCM send failed for token:', err);
-          return null;
-        })
-      )
-    );
-    console.log('[webhook] FCM sent to', results.filter(Boolean).length, 'devices');
   } catch (err) {
     console.error('[webhook] Notification error:', err);
   }

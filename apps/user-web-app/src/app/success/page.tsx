@@ -796,11 +796,11 @@ function SuccessContent() {
       const html2pdf = (await import('html2pdf.js')).default;
       await html2pdf()
         .set({
-          margin: 8,
+          margin: [4, 4, 4, 4],
           filename: 'payparq-pass.pdf',
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, logging: false },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true, logging: false, windowHeight: 600 },
+          jsPDF: { unit: 'mm', format: 'a5', orientation: 'portrait' },
         })
         .from(passCard)
         .save();

@@ -20,12 +20,9 @@ try {
 
 async function sendOwnerPushNotification(locationId: string, sessionData: { plate: string; amount: number; email: string; entryTime?: string }) {
   try {
-    if (!firebaseApp || !supabaseAdmin) return;
+    if (!supabaseAdmin) return;
     const { data: location } = await supabaseAdmin.from('locations').select('owner_id, name').eq('id', locationId).single();
     if (!location?.owner_id) return;
-
-    const { data: tokens } = await supabaseAdmin.from('device_tokens').select('token').eq('user_id', location.owner_id);
-    if (!tokens?.length) return;
 
     const amountStr = sessionData.amount > 0 ? `€${(sessionData.amount / 100).toFixed(2)}` : 'Free';
     const title = `Nova rezervacija — ${location.name || locationId}`;
@@ -34,10 +31,16 @@ async function sendOwnerPushNotification(locationId: string, sessionData: { plat
 
     await supabaseAdmin.from('notifications').insert({ user_id: location.owner_id, type: 'payment', title, data: { body } });
 
-    const messaging = admin.messaging(firebaseApp);
-    await Promise.all(tokens.map(t => messaging.send({ token: t.token, notification: { title, body } }).catch(() => null)));
+    // Send Firebase push to mobile app
+    if (firebaseApp) {
+      const { data: tokens } = await supabaseAdmin.from('device_tokens').select('token').eq('user_id', location.owner_id);
+      if (tokens?.length) {
+        const messaging = admin.messaging(firebaseApp);
+        await Promise.all(tokens.map(t => messaging.send({ token: t.token, notification: { title, body } }).catch(() => null)));
+      }
+    }
   } catch (err) {
-    console.error('[webhook] push notification failed:', err);
+    console.error('[webhook] notification failed:', err);
   }
 }
 
