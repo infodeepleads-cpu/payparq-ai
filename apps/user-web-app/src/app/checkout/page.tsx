@@ -1094,7 +1094,7 @@ function CheckoutInner() {
           if (data?.verification_metadata?.checkoutSlots) {
             setCheckoutSlots(data.verification_metadata.checkoutSlots);
           }
-          const liveHourly = typeof data.base_price_hourly === 'number' && data.base_price_hourly > 0 ? data.base_price_hourly : 5;
+          const liveHourly = (typeof data.base_price_hourly === 'number' && data.base_price_hourly > 0) ? data.base_price_hourly : (typeof data.rate_per_hour === 'number' && data.rate_per_hour > 0) ? data.rate_per_hour : 5;
           const liveDaily = typeof data.base_price_daily === 'number' && data.base_price_daily > 0 ? data.base_price_daily : 0;
           const now = new Date();
           const ci = new Date(now);
