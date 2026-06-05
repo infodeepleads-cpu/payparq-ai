@@ -84,8 +84,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {locale === 'en' ? 'Dashboard' : 'Upravljačka Ploča'}
           </a>
           <a
-            href="/members?tab=help"
-            onClick={() => { close(); setTimeout(() => window.location.href = '/members?tab=help', 50); }}
+            href="https://www.payparq.com/support"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => close()}
             className="px-4 py-3 rounded-xl text-sm font-medium text-black text-center hover:bg-black/5"
           >
             {locale === 'en' ? 'Contact Us' : 'Kontaktirajte nas'}

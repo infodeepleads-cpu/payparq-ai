@@ -3672,11 +3672,12 @@ export default function MembersPage() {
                             ? "bg-white text-black"
                             : "text-white/70 hover:bg-white/5"
                         }`}
+                        data-no-translate="true"
                       >
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                           %
                         </span>
-                        <span data-no-translate="true">{membersT('Promocije', locale)}</span>
+                        <span>{membersT('Promocije', locale)}</span>
                       </button>
                       <button
                         type="button"

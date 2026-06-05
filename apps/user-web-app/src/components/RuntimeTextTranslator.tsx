@@ -134,6 +134,8 @@ const localHrOverrides = new Map<string, string>([
   ["Engleski", "Engleski"],
   ["Hrvatski", "Hrvatski"],
   // Day abbreviations (must not be auto-translated)
+  ["Su", "Su"],
+  ["Ne", "Ne"],
   ["pon", "pon"],
   ["uto", "uto"],
   ["sri", "sri"],
