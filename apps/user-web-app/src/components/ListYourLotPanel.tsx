@@ -6,6 +6,7 @@ import { ChevronRight, Info, Clock } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useJsApiLoader, Autocomplete } from '@react-google-maps/api';
 import { ListingHeader } from './ListingHeader';
+import { useLocale } from '@/components/LocaleProvider';
 import { supabase } from '@/lib/supabase';
 
 const DynamicMap = dynamic(() => import('./ParkingLocationMap'), { ssr: false });
@@ -26,6 +27,25 @@ const REGIONS = [
   { id: 'DE', label: 'Germany', center: [52.520, 13.405] },
   { id: 'CH', label: 'Switzerland', center: [46.948, 7.447] },
 ];
+
+const LIST_TRANSLATIONS: Record<string, { en: string; hr: string }> = {
+  'Continue': { en: 'Continue', hr: 'Nastaviti' },
+  'Monday to Sunday': { en: 'Monday to Sunday', hr: 'Ponedjeljak do nedjelje' },
+  'Monday to Friday': { en: 'Monday to Friday', hr: 'Ponedjeljak do petka' },
+  'Helpful Information': { en: 'Helpful Information', hr: 'Korisne Informacije' },
+  'Dynamic Pricing': { en: 'Dynamic Pricing', hr: 'Dinamičko Određivanje Cijena' },
+  'Accepts both monthly and hourly/daily reservations usually maximizes earnings': { en: 'Accepts both monthly and hourly/daily reservations usually maximizes earnings', hr: 'Prihvaćanje i mjesečnih i satnih/dnevnih rezervacija obično maksimizira zaradu.' },
+  'Auto dynamic pricing': { en: 'Auto dynamic pricing', hr: 'Dinamičko automatsko određivanje cijena automatski optimizira sve vrste rezervacija — nema potrebe za ručnim odabirom.' },
+  'Save': { en: 'Save', hr: 'Spremi' },
+  'Cancel': { en: 'Cancel', hr: 'Odustani' },
+  'Standard price': { en: 'Standard price', hr: 'Standardna cijena' },
+  'Hourly (€/h)': { en: 'Hourly (€/h)', hr: 'Satna (€/h)' },
+  'Daily (€/day)': { en: 'Daily (€/day)', hr: 'Dnevna (€/dan)' },
+  'Monthly (€/mo)': { en: 'Monthly (€/mo)', hr: 'Mjesečna (€/mj)' },
+  'Minimum prices you will accept': { en: 'Minimum prices you will accept', hr: 'Minimalne cijene koje ćete prihvatiti' },
+  'AI Dynamic Pricing': { en: 'AI Dynamic Pricing', hr: 'AI Dinamičko Određivanje Cijena' },
+  'Price calculation for maximum earnings': { en: 'Price calculation for maximum earnings', hr: 'Kalkulacija cijene za maksimalnu zaradu' },
+};
 
 interface ListingData {
   region: string;
@@ -116,10 +136,13 @@ export function ListYourLotPanel({
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams?.get('edit');
+  const { locale } = useLocale();
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries: ['places'],
   });
+
+  const lt = (key: string) => LIST_TRANSLATIONS[key]?.[locale] ?? key;
 
   const [step, setStepInternal] = useState<MainStep>(propStep || 'intro');
   const [step1Sub, setStep1SubInternal] = useState<Step1Sub>(propSubStep || 'region');
@@ -1866,7 +1889,7 @@ export function ListYourLotPanel({
               )}
 
               <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
-                Nastaviti
+                {lt('Continue')}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -1947,7 +1970,7 @@ export function ListYourLotPanel({
               </div>
 
               <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
-                Nastaviti
+                {lt('Continue')}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -2114,7 +2137,7 @@ export function ListYourLotPanel({
               </div>
 
               <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
-                Nastaviti
+                {lt('Continue')}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -2212,15 +2235,15 @@ export function ListYourLotPanel({
                       className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
                       style={{colorScheme: 'light'}}
                     >
-                      <option value="monday_to_sunday">Ponedjeljak do nedjelje</option>
-                      <option value="monday_to_friday">Ponedjeljak do petka</option>
+                      <option value="monday_to_sunday">{lt('Monday to Sunday')}</option>
+                      <option value="monday_to_friday">{lt('Monday to Friday')}</option>
                     </select>
                   </div>
                 </>
               )}
 
               <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
-                Nastaviti
+                {lt('Continue')}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -2292,7 +2315,7 @@ export function ListYourLotPanel({
               </div>
 
               <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
-                Nastaviti
+                {lt('Continue')}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -2371,7 +2394,7 @@ export function ListYourLotPanel({
               </div>
 
               <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
-                Nastaviti
+                {lt('Continue')}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -2704,7 +2727,7 @@ export function ListYourLotPanel({
               </div>
 
               <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
-                Nastaviti
+                {lt('Continue')}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>

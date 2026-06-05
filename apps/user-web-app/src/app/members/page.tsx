@@ -501,6 +501,12 @@ const MEMBERS_TRANSLATIONS = {
   'VALIDNO': { en: 'VALID', hr: 'VALIDNO' },
   'Ride': { en: 'Ride', hr: 'Vožnja' },
   'Pick up and ride': { en: 'Pick up and ride', hr: 'Ukrcaj i vožnja' },
+  'Account confirmation': { en: 'Account confirmation', hr: 'Potvrda računa' },
+  'Download PDF': { en: 'Download PDF', hr: 'Preuzmi PDF' },
+  'Processing...': { en: 'Processing...', hr: 'Obrada...' },
+  'Copy': { en: 'Copy', hr: 'Kopirati' },
+  'Share referral codes & earn 10% commission.': { en: 'Share referral codes & earn 10% commission.', hr: 'Dijeli referral kodove i zaradi 10% provizije.' },
+  'Croatian': { en: 'Croatian', hr: 'Hrvatski' },
 } as const;
 
 const membersT = (key: string, locale: 'en' | 'hr'): string => {
@@ -1973,7 +1979,7 @@ export default function MembersPage() {
                       : 'border border-black/10 hover:bg-black/5'
                   }`}
                 >
-                  <span data-no-translate="true">Hrvatski</span>
+                  <span data-no-translate="true">{membersT('Croatian', locale)}</span>
                 </button>
               </div>
             </div>
@@ -2025,14 +2031,14 @@ export default function MembersPage() {
               )}
             </div>
             <div className="mt-3 border-t border-black/10 pt-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-black/60">Potvrda računa</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-black/60">{membersT('Account confirmation', locale)}</p>
               <button
                 type="button"
                 onClick={handleInvoiceAction}
                 disabled={actionProcessing === "invoice"}
                 className="mt-1 inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
               >
-                {actionProcessing === "invoice" ? "Obrada..." : "Preuzmi PDF"}
+                {actionProcessing === "invoice" ? membersT('Processing...', locale) : membersT('Download PDF', locale)}
               </button>
               {homeFeedback.invoice && (
                 <p className={`mt-1 text-[11px] ${homeFeedback.invoice.type === "error" ? "text-red-600" : "text-black/70"}`}>
@@ -2883,7 +2889,7 @@ export default function MembersPage() {
                         }}
                         className="px-3 py-2 rounded-lg bg-[#0F6E56] text-white text-xs font-semibold hover:bg-[#0a5241] transition-colors"
                       >
-                        {copiedCode === rc.code ? '✓' : 'Copy'}
+                        {copiedCode === rc.code ? '✓' : membersT('Copy', locale)}
                       </button>
                     </div>
                     <p className="text-xs text-[#0F6E56]/70">10% off next stay • 10% commission</p>

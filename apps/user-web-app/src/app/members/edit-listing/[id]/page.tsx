@@ -7,6 +7,90 @@ import { supabase } from '@/lib/supabase';
 import { MapPin, Navigation, ChevronDown, ChevronUp, Clock, X, Info } from 'lucide-react';
 import { PayparqPageHeader } from '@/components/PayparqPageHeader';
 import { AmenitiesChips } from '@/components/AmenitiesChips';
+import { useLocale } from '@/components/LocaleProvider';
+
+const EDIT_T: Record<string, { en: string; hr: string }> = {
+  'Loading map...': { en: 'Loading map...', hr: 'Učitavanje karte...' },
+  'Use current location': { en: 'Use current location', hr: 'Koristi trenutnu lokaciju' },
+  'Loading...': { en: 'Loading...', hr: 'Učitavanje...' },
+  'Edit listing': { en: 'Edit listing', hr: 'Uredi popis' },
+  'Lot info': { en: 'Lot info', hr: 'Podaci o lotu' },
+  'Name': { en: 'Name', hr: 'Naziv' },
+  'Address': { en: 'Address', hr: 'Adresa' },
+  'Parking specifics': { en: 'Parking specifics', hr: 'Specifičnosti parkinga' },
+  'Things to know': { en: 'Things to know', hr: 'Stvari koje biste trebali znati' },
+  'Access type': { en: 'Access type', hr: 'Vrsta Pristupa' },
+  'Gate/Barrier': { en: 'Gate/Barrier', hr: 'Rampa/Brana' },
+  'No barrier': { en: 'No barrier', hr: 'Bez Rampe' },
+  'Reception/Guard': { en: 'Reception/Guard', hr: 'Recepcija/Čuvar' },
+  'Phone (emergency / booking)': { en: 'Phone (emergency / booking)', hr: 'Telefon (hitni slučaj / rezervacija)' },
+  'Parking type': { en: 'Parking type', hr: 'Vrsta parkinga' },
+  'Lot': { en: 'Lot', hr: 'Parcela' },
+  'Garage': { en: 'Garage', hr: 'Garaža' },
+  'Valet': { en: 'Valet', hr: 'Valet' },
+  'Parking': { en: 'Parking', hr: 'Parking' },
+  'Height limit (m)': { en: 'Height limit (m)', hr: 'Ograničenje visine (m)' },
+  'Width limit (m)': { en: 'Width limit (m)', hr: 'Ograničenje širine (m)' },
+  'Exotic vehicles': { en: 'Exotic vehicles', hr: 'Egzotična vozila' },
+  'Yes': { en: 'Yes', hr: 'Da' },
+  'No': { en: 'No', hr: 'Ne' },
+  'On request': { en: 'On request', hr: 'Na upit' },
+  'Owner comment': { en: 'Owner comment', hr: 'Komentar Vlasnika' },
+  'Access instructions': { en: 'Access instructions', hr: 'Upute za pristup' },
+  'Shown to driver after booking and in mobile scanner.': { en: 'Shown to driver after booking and in mobile scanner.', hr: 'Prikazuje se vozaču nakon rezervacije i u mobilnom skeneru.' },
+  'Amenities': { en: 'Amenities', hr: 'Dodaci' },
+  'Working hours (Access hours)': { en: 'Working hours (Access hours)', hr: 'Radno Vrijeme (Pristupno vrijeme)' },
+  'Open all day': { en: 'Open all day', hr: 'Otvoreno cijelo vrijeme' },
+  'Days': { en: 'Days', hr: 'Dani' },
+  'From': { en: 'From', hr: 'Od' },
+  'To': { en: 'To', hr: 'Kraj' },
+  'Capacity': { en: 'Capacity', hr: 'Kapacitet' },
+  'Number of spots': { en: 'Number of spots', hr: 'Broj mjesta' },
+  'Spot types': { en: 'Spot types', hr: 'Vrsta mjesta' },
+  'Differentiate spot categories': { en: 'Differentiate spot categories with a standard price multiplier', hr: 'Razlikujte kategoriju mjesta — odaberite koje ćete smjestiti uz množitelj standardne cijene' },
+  'Pricing': { en: 'Pricing', hr: 'Cijena' },
+  'Standard': { en: 'Standard', hr: 'Standard' },
+  'Hourly (€/h)': { en: 'Hourly (€/h)', hr: 'Satna (€/h)' },
+  'Daily (€/day)': { en: 'Daily (€/day)', hr: 'Dnevna (€/dan)' },
+  'Monthly (€/mo)': { en: 'Monthly (€/mo)', hr: 'Mjesečna (€/mj)' },
+  'Minimum prices you will accept': { en: 'Minimum prices you will accept', hr: 'Minimalne cijene koje ćete prihvatiti' },
+  'AI Dynamic pricing': { en: 'AI Dynamic pricing', hr: 'AI Dinamično određivanje cijena' },
+  'Price calculation for maximum earnings': { en: 'Price calculation for maximum earnings', hr: 'Kalkulacija cijene za maksimalnu zaradu' },
+  'Checkout add-ons': { en: 'Checkout add-ons', hr: 'Blagajna Dodaci' },
+  'Select what each of 3 buttons on checkout offers the customer.': { en: 'Select what each of 3 buttons on checkout offers the customer.', hr: 'Odaberite što svaki od 3 gumba na checkout stranici nudi kupcu.' },
+  'Photos (Optional)': { en: 'Photos (Optional)', hr: 'Fotografije (Neobavezno)' },
+  'Boost conversions': { en: 'Boost conversions', hr: 'Povećajte konverzije' },
+  'Listings with photos have 33-72% higher conversion rates.': { en: 'Listings with photos have 33-72% higher conversion rates. We recommend adding 3-5 quality photos.', hr: 'Ogledni parkingi s fotografijama imaju 33-72% veće stope konverzije. Preporučujemo dodavanje 3-5 kvalitetnih fotografija vašeg parking mjesta.' },
+  'Click to upload or drag photos': { en: 'Click to upload or drag photos', hr: 'Kliknite za upload ili prevucite fotografije' },
+  'JPG, PNG, max 5MB per file': { en: 'JPG, PNG, max 5MB per file', hr: 'JPG, PNG, max 5MB po datoteci' },
+  'Save': { en: 'Save', hr: 'Spremi' },
+  'Saving...': { en: 'Saving...', hr: 'Sprema...' },
+  'Cancel': { en: 'Cancel', hr: 'Otkaži' },
+  'Oversized vehicle (XXL)': { en: 'Oversized vehicle (XXL)', hr: 'Preveliko vozilo (XXL)' },
+  'Premium (Shade, Entrance, Garage)': { en: 'Premium (Shade, Entrance, Garage)', hr: 'Premium (Sjena, Ulaz, Garaža)' },
+  'Camper': { en: 'Camper', hr: 'Kamper' },
+  'Bus': { en: 'Bus', hr: 'Bus' },
+  'VIP Valet (All included)': { en: 'VIP Valet (All included)', hr: 'VIP Valet (Sve uključeno)' },
+  'Unlimited charging/washing, Red carpet': { en: 'Unlimited charging/washing, Red carpet', hr: 'Neograničeno punjenje/pranje, Crveni tepih' },
+  'Late checkout': { en: 'Late checkout', hr: 'Kasni odlazak' },
+  'EV charging': { en: 'EV charging', hr: 'EV punjenje' },
+  'Fueling': { en: 'Fueling', hr: 'Pretakanje' },
+  'Wash': { en: 'Wash', hr: 'Pranje' },
+  'Covered': { en: 'Covered', hr: 'Natkriveno' },
+  'Barrier': { en: 'Barrier', hr: 'Rampa/Brana' },
+  'CCTV': { en: 'CCTV', hr: 'CCTV' },
+  'Disabled access': { en: 'Disabled access', hr: 'Pristup invalidima' },
+  'Staff': { en: 'Staff', hr: 'Osoblje' },
+  'Shuttle service': { en: 'Shuttle service', hr: 'Shuttle servis' },
+  'Monday': { en: 'Mon', hr: 'Po' },
+  'Tuesday': { en: 'Tue', hr: 'U' },
+  'Wednesday': { en: 'Wed', hr: 'Sr' },
+  'Thursday': { en: 'Thu', hr: 'Č' },
+  'Friday': { en: 'Fri', hr: 'Pe' },
+  'Saturday': { en: 'Sat', hr: 'Su' },
+  'Sunday': { en: 'Sun', hr: 'Ne' },
+};
+const et = (key: string, locale: 'en' | 'hr') => EDIT_T[key]?.[locale] ?? key;
 
 const GMAPS_LIBS: ('places')[] = ['places'];
 
@@ -144,26 +228,26 @@ function AddressMapField({ address, onAddressChange, pin, onPinChange, onRegionD
           </GoogleMap>
         ) : (
           <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-            <span className="text-xs text-gray-400">Učitavanje karte...</span>
+            <span className="text-xs text-gray-400">Loading map...</span>
           </div>
         )}
       </div>
       <button type="button" onClick={useCurrentLocation} className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 transition-colors">
-        <Navigation className="w-3 h-3" />Koristi trenutnu lokaciju
+        <Navigation className="w-3 h-3" />Use current location
       </button>
     </div>
   );
 }
 
-const ADDONS = ['Valet', 'EV punjenje', 'Pretakanje', 'Pranje', 'Natkriveno', 'Rampa/Brana', 'CCTV', 'Pristup invalidima', 'Osoblje', 'Garaža', 'Shuttle servis'];
-const SPOT_TYPES = [
-  { key: 'standard_xxl', label: 'Preveliko vozilo (XXL)', mult: '1.25×' },
-  { key: 'premium', label: 'Premium (Sjena, Ulaz, Garaža)', mult: '1.5×' },
-  { key: 'kamper', label: 'Kamper', mult: '2×' },
-  { key: 'bus', label: 'Bus', mult: '5×' },
-  { key: 'valet', label: 'Valet', mult: '2×' },
-  { key: 'vip_valet', label: 'VIP Valet (Sve uključeno)', mult: '2.5–5×', desc: 'Neograničeno punjenje/pranje, Crveni tepih' },
-  { key: 'late_checkout', label: 'Kasni odlazak', mult: '½ dana' },
+const ADDON_KEYS = ['Valet', 'EV charging', 'Fueling', 'Wash', 'Covered', 'Barrier', 'CCTV', 'Disabled access', 'Staff', 'Garage', 'Shuttle service'];
+const SPOT_TYPE_KEYS = [
+  { key: 'standard_xxl', labelKey: 'Oversized vehicle (XXL)', mult: '1.25×' },
+  { key: 'premium', labelKey: 'Premium (Shade, Entrance, Garage)', mult: '1.5×' },
+  { key: 'kamper', labelKey: 'Camper', mult: '2×' },
+  { key: 'bus', labelKey: 'Bus', mult: '5×' },
+  { key: 'valet', labelKey: 'Valet', mult: '2×' },
+  { key: 'vip_valet', labelKey: 'VIP Valet (All included)', mult: '2.5–5×', descKey: 'Unlimited charging/washing, Red carpet' },
+  { key: 'late_checkout', labelKey: 'Late checkout', mult: '½ day' },
 ];
 
 // ─── Main form ────────────────────────────────────────────────────────────────
@@ -171,6 +255,7 @@ const SPOT_TYPES = [
 export default function EditListingPage() {
   const params = useParams();
   const router = useRouter();
+  const { locale } = useLocale();
   const id = params.id as string;
 
   const { isLoaded } = useJsApiLoader({
@@ -203,7 +288,7 @@ export default function EditListingPage() {
   const [is247, setIs247] = useState(true);
   const [hoursFrom, setHoursFrom] = useState('');
   const [hoursTo, setHoursTo] = useState('');
-  const [openDays, setOpenDays] = useState<string[]>(['Ponedjeljak', 'Utorak', 'Srijeda', 'Četvrtak', 'Petak', 'Subota', 'Nedjelja']);
+  const [openDays, setOpenDays] = useState<string[]>(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
   const toggleDay = (d: string) => setOpenDays((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]);
 
   const [baseSpots, setBaseSpots] = useState('');
@@ -276,9 +361,9 @@ export default function EditListingPage() {
       setAddons(meta.addons || meta.features || []);
       setIs247(meta.is247 ?? meta.available24_7 ?? true);
       const savedDays = meta.openDays || meta.daysAvailable || [];
-      const dayMapping: Record<string, string> = { 'Pon': 'Ponedjeljak', 'Uto': 'Utorak', 'Sri': 'Srijeda', 'Čet': 'Četvrtak', 'Pet': 'Petak', 'Sub': 'Subota', 'Ned': 'Nedjelja' };
+      const dayMapping: Record<string, string> = { 'Pon': 'Monday', 'Uto': 'Tuesday', 'Sri': 'Wednesday', 'Čet': 'Thursday', 'Pet': 'Friday', 'Sub': 'Saturday', 'Ned': 'Sunday', 'Ponedjeljak': 'Monday', 'Utorak': 'Tuesday', 'Srijeda': 'Wednesday', 'Četvrtak': 'Thursday', 'Petak': 'Friday', 'Subota': 'Saturday', 'Nedjelja': 'Sunday' };
       const convertedDays = savedDays.map((d: string) => dayMapping[d] || d);
-      setOpenDays(convertedDays.length > 0 ? convertedDays : ['Ponedjeljak', 'Utorak', 'Srijeda', 'Četvrtak', 'Petak', 'Subota', 'Nedjelja']);
+      setOpenDays(convertedDays.length > 0 ? convertedDays : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
       setHoursFrom(meta.hoursFrom || '');
       setHoursTo(meta.hoursTo || '');
 
@@ -339,7 +424,7 @@ export default function EditListingPage() {
       }
 
       // Save with host form schema
-      const reverseMapping: Record<string, string> = { 'Ponedjeljak': 'Pon', 'Utorak': 'Uto', 'Srijeda': 'Sri', 'Četvrtak': 'Čet', 'Petak': 'Pet', 'Subota': 'Sub', 'Nedjelja': 'Ned' };
+      const reverseMapping: Record<string, string> = { 'Monday': 'Pon', 'Tuesday': 'Uto', 'Wednesday': 'Sri', 'Thursday': 'Čet', 'Friday': 'Pet', 'Saturday': 'Sub', 'Sunday': 'Ned' };
       const abbreviatedDays = openDays.map(d => reverseMapping[d] || d);
       const { error } = await supabase
         .from('locations')
@@ -409,7 +494,7 @@ export default function EditListingPage() {
               <span className="text-lg font-black tracking-tight text-white select-none">P</span>
             </div>
           </div>
-          <p className="text-gray-600 text-sm">Učitavanje...</p>
+          <p className="text-gray-600 text-sm">{et('Loading...', locale)}</p>
         </div>
       </div>
     );
@@ -417,7 +502,7 @@ export default function EditListingPage() {
 
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
-      <PayparqPageHeader title="Uredi popis" onBack={() => router.back()} lineColor="black" />
+      <PayparqPageHeader title={et('Edit listing', locale)} onBack={() => router.back()} lineColor="black" />
 
       {success && (
         <div className="fixed top-20 left-4 right-4 max-w-sm p-3 bg-green-100 border border-green-300 rounded text-green-700 text-sm z-40">
@@ -430,14 +515,14 @@ export default function EditListingPage() {
 
           {/* ── Section 1: Lot Info ── */}
           <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-5">
-            <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Podaci o lotu</p>
+            <p className="text-xs font-black text-gray-500 uppercase tracking-widest">{et('Lot info', locale)}</p>
             <div className="space-y-3">
               <div>
-                <label className={labelClass}>Naziv</label>
-                <input type="text" placeholder="npr. Parking Centar Zagreb" value={lotName} onChange={(e) => setLotName(e.target.value)} className={inputClass} required />
+                <label className={labelClass}>{et('Name', locale)}</label>
+                <input type="text" placeholder="e.g. Parking Center Zagreb" value={lotName} onChange={(e) => setLotName(e.target.value)} className={inputClass} required />
               </div>
               <div>
-                <label className={labelClass}>Adresa</label>
+                <label className={labelClass}>{et('Address', locale)}</label>
                 <AddressMapField address={address} onAddressChange={setAddress} pin={pin} onPinChange={setPin} onRegionDetect={(r) => r && setRegion(r)} isLoaded={isLoaded} />
               </div>
             </div>
@@ -445,34 +530,34 @@ export default function EditListingPage() {
 
           {/* ── Section 2: Lot Specifics ── */}
           <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-5">
-            <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Specifičnosti parkinga</p>
+            <p className="text-xs font-black text-gray-500 uppercase tracking-widest">{et('Parking specifics', locale)}</p>
 
-            <CollapsibleSection title="Stvari koje biste trebali znati" defaultOpen={false}>
+            <CollapsibleSection title={et('Things to know', locale)} defaultOpen={false}>
               <div>
-                <label className={labelClass}>Vrsta Pristupa</label>
+                <label className={labelClass}>{et('Access type', locale)}</label>
                 <div className="flex gap-2 flex-wrap">
-                  {['Rampa/Brana', 'Bez Rampe', 'Recepcija/Čuvar'].map((t) => (
-                    <button key={t} type="button" onClick={() => setAccessType(t)}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ${accessType === t ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
-                      {t}
+                  {(['Gate/Barrier', 'No barrier', 'Reception/Guard'] as const).map((k) => (
+                    <button key={k} type="button" onClick={() => setAccessType(k)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ${accessType === k ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
+                      {et(k, locale)}
                     </button>
                   ))}
                 </div>
-                {accessType === 'Rampa/Brana' && (
+                {accessType === 'Gate/Barrier' && (
                   <div className="mt-2">
-                    <label className={subLabelClass}>Telefon (hitni slučaj / rezervacija)</label>
+                    <label className={subLabelClass}>{et('Phone (emergency / booking)', locale)}</label>
                     <input type="tel" placeholder="+385 91 000 0000" value={gatedPhone} onChange={(e) => setGatedPhone(e.target.value)} className={inputClass} />
                   </div>
                 )}
               </div>
 
               <div>
-                <label className={labelClass}>Vrsta parkinga</label>
+                <label className={labelClass}>{et('Parking type', locale)}</label>
                 <div className="flex gap-2 flex-wrap">
-                  {['Parcela', 'Garaža', 'Valet', 'Parking'].map((t) => (
-                    <button key={t} type="button" onClick={() => setParkingType(t)}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ${parkingType === t ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
-                      {t}
+                  {(['Lot', 'Garage', 'Valet', 'Parking'] as const).map((k) => (
+                    <button key={k} type="button" onClick={() => setParkingType(k)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ${parkingType === k ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
+                      {et(k, locale)}
                     </button>
                   ))}
                 </div>
@@ -480,55 +565,55 @@ export default function EditListingPage() {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className={labelClass}>Ograničenje visine (m)</label>
-                  <input type="text" placeholder="npr. 2.10" value={heightLimit} onChange={(e) => setHeightLimit(e.target.value)} className={inputClass} />
+                  <label className={labelClass}>{et('Height limit (m)', locale)}</label>
+                  <input type="text" placeholder="e.g. 2.10" value={heightLimit} onChange={(e) => setHeightLimit(e.target.value)} className={inputClass} />
                 </div>
                 <div>
-                  <label className={labelClass}>Ograničenje širine (m)</label>
-                  <input type="text" placeholder="npr. 2.20" value={widthLimit} onChange={(e) => setWidthLimit(e.target.value)} className={inputClass} />
+                  <label className={labelClass}>{et('Width limit (m)', locale)}</label>
+                  <input type="text" placeholder="e.g. 2.20" value={widthLimit} onChange={(e) => setWidthLimit(e.target.value)} className={inputClass} />
                 </div>
               </div>
 
               <div>
-                <label className={labelClass}>Egzotična vozila</label>
+                <label className={labelClass}>{et('Exotic vehicles', locale)}</label>
                 <div className="flex gap-2">
-                  {['Da', 'Ne', 'Na upit'].map((v) => (
-                    <button key={v} type="button" onClick={() => setExoticVehicles(v)}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ${exoticVehicles === v ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
-                      {v}
+                  {(['Yes', 'No', 'On request'] as const).map((k) => (
+                    <button key={k} type="button" onClick={() => setExoticVehicles(k)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ${exoticVehicles === k ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
+                      {et(k, locale)}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className={labelClass}>Komentar Vlasnika</label>
-                <textarea placeholder="npr. Parking je zaštićen 24/7 video nadzorom..." value={ownerComment} onChange={(e) => setOwnerComment(e.target.value)} rows={3} className="w-full border border-gray-300 rounded-md px-3.5 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-colors resize-none" />
+                <label className={labelClass}>{et('Owner comment', locale)}</label>
+                <textarea placeholder={locale === 'en' ? 'e.g. Parking is protected 24/7 by CCTV...' : 'npr. Parking je zaštićen 24/7 video nadzorom...'} value={ownerComment} onChange={(e) => setOwnerComment(e.target.value)} rows={3} className="w-full border border-gray-300 rounded-md px-3.5 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-colors resize-none" />
               </div>
 
               <div>
-                <label className={labelClass}>Upute za pristup</label>
-                <textarea placeholder="npr. Uđite s Ulice kralja Tomislava..." value={accessInstructions} onChange={(e) => setAccessInstructions(e.target.value)} rows={3} className="w-full border border-gray-300 rounded-md px-3.5 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-colors resize-none" />
-                <p className="text-xs text-gray-400 mt-1">Prikazuje se vozaču nakon rezervacije i u mobilnom skeneru.</p>
+                <label className={labelClass}>{et('Access instructions', locale)}</label>
+                <textarea placeholder={locale === 'en' ? 'e.g. Enter from King Tomislav Street...' : 'npr. Uđite s Ulice kralja Tomislava...'} value={accessInstructions} onChange={(e) => setAccessInstructions(e.target.value)} rows={3} className="w-full border border-gray-300 rounded-md px-3.5 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-black focus:ring-0 transition-colors resize-none" />
+                <p className="text-xs text-gray-400 mt-1">{et('Shown to driver after booking and in mobile scanner.', locale)}</p>
               </div>
             </CollapsibleSection>
 
-            <CollapsibleSection title="Dodaci" defaultOpen={false}>
+            <CollapsibleSection title={et('Amenities', locale)} defaultOpen={false}>
               <div className="flex flex-wrap gap-2">
-                {ADDONS.map((a) => (
+                {ADDON_KEYS.map((a) => (
                   <button key={a} type="button" onClick={() => toggleAddon(a)}
                     className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ${addons.includes(a) ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
-                    <span translate="no">{a}</span>
+                    {et(a, locale)}
                   </button>
                 ))}
               </div>
             </CollapsibleSection>
 
-            <CollapsibleSection title="Radno Vrijeme (Pristupno vrijeme)" defaultOpen={false}>
+            <CollapsibleSection title={et('Working hours (Access hours)', locale)} defaultOpen={false}>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold text-gray-800">24/7</p>
-                  <p className="text-xs text-gray-400">Otvoreno cijelo vrijeme</p>
+                  <p className="text-xs text-gray-400">{et('Open all day', locale)}</p>
                 </div>
                 <Toggle checked={is247} onChange={setIs247} />
               </div>
@@ -536,23 +621,23 @@ export default function EditListingPage() {
               {!is247 && (
                 <div className="space-y-3 pt-1">
                   <div>
-                    <label className={subLabelClass}>Dani</label>
+                    <label className={subLabelClass}>{et('Days', locale)}</label>
                     <div className="flex gap-1.5 flex-wrap">
-                      {[['Ponedjeljak', 'Po'], ['Utorak', 'U'], ['Srijeda', 'Sr'], ['Četvrtak', 'Č'], ['Petak', 'Pe'], ['Subota', 'Su'], ['Nedjelja', 'Ne']].map(([fullDay, shortLabel]) => (
-                        <button key={fullDay} type="button" onClick={() => toggleDay(fullDay)}
-                          className={`w-10 h-8 rounded text-xs font-bold border transition-colors ${openDays.includes(fullDay) ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-500 border-gray-300 hover:border-gray-500'}`}>
-                          {shortLabel}
+                      {(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const).map((day) => (
+                        <button key={day} type="button" onClick={() => toggleDay(day)}
+                          className={`w-10 h-8 rounded text-xs font-bold border transition-colors ${openDays.includes(day) ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-500 border-gray-300 hover:border-gray-500'}`}>
+                          {et(day, locale)}
                         </button>
                       ))}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className={subLabelClass}>Od</label>
+                      <label className={subLabelClass}>{et('From', locale)}</label>
                       <input type="time" value={hoursFrom} onChange={(e) => setHoursFrom(e.target.value)} className={inputClass} />
                     </div>
                     <div>
-                      <label className={subLabelClass}>Kraj</label>
+                      <label className={subLabelClass}>{et('To', locale)}</label>
                       <input type="time" value={hoursTo} onChange={(e) => setHoursTo(e.target.value)} className={inputClass} />
                     </div>
                   </div>
@@ -560,22 +645,22 @@ export default function EditListingPage() {
               )}
             </CollapsibleSection>
 
-            <CollapsibleSection title="Kapacitet" defaultOpen={false}>
+            <CollapsibleSection title={et('Capacity', locale)} defaultOpen={false}>
               <div>
-                <label className={labelClass}>Broj mjesta</label>
+                <label className={labelClass}>{et('Number of spots', locale)}</label>
                 <input type="number" placeholder="10" min="1" value={baseSpots} onChange={(e) => setBaseSpots(e.target.value)} className={inputClass} required />
               </div>
             </CollapsibleSection>
 
-            <CollapsibleSection title="Vrsta mjesta" defaultOpen={false}>
-              <p className="text-xs text-gray-600 mb-3 leading-relaxed">Razlikujte kategoriju mjesta — odaberite koje ćete smjestiti uz množitelj standardne cijene</p>
+            <CollapsibleSection title={et('Spot types', locale)} defaultOpen={false}>
+              <p className="text-xs text-gray-600 mb-3 leading-relaxed">{et('Differentiate spot categories', locale)}</p>
               <div className="space-y-2">
-                {SPOT_TYPES.map((st) => (
+                {SPOT_TYPE_KEYS.map((st) => (
                   <div key={st.key} onClick={() => toggleSpotType(st.key)}
                     className={`flex items-center justify-between px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${activeSpotTypes.includes(st.key) ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300'}`}>
                     <div>
-                      <p className="text-xs font-semibold text-gray-900">{st.label}</p>
-                      {st.desc && <p className="text-xs text-gray-400 mt-0.5">{st.desc}</p>}
+                      <p className="text-xs font-semibold text-gray-900">{et(st.labelKey, locale)}</p>
+                      {st.descKey && <p className="text-xs text-gray-400 mt-0.5">{et(st.descKey, locale)}</p>}
                     </div>
                     <span className={`text-xs font-bold ml-3 flex-shrink-0 ${activeSpotTypes.includes(st.key) ? 'text-gray-900' : 'text-gray-400'}`}>{st.mult}</span>
                   </div>
@@ -583,53 +668,53 @@ export default function EditListingPage() {
               </div>
             </CollapsibleSection>
 
-            <CollapsibleSection title="Cijena" defaultOpen={false}>
+            <CollapsibleSection title={et('Pricing', locale)} defaultOpen={false}>
               <div className="space-y-4 mb-6 pb-6 border-b border-gray-100">
-                <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">Standard</p>
+                <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">{et('Standard', locale)}</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   <div>
-                    <label className={labelClass}>Satna (€/h)</label>
+                    <label className={labelClass}>{et('Hourly (€/h)', locale)}</label>
                     <input type="number" placeholder="2.50" min="0" step="0.50" value={standardHourlyPrice} onChange={(e) => setStandardHourlyPrice(e.target.value)} className={inputClass} required />
                   </div>
                   <div>
-                    <label className={labelClass}>Dnevna (€/dan)</label>
+                    <label className={labelClass}>{et('Daily (€/day)', locale)}</label>
                     <input type="number" placeholder="15.00" min="0" step="0.50" value={standardDailyPrice} onChange={(e) => setStandardDailyPrice(e.target.value)} className={inputClass} />
                   </div>
                   <div>
-                    <label className={labelClass}>Mjesečna (€/mj)</label>
+                    <label className={labelClass}>{et('Monthly (€/mo)', locale)}</label>
                     <input type="number" placeholder="300.00" min="0" step="10" value={standardMonthlyPrice} onChange={(e) => setStandardMonthlyPrice(e.target.value)} className={inputClass} />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-4 pt-2 border-t border-gray-100">
-                <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">Minimalne cijene koje ćete prihvatiti</p>
+                <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">{et('Minimum prices you will accept', locale)}</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   <div>
-                    <label className={labelClass}>Satna (€/h)</label>
+                    <label className={labelClass}>{et('Hourly (€/h)', locale)}</label>
                     <input type="number" placeholder="1.00" min="0" step="0.10" value={minPriceHourly} onChange={(e) => setMinPriceHourly(e.target.value)} className={inputClass} />
                   </div>
                   <div>
-                    <label className={labelClass}>Dnevna (€/dan)</label>
+                    <label className={labelClass}>{et('Daily (€/day)', locale)}</label>
                     <input type="number" placeholder="5.00" min="0" step="0.10" value={minPriceDaily} onChange={(e) => setMinPriceDaily(e.target.value)} className={inputClass} />
                   </div>
                   <div>
-                    <label className={labelClass}>Mjesečna (€/mj)</label>
+                    <label className={labelClass}>{et('Monthly (€/mo)', locale)}</label>
                     <input type="number" placeholder="100.00" min="0" step="10" value={minPriceMonthly} onChange={(e) => setMinPriceMonthly(e.target.value)} className={inputClass} />
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-4">
                   <div>
-                    <p className="text-xs font-semibold text-gray-800">AI Dinamično određivanje cijena</p>
-                    <p className="text-xs text-gray-400">Kalkulacija cijene za maksimalnu zaradu</p>
+                    <p className="text-xs font-semibold text-gray-800">{et('AI Dynamic pricing', locale)}</p>
+                    <p className="text-xs text-gray-400">{et('Price calculation for maximum earnings', locale)}</p>
                   </div>
                   <Toggle checked={useAIDynamicPricing} onChange={setUseAIDynamicPricing} />
                 </div>
               </div>
             </CollapsibleSection>
 
-            <CollapsibleSection title="Blagajna Dodaci" defaultOpen={false}>
-              <p className="text-xs text-gray-600 mb-4">Odaberite što svaki od 3 gumba na checkout stranici nudi kupcu.</p>
+            <CollapsibleSection title={et('Checkout add-ons', locale)} defaultOpen={false}>
+              <p className="text-xs text-gray-600 mb-4">{et('Select what each of 3 buttons on checkout offers the customer.', locale)}</p>
               <div className="grid grid-cols-3 gap-3">
                 {([0, 1, 2] as const).map((idx) => {
                   const slot = checkoutSlots?.[idx] || { type: 'hour', value: idx + 1 };
@@ -672,17 +757,17 @@ export default function EditListingPage() {
               </div>
             </CollapsibleSection>
 
-            <CollapsibleSection title="Fotografije (Neobavezno)" defaultOpen={false}>
+            <CollapsibleSection title={et('Photos (Optional)', locale)} defaultOpen={false}>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-blue-600 flex-shrink-0" /> Povećajte konverzije</p>
-                <p className="text-xs text-black leading-relaxed">Ogledni parkingi s fotografijama imaju 33-72% veće stope konverzije. Preporučujemo dodavanje 3-5 kvalitetnih fotografija vašeg parking mjesta.</p>
+                <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-blue-600 flex-shrink-0" /> {et('Boost conversions', locale)}</p>
+                <p className="text-xs text-black leading-relaxed">{et('Listings with photos have 33-72% higher conversion rates.', locale)}</p>
               </div>
 
               <div className="space-y-3">
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-500 transition-colors"
                   onClick={() => document.getElementById('photo-input')?.click()}>
-                  <p className="text-xs font-semibold text-gray-700 mb-1">Kliknite za upload ili prevucite fotografije</p>
-                  <p className="text-xs text-gray-500">JPG, PNG, max 5MB po datoteci</p>
+                  <p className="text-xs font-semibold text-gray-700 mb-1">{et('Click to upload or drag photos', locale)}</p>
+                  <p className="text-xs text-gray-500">{et('JPG, PNG, max 5MB per file', locale)}</p>
                   <input
                     id="photo-input"
                     type="file"
@@ -735,13 +820,13 @@ export default function EditListingPage() {
               onClick={handleSave}
               disabled={saving}
               className="flex-1 py-3 rounded-lg font-bold text-base text-white disabled:opacity-60 transition-opacity shadow-sm bg-gray-900 hover:bg-gray-800">
-              {saving ? 'Sprema...' : 'Spremi'}
+              {saving ? et('Saving...', locale) : et('Save', locale)}
             </button>
             <button
               type="button"
               onClick={() => router.back()}
               className="flex-1 py-3 rounded-lg font-bold text-base border border-gray-300 text-gray-900 hover:bg-gray-50 transition-colors">
-              Otkaži
+              {et('Cancel', locale)}
             </button>
           </div>
         </form>

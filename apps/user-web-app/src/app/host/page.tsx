@@ -90,6 +90,15 @@ const HOST_TRANSLATIONS = {
   'Parking': { en: 'Parking', hr: 'Parkiranje' },
   'Access type': { en: 'Access type', hr: 'Vrsta pristupa' },
   'Working Hours': { en: 'Working Hours (Access time)', hr: 'Radno Vrijeme (Pristupno vrijeme)' },
+  'Save': { en: 'Save', hr: 'Spremi' },
+  'Cancel': { en: 'Cancel', hr: 'Odustani' },
+  'Standard price': { en: 'Standard price', hr: 'Standardna cijena' },
+  'Hourly (€/h)': { en: 'Hourly (€/h)', hr: 'Satna (€/h)' },
+  'Daily (€/day)': { en: 'Daily (€/day)', hr: 'Dnevna (€/dan)' },
+  'Monthly (€/mo)': { en: 'Monthly (€/mo)', hr: 'Mjesečna (€/mj)' },
+  'Minimum prices you will accept': { en: 'Minimum prices you will accept', hr: 'Minimalne cijene koje ćete prihvatiti' },
+  'AI Dynamic Pricing': { en: 'AI Dynamic Pricing', hr: 'AI Dinamičko Određivanje Cijena' },
+  'Price calculation for maximum earnings': { en: 'Price calculation for maximum earnings', hr: 'Kalkulacija cijene za maksimalnu zaradu' },
 } as const;
 
 const hostT = (key: string, locale: string): string => {
@@ -613,7 +622,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel, loc
           className="flex-1 px-4 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors"
           translate="no"
         >
-          Spremi
+          {hostT('Save', locale)}
         </button>
         <button
           type="button"
@@ -621,7 +630,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel, loc
           className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors"
           translate="no"
         >
-          Odustani
+          {hostT('Cancel', locale)}
         </button>
       </div>
     </div>
@@ -1133,18 +1142,18 @@ export default function HostPage() {
 
                 {/* Standard pricing */}
                 <div className="space-y-4 mb-6 pb-6 border-b border-gray-100">
-                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">Standardna cijena</p>
+                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">{hostT('Standard price', locale)}</p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <div>
-                      <label className={labelClass}>Satna (€/h)</label>
+                      <label className={labelClass}>{hostT('Hourly (€/h)', locale)}</label>
                       <input type="number" placeholder="2.50" min="0" step="0.50" value={standardHourlyPrice} onChange={(e) => setStandardHourlyPrice(e.target.value)} className={inputClass} required />
                     </div>
                     <div>
-                      <label className={labelClass}>Dnevna (€/dan)</label>
+                      <label className={labelClass}>{hostT('Daily (€/day)', locale)}</label>
                       <input type="number" placeholder="15.00" min="0" step="0.50" value={standardDailyPrice} onChange={(e) => setStandardDailyPrice(e.target.value)} className={inputClass} />
                     </div>
                     <div>
-                      <label className={labelClass}>Mjesečna (€/mj)</label>
+                      <label className={labelClass}>{hostT('Monthly (€/mo)', locale)}</label>
                       <input type="number" placeholder="300.00" min="0" step="10" value={standardMonthlyPrice} onChange={(e) => setStandardMonthlyPrice(e.target.value)} className={inputClass} />
                     </div>
                   </div>
@@ -1152,25 +1161,25 @@ export default function HostPage() {
 
                 {true && (
                   <div className="space-y-4 pt-2 border-t border-gray-100">
-                    <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">{locale === 'en' ? 'Minimum prices you will accept' : 'Minimalne cijene koje ćete prihvatiti'}</p>
+                    <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">{hostT('Minimum prices you will accept', locale)}</p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                       <div>
-                        <label className={labelClass} translate="no">Satna (€/h)</label>
+                        <label className={labelClass}>{hostT('Hourly (€/h)', locale)}</label>
                         <input type="number" placeholder="1.00" min="0" step="0.10" value={minPriceHourly} onChange={(e) => setMinPriceHourly(e.target.value)} className={inputClass} />
                       </div>
                       <div>
-                        <label className={labelClass} translate="no">Dnevna (€/dan)</label>
+                        <label className={labelClass}>{hostT('Daily (€/day)', locale)}</label>
                         <input type="number" placeholder="5.00" min="0" step="0.10" value={minPriceDaily} onChange={(e) => setMinPriceDaily(e.target.value)} className={inputClass} />
                       </div>
                       <div>
-                        <label className={labelClass} translate="no">Mjesečna (€/mj)</label>
+                        <label className={labelClass}>{hostT('Monthly (€/mo)', locale)}</label>
                         <input type="number" placeholder="100.00" min="0" step="10" value={minPriceMonthly} onChange={(e) => setMinPriceMonthly(e.target.value)} className={inputClass} />
                       </div>
                     </div>
                     <div className="flex items-center justify-between pt-4">
                       <div>
-                        <p className="text-xs font-semibold text-gray-800">AI Dinamičko Određivanje Cijena</p>
-                        <p className="text-xs text-gray-400">Kalkulacija cijene za maksimalnu zaradu</p>
+                        <p className="text-xs font-semibold text-gray-800">{hostT('AI Dynamic Pricing', locale)}</p>
+                        <p className="text-xs text-gray-400">{hostT('Price calculation for maximum earnings', locale)}</p>
                       </div>
                       <Toggle checked={useAIDynamicPricing} onChange={setUseAIDynamicPricing} />
                     </div>

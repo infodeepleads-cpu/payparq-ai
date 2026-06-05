@@ -2,23 +2,30 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { useLocale } from '@/components/LocaleProvider';
 
 interface Props {
   value: string;
   onChange: (value: string) => void;
 }
 
+const LABELS: Record<string, { en: string; hr: string }> = {
+  'Satna/dnevna': { en: 'Hourly/Daily', hr: 'Satna/dnevna' },
+  'Mjesečna': { en: 'Monthly', hr: 'Mjesečna' },
+};
+
 export function ReservationTypeDropdown({ value, onChange }: Props) {
+  const { locale } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const options = [
-    { value: 'Satna/dnevna', label: 'Satna/dnevna' },
-    { value: 'Mjesečna', label: 'Mjesečna' },
+    { value: 'Satna/dnevna' },
+    { value: 'Mjesečna' },
   ];
 
-  const selectedOption = options.find(opt => opt.value === value);
-  const displayText = selectedOption?.label || options[0].label;
+  const getLabel = (v: string) => LABELS[v]?.[locale] ?? v;
+  const displayText = getLabel(value) || getLabel(options[0].value);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -57,7 +64,7 @@ export function ReservationTypeDropdown({ value, onChange }: Props) {
                 idx < options.length - 1 ? 'border-b border-gray-200' : ''
               }`}
             >
-              {opt.label}
+              {getLabel(opt.value)}
             </button>
           ))}
         </div>

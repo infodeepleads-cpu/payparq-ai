@@ -1031,8 +1031,9 @@ function SuccessContent() {
     if (!checkoutStart) return null;
     const d = new Date(checkoutStart);
     if (Number.isNaN(d.getTime())) return null;
-    return d.toLocaleDateString('hr-HR', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Zagreb' });
-  }, [checkoutStart]);
+    const dateLocale = locale === 'en' ? 'en-GB' : 'hr-HR';
+    return d.toLocaleDateString(dateLocale, { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Zagreb' });
+  }, [checkoutStart, locale]);
 
   const passTimeIn = useMemo(() => {
     if (!checkoutStart) return '—';
@@ -1052,10 +1053,11 @@ function SuccessContent() {
     if (!checkoutEnd) return null;
     const d = new Date(checkoutEnd);
     if (Number.isNaN(d.getTime())) return null;
-    const dateStr = d.toLocaleDateString('hr-HR', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Zagreb' });
+    const dateLocale = locale === 'en' ? 'en-GB' : 'hr-HR';
+    const dateStr = d.toLocaleDateString(dateLocale, { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Zagreb' });
     // Only show if different day than check-in
     if (checkoutStart) {
-      const inDay = new Date(checkoutStart).toLocaleDateString('hr-HR', { timeZone: 'Europe/Zagreb' });
+      const inDay = new Date(checkoutStart).toLocaleDateString(dateLocale, { timeZone: 'Europe/Zagreb' });
       const outDay = d.toLocaleDateString('hr-HR', { timeZone: 'Europe/Zagreb' });
       if (inDay === outDay) return null;
     }
