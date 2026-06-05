@@ -109,7 +109,6 @@ const HOST_TRANSLATIONS = {
   'space': { en: 'space', hr: 'mjesto' },
   'spaces': { en: 'spaces', hr: 'mjesta' },
   'Number of spots': { en: 'Number of spots', hr: 'Broj mjesta' },
-  'Spot types': { en: 'Spot types', hr: 'Vrsta mjesta' },
 } as const;
 
 const hostT = (key: string, locale: string): string => {
