@@ -63,6 +63,8 @@ const EDIT_T: Record<string, { en: string; hr: string }> = {
   'Listings with photos have 33-72% higher conversion rates.': { en: 'Listings with photos have 33-72% higher conversion rates. We recommend adding 3-5 quality photos.', hr: 'Ogledni parkingi s fotografijama imaju 33-72% veće stope konverzije. Preporučujemo dodavanje 3-5 kvalitetnih fotografija vašeg parking mjesta.' },
   'Click to upload or drag photos': { en: 'Click to upload or drag photos', hr: 'Kliknite za upload ili prevucite fotografije' },
   'JPG, PNG, max 5MB per file': { en: 'JPG, PNG, max 5MB per file', hr: 'JPG, PNG, max 5MB po datoteci' },
+  'Photo': { en: 'Photo', hr: 'Fotografija' },
+  'New photo': { en: 'New photo', hr: 'Nova fotografija' },
   'Save': { en: 'Save', hr: 'Spremi' },
   'Saving...': { en: 'Saving...', hr: 'Sprema...' },
   'Cancel': { en: 'Cancel', hr: 'Otkaži' },
@@ -785,7 +787,7 @@ export default function EditListingPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     {existingPhotos.map((url, idx) => (
                       <div key={`existing-${idx}`} className="relative group">
-                        <img src={url} alt={`Fotografija ${idx + 1}`} className="w-full h-24 object-cover rounded-lg border border-gray-200" />
+                        <img src={url} alt={`${et('Photo', locale)} ${idx + 1}`} className="w-full h-24 object-cover rounded-lg border border-gray-200" />
                         <button
                           type="button"
                           onClick={() => setExistingPhotos(existingPhotos.filter((_, i) => i !== idx))}
@@ -797,7 +799,7 @@ export default function EditListingPage() {
                     ))}
                     {photos.map((photo, idx) => (
                       <div key={`new-${idx}`} className="relative group">
-                        <img src={URL.createObjectURL(photo)} alt={`Nova fotografija ${idx + 1}`} className="w-full h-24 object-cover rounded-lg border border-gray-200" />
+                        <img src={URL.createObjectURL(photo)} alt={`${et('New photo', locale)} ${idx + 1}`} className="w-full h-24 object-cover rounded-lg border border-gray-200" />
                         <button
                           type="button"
                           onClick={() => setPhotos(photos.filter((_, i) => i !== idx))}
