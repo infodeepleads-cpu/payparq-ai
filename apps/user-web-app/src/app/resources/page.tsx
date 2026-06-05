@@ -536,6 +536,7 @@ function resolveSignPrice(source: LocationRow, type: "hourly" | "daily") {
 function buildCheckoutQrUrl(params: {
   locationId: string;
   displayId: string;
+  locationName?: string;
   type: "hourly" | "daily";
   price?: number | null;
   allowPromotionCodes?: boolean;
@@ -549,10 +550,11 @@ function buildCheckoutQrUrl(params: {
     .replace(/\/+$/, "");
 
   if (params.usePayPage) {
-    const query = new URLSearchParams({ loc: params.locationId });
-    if (typeof params.price === "number" && Number.isFinite(params.price) && params.price >= 0) {
-      query.set("price", params.price.toFixed(2));
-    }
+    const query = new URLSearchParams({
+      loc: params.locationId,
+      source: 'qr',
+      ...(params.displayId ? { display_id: params.displayId } : {}),
+    });
     return `${appBase}/checkout?${query.toString()}`;
   }
 
@@ -2129,6 +2131,7 @@ export default function ResourcesPage() {
         promotionCodeLabel: resourceForSign.promotionCodeLabel,
         useMobileScannerFormat: isWidgetSixteen || isWidgetSeventeen,
         dailyFooterHint: isWidgetSeventeen || isWidgetEighteen,
+        locationName: resourceForSign.name,
         usePayPage: widgetIndex === 0,
       });
       let qrImage: HTMLImageElement;
@@ -2886,7 +2889,16 @@ export default function ResourcesPage() {
                               <img
                                 key={selectedLocation.id}
                                 src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&qzone=1&color=000000&bgcolor=ffffff&data=${encodeURIComponent(
-                                  `${(process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.payparq.com').replace(/\/+$/, '')}/checkout?loc=${selectedLocation.id}${selectedLocation.signPrice != null ? `&price=${selectedLocation.signPrice.toFixed(2)}` : ''}`
+                                  buildCheckoutQrUrl({
+                                    locationId: selectedLocation.id,
+                                    displayId: selectedLocation.displayId,
+                                    locationName: selectedLocation.name,
+                                    type: selectedLocation.pricingMode,
+                                    price: selectedLocation.signPrice,
+                                    allowPromotionCodes: selectedLocation.allowPromotionCodes,
+                                    promotionCodeLabel: selectedLocation.promotionCodeLabel,
+                                    usePayPage: true,
+                                  })
                                 )}`}
                                 alt="Live QR code"
                                 width={120}
@@ -2894,7 +2906,7 @@ export default function ResourcesPage() {
                                 className="rounded-lg border border-white/20 bg-white p-2"
                               />
                               <p className="text-[10px] text-white/40 mt-1 break-all">
-                                {`/checkout?loc=${selectedLocation.id}`}
+                                {`/checkout?loc=${selectedLocation.id} • 3h preselected`}
                               </p>
                             </div>
                           )}

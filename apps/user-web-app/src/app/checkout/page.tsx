@@ -1061,6 +1061,11 @@ function CheckoutInner() {
   const source = searchParams.get('source') || 'platform';
 
   const [amountCents, setAmountCents] = useState(initialAmountCents);
+  const [liveCheckIn, setLiveCheckIn] = useState(checkIn);
+  const [liveCheckOut, setLiveCheckOut] = useState(checkOut);
+  const [liveLocationName, setLiveLocationName] = useState(locationName);
+  const [livePhCents, setLivePhCents] = useState(phCents);
+  const [livePdCents, setLivePdCents] = useState(pdCents);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [checkoutSlots, setCheckoutSlots] = useState<CheckoutSlot[] | undefined>(undefined);
@@ -1070,12 +1075,31 @@ function CheckoutInner() {
     if (!locId) return;
     supabaseCheckout
       .from('locations')
-      .select('verification_metadata')
+      .select('verification_metadata, base_price_hourly, base_price_daily, name')
       .eq('id', locId)
       .single()
       .then(({ data }) => {
         if (data?.verification_metadata?.checkoutSlots) {
           setCheckoutSlots(data.verification_metadata.checkoutSlots);
+        }
+        // For QR scans: fetch live prices and compute fresh check-in/out times
+        if (source === 'qr' && data) {
+          const liveHourly = typeof data.base_price_hourly === 'number' ? data.base_price_hourly : 0;
+          const liveDaily = typeof data.base_price_daily === 'number' ? data.base_price_daily : 0;
+          const liveName = data.name || locationName;
+          const now = new Date();
+          const ci = new Date(now);
+          ci.setMinutes(0, 0, 0);
+          ci.setHours(ci.getHours() + 1);
+          const co = new Date(ci);
+          co.setHours(co.getHours() + 3);
+          const liveAmount = Math.round(liveHourly * 3 * 100);
+          setLiveCheckIn(ci.toISOString());
+          setLiveCheckOut(co.toISOString());
+          setLiveLocationName(liveName);
+          setLivePhCents(Math.round(liveHourly * 100));
+          setLivePdCents(Math.round(liveDaily * 100));
+          setAmountCents(liveAmount);
         }
       });
   }, [locId]);
@@ -1103,7 +1127,7 @@ function CheckoutInner() {
     return 0.25; // 25% for 'platform' and 'airport'
   };
 
-  const createIntent = useCallback(async (cents: number, promoCode?: string, userEmail?: string) => {
+  const createIntent = useCallback(async (cents: number, promoCode?: string, userEmail?: string, ciOverride?: string, coOverride?: string, nameOverride?: string) => {
     if (cents < 50) { setClientSecret('free'); return; }
     try {
       const commissionCents = Math.round(cents * getCommissionRate(source));
@@ -1113,8 +1137,8 @@ function CheckoutInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           location_id: locId, amount_cents: cents,
-          check_in: checkIn, check_out: checkOut,
-          description: `PayParq — ${locationName}`,
+          check_in: ciOverride ?? liveCheckIn, check_out: coOverride ?? liveCheckOut,
+          description: `PayParq — ${nameOverride ?? liveLocationName}`,
           email: userEmail || undefined,
           address: address || undefined,
           booking_source: source,
@@ -1127,14 +1151,24 @@ function CheckoutInner() {
       if (!res.ok || !data.client_secret) { setFetchError('Unable to start payment.'); return; }
       setClientSecret(data.client_secret);
     } catch { setFetchError('Network error.'); }
-  }, [locId, checkIn, checkOut, locationName, source]);
+  }, [locId, liveCheckIn, liveCheckOut, liveLocationName, source]);
 
   useEffect(() => {
     if (!locId) { setFetchError('Invalid parameters.'); return; }
+    // For QR: wait for live prices to load before creating intent
+    if (source === 'qr') return;
     const fee = Math.round(99 + (initialAmountCents * 0.10));
     createIntent(initialAmountCents + fee);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // For QR source: create intent once live prices are loaded
+  useEffect(() => {
+    if (source !== 'qr' || amountCents === 0) return;
+    const fee = Math.round(99 + (amountCents * 0.10));
+    createIntent(amountCents + fee);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [amountCents, liveCheckIn]);
 
   const handleAmountChange = useCallback((newCents: number, promoCode?: string) => {
     setAmountCents(newCents);
