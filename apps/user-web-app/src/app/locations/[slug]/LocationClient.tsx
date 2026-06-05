@@ -1377,9 +1377,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                   <div className="rounded-xl border border-black/10 bg-[#FAFAFA] p-3">
                     <p className="text-[11px] uppercase tracking-[0.16em] text-black/70 font-semibold">{locale === 'en' ? 'Special Inquiries' : 'Posebni Upiti'}</p>
                     <div className="mt-2 space-y-1.5 text-xs text-black/80">
-                      <div className="flex items-center justify-between"><span className="notranslate" translate="no">Park & Taxi (Poruka)</span><span className="font-semibold">Na Upit</span></div>
-                      <div className="flex items-center justify-between"><span>Kamperi (Poruka)</span><span className="font-semibold">{formatEur(camperDailyPrice)}/dan</span></div>
-                      <div className="flex items-center justify-between"><span>Autobusi (Poruka)</span><span className="font-semibold">{formatEur(busDailyPrice)}/dan</span></div>
+                      <div className="flex items-center justify-between"><span className="notranslate" translate="no">Park & Taxi ({locale === 'en' ? 'Message' : 'Poruka'})</span><span className="font-semibold">{locale === 'en' ? 'On Request' : 'Na Upit'}</span></div>
+                      <div className="flex items-center justify-between"><span>{locale === 'en' ? 'Campers (Message)' : 'Kamperi (Poruka)'}</span><span className="font-semibold">{formatEur(camperDailyPrice)}/{locale === 'en' ? 'day' : 'dan'}</span></div>
+                      <div className="flex items-center justify-between"><span>{locale === 'en' ? 'Buses (Message)' : 'Autobusi (Poruka)'}</span><span className="font-semibold">{formatEur(busDailyPrice)}/{locale === 'en' ? 'day' : 'dan'}</span></div>
                     </div>
                   </div>
                 </div>

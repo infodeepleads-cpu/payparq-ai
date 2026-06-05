@@ -1069,17 +1069,16 @@ function CheckoutInner() {
 
   useEffect(() => {
     if (!locId) return;
-    supabaseCheckout
-      .from('locations')
-      .select('verification_metadata, name, address, display_id, rate_per_hour, base_price_hourly, base_price_daily, base_price_monthly, rate_per_hour_floor, rate_per_hour_ceiling, base_price_daily_floor, base_price_daily_ceiling, base_price_monthly_floor, base_price_monthly_ceiling, enforcement_pricing_mode')
-      .eq('id', locId)
-      .single()
-      .then(({ data }) => {
-        if (data?.verification_metadata?.checkoutSlots) {
-          setCheckoutSlots(data.verification_metadata.checkoutSlots);
-        }
-        // QR scan: resolve prices exactly like search page, redirect to full checkout URL
-        if (source === 'qr' && data) {
+    // For QR scans: fetch live prices via API (supabaseAdmin, bypasses RLS) then redirect
+    if (source === 'qr') {
+      fetch(`/api/listings/${locId}`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((json) => {
+          const data = json?.location;
+          if (!data) { setFetchError('Location not found.'); return; }
+          if (data?.verification_metadata?.checkoutSlots) {
+            setCheckoutSlots(data.verification_metadata.checkoutSlots);
+          }
           const liveHourly = resolveScannerTruthPriceEuro(data, 'hourly');
           const liveDaily = resolveScannerTruthPriceEuro(data, 'daily');
           const now = new Date();
@@ -1088,7 +1087,9 @@ function CheckoutInner() {
           ci.setHours(ci.getHours() + 1);
           const co = new Date(ci);
           co.setHours(co.getHours() + 3);
-          const amount = Math.round(liveHourly * 3 * 100);
+          const hourlyTotal = liveHourly * 3;
+          const dailyTotal = liveDaily > 0 ? liveDaily : Infinity;
+          const amount = Math.round(Math.min(hourlyTotal, dailyTotal) * 100);
           const params = new URLSearchParams({
             loc: locId,
             in: ci.toISOString(),
@@ -1102,6 +1103,19 @@ function CheckoutInner() {
             ...(data.display_id ? { display_id: String(data.display_id) } : {}),
           });
           window.location.replace(`/checkout?${params.toString()}`);
+        })
+        .catch(() => setFetchError('Unable to load location.'));
+      return;
+    }
+
+    supabaseCheckout
+      .from('locations')
+      .select('verification_metadata')
+      .eq('id', locId)
+      .single()
+      .then(({ data }) => {
+        if (data?.verification_metadata?.checkoutSlots) {
+          setCheckoutSlots(data.verification_metadata.checkoutSlots);
         }
       });
   }, [locId]);
@@ -1157,7 +1171,7 @@ function CheckoutInner() {
 
   useEffect(() => {
     if (!locId) { setFetchError('Invalid parameters.'); return; }
-    if (source === 'qr') return; // wait for redirect with resolved params
+    if (source === 'qr') return;
     const fee = Math.round(99 + (initialAmountCents * 0.10));
     createIntent(initialAmountCents + fee);
   // eslint-disable-next-line react-hooks/exhaustive-deps

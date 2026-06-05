@@ -1,7 +1,1 @@
-'use client';
-
-import { SearchPage } from '@/components/SearchPage';
-
-export default function Home() {
-  return <SearchPage />;
-}
+export { default } from './main/page';

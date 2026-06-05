@@ -63,7 +63,7 @@ const t = (key: string, locale: 'en' | 'hr'): string => {
   return trans ? trans[locale] : key;
 };
 
-export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, basePriceHourly, basePriceDaily, basePriceMonthly, onBack }: LotCalendarPricingProps) {
+export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, onBack }: LotCalendarPricingProps) {
   const { locale } = useLocale();
   const [loading, setLoading] = useState(true);
   const [calendarDate, setCalendarDate] = useState(() => new Date());
@@ -72,6 +72,9 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, ba
   const [rangeStartDate, setRangeStartDate] = useState<string | null>(null);
   const [rangeEndDate, setRangeEndDate] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [liveBaseHourly, setLiveBaseHourly] = useState<number | null>(null);
+  const [liveBaseDaily, setLiveBaseDaily] = useState<number | null>(null);
+  const [liveBaseMonthly, setLiveBaseMonthly] = useState<number | null>(null);
 
   // Load existing data via API (uses supabaseAdmin, bypasses RLS)
   useEffect(() => {
@@ -85,6 +88,10 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, ba
         } else {
           setDateConfigs({});
         }
+        // Store live base prices from DB
+        if (typeof location?.base_price_hourly === 'number') setLiveBaseHourly(location.base_price_hourly);
+        if (typeof location?.base_price_daily === 'number') setLiveBaseDaily(location.base_price_daily);
+        if (typeof location?.base_price_monthly === 'number') setLiveBaseMonthly(location.base_price_monthly);
       } catch (err: any) {
         console.error('Failed to load lot data:', err.message);
       } finally {
@@ -335,9 +342,9 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, ba
               lotCapacity={parseInt(lotCapacity)}
               locale={locale}
               allConfigs={dateConfigs}
-              basePriceHourly={basePriceHourly}
-              basePriceDaily={basePriceDaily}
-              basePriceMonthly={basePriceMonthly}
+              basePriceHourly={liveBaseHourly}
+              basePriceDaily={liveBaseDaily}
+              basePriceMonthly={liveBaseMonthly}
               onSave={(config) => handleSaveDate(config)}
               onCancel={() => setSelectedDate(null)}
             />
@@ -404,9 +411,9 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale, allCo
   const [openTime, setOpenTime] = useState(config.openTime);
   const [closeTime, setCloseTime] = useState(config.closeTime);
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>(config.priceMode || 'auto');
-  const [priceHourly, setPriceHourly] = useState(config.priceHourly != null ? String(config.priceHourly) : '');
-  const [priceDaily, setPriceDaily] = useState(config.priceDaily != null ? String(config.priceDaily) : '');
-  const [priceMonthly, setPriceMonthly] = useState(config.priceMonthly != null ? String(config.priceMonthly) : '');
+  const [priceHourly, setPriceHourly] = useState(config.priceHourly != null ? String(config.priceHourly) : basePriceHourly != null ? String(basePriceHourly) : '');
+  const [priceDaily, setPriceDaily] = useState(config.priceDaily != null ? String(config.priceDaily) : basePriceDaily != null ? String(basePriceDaily) : '');
+  const [priceMonthly, setPriceMonthly] = useState(config.priceMonthly != null ? String(config.priceMonthly) : basePriceMonthly != null ? String(basePriceMonthly) : '');
 
   const getPreviousPrice = () => {
     const dates = Object.keys(allConfigs).sort().reverse();

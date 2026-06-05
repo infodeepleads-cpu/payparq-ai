@@ -13,7 +13,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
     const { data, error } = await client
       .from('locations')
-      .select('id, name, address, capacity, verification_status, display_id, verification_metadata, verification_photos, base_price_hourly, base_price_daily, base_price_monthly')
+      .select('id, name, address, capacity, verification_status, display_id, verification_metadata, verification_photos, base_price_hourly, base_price_daily, base_price_monthly, rate_per_hour, rate_per_hour_floor, rate_per_hour_ceiling, base_price_daily_floor, base_price_daily_ceiling, base_price_monthly_floor, base_price_monthly_ceiling, enforcement_pricing_mode')
       .eq('id', id)
       .single();
 
