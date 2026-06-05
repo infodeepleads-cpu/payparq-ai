@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Clock, X } from 'lucide-react';
 import { useLocale } from './LocaleProvider';
+import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
 interface LotCalendarPricingProps {
   lotId: string;
@@ -89,9 +90,9 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
           setDateConfigs({});
         }
         // Store live base prices from DB
-        if (typeof location?.base_price_hourly === 'number') setLiveBaseHourly(location.base_price_hourly);
-        if (typeof location?.base_price_daily === 'number') setLiveBaseDaily(location.base_price_daily);
-        if (typeof location?.base_price_monthly === 'number') setLiveBaseMonthly(location.base_price_monthly);
+        setLiveBaseHourly(resolveScannerTruthPriceEuro(location, 'hourly'));
+        setLiveBaseDaily(resolveScannerTruthPriceEuro(location, 'daily'));
+        setLiveBaseMonthly(resolveScannerTruthPriceEuro(location, 'monthly'));
       } catch (err: any) {
         console.error('Failed to load lot data:', err.message);
       } finally {
