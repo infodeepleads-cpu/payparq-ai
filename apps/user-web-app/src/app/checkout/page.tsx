@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { Star, CheckCircle, X, Phone, Lock } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { useLocale } from '@/components/LocaleProvider';
+import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
 const supabaseCheckout = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -1070,17 +1071,17 @@ function CheckoutInner() {
     if (!locId) return;
     supabaseCheckout
       .from('locations')
-      .select('verification_metadata, base_price_hourly, base_price_daily, name, address, display_id')
+      .select('verification_metadata, name, address, display_id, rate_per_hour, base_price_hourly, base_price_daily, base_price_monthly, rate_per_hour_floor, rate_per_hour_ceiling, base_price_daily_floor, base_price_daily_ceiling, base_price_monthly_floor, base_price_monthly_ceiling, enforcement_pricing_mode')
       .eq('id', locId)
       .single()
       .then(({ data }) => {
         if (data?.verification_metadata?.checkoutSlots) {
           setCheckoutSlots(data.verification_metadata.checkoutSlots);
         }
-        // QR scan: redirect to full checkout URL with live DB prices
+        // QR scan: resolve prices exactly like search page, redirect to full checkout URL
         if (source === 'qr' && data) {
-          const liveHourly = typeof data.base_price_hourly === 'number' ? data.base_price_hourly : 0;
-          const liveDaily = typeof data.base_price_daily === 'number' ? data.base_price_daily : 0;
+          const liveHourly = resolveScannerTruthPriceEuro(data, 'hourly');
+          const liveDaily = resolveScannerTruthPriceEuro(data, 'daily');
           const now = new Date();
           const ci = new Date(now);
           ci.setMinutes(0, 0, 0);
@@ -1096,9 +1097,9 @@ function CheckoutInner() {
             name: data.name || locId,
             address: data.address || '',
             ph: Math.round(liveHourly * 100).toString(),
+            pd: Math.round(liveDaily * 100).toString(),
             source: 'qr_resolved',
             ...(data.display_id ? { display_id: String(data.display_id) } : {}),
-            ...(liveDaily ? { pd: Math.round(liveDaily * 100).toString() } : {}),
           });
           window.location.replace(`/checkout?${params.toString()}`);
         }
