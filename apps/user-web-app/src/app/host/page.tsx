@@ -368,10 +368,10 @@ function CalendarScheduler({ baseSpots, onConfigsChange, locale }: { baseSpots: 
     onConfigsChange?.(dateConfigs);
   }, [dateConfigs, onConfigsChange]);
 
-  const englishMonths = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const monthName = locale === 'en' ? englishMonths[month - 1] : ['siječnja','veljače','ožujka','travnja','svibnja','lipnja','srpnja','kolovoza','rujna','listopadu','studenog','prosinca'][month - 1];
   const year = calendarDate.getFullYear();
   const month = calendarDate.getMonth();
+  const englishMonths = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthName = locale === 'en' ? englishMonths[month] : ['siječnja','veljače','ožujka','travnja','svibnja','lipnja','srpnja','kolovoza','rujna','listopada','studenog','prosinca'][month];
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayRaw = new Date(year, month, 1).getDay();
   const emptyBefore = firstDayRaw === 0 ? 6 : firstDayRaw - 1;
