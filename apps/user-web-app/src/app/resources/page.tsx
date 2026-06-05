@@ -542,7 +542,20 @@ function buildCheckoutQrUrl(params: {
   promotionCodeLabel?: string;
   useMobileScannerFormat?: boolean;
   dailyFooterHint?: boolean;
+  usePayPage?: boolean;
 }) {
+  const appBase = (process.env.NEXT_PUBLIC_APP_URL ?? "https://www.payparq.com")
+    .trim()
+    .replace(/\/+$/, "");
+
+  if (params.usePayPage) {
+    const query = new URLSearchParams({ loc: params.locationId });
+    if (typeof params.price === "number" && Number.isFinite(params.price) && params.price >= 0) {
+      query.set("price", params.price.toFixed(2));
+    }
+    return `${appBase}/checkout?${query.toString()}`;
+  }
+
   const query = new URLSearchParams({
     display_id: params.displayId,
     type: params.type,
@@ -565,9 +578,6 @@ function buildCheckoutQrUrl(params: {
     const trimmedLabel = (params.promotionCodeLabel ?? "").trim();
     query.set("promotion_code_label", trimmedLabel || "FREE100");
   }
-  const appBase = (process.env.NEXT_PUBLIC_APP_URL ?? "https://www.payparq.com")
-    .trim()
-    .replace(/\/+$/, "");
   return `${appBase}/api/stripe/checkout?${query.toString()}`;
 }
 
@@ -1527,7 +1537,18 @@ export default function ResourcesPage() {
         let qrObjectUrl = "";
         let qrImage: HTMLImageElement;
         const shouldMatchWidget3Styling = widgetIndex === 2 || widgetIndex === 3;
-        const qrDataValue = widgetIndex === 9 ? "https://www.payparq.com/support" : "https://www.payparq.com/payments";
+        const qrDataValue = widgetIndex === 9
+          ? "https://www.payparq.com/support"
+          : resourceForSign
+          ? buildCheckoutQrUrl({
+              locationId: resourceForSign.id,
+              displayId: resourceForSign.displayId,
+              type: resourceForSign.pricingMode,
+              price: resourceForSign.signPrice,
+              allowPromotionCodes: resourceForSign.allowPromotionCodes,
+              promotionCodeLabel: resourceForSign.promotionCodeLabel,
+            })
+          : "https://www.payparq.com/payments";
         if (shouldMatchWidget3Styling) {
           const { default: QRCodeStyling } = await import("qr-code-styling");
           const qrStyling = new QRCodeStyling({
@@ -2103,10 +2124,12 @@ export default function ResourcesPage() {
         locationId: resourceForSign.id,
         displayId: resourceForSign.displayId,
         type: resourceForSign.pricingMode,
+        price: resourceForSign.signPrice,
         allowPromotionCodes: resourceForSign.allowPromotionCodes,
         promotionCodeLabel: resourceForSign.promotionCodeLabel,
         useMobileScannerFormat: isWidgetSixteen || isWidgetSeventeen,
         dailyFooterHint: isWidgetSeventeen || isWidgetEighteen,
+        usePayPage: widgetIndex === 0,
       });
       let qrImage: HTMLImageElement;
       let qrModuleCount: number | undefined;
@@ -2857,6 +2880,24 @@ export default function ResourcesPage() {
                           {selectedLocation.signPrice != null && selectedLocation.signPrice < 0.5 ? (
                             <p className="text-white/65">Sub-€0.50 lots charge €0.50 card min and keep extra as wallet credit.</p>
                           ) : null}
+                          {index === 0 && (
+                            <div className="mt-3 pt-3 border-t border-white/10">
+                              <p className="text-[11px] uppercase tracking-[0.16em] text-white/60 mb-2">Live QR Preview</p>
+                              <img
+                                key={selectedLocation.id}
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&qzone=1&color=000000&bgcolor=ffffff&data=${encodeURIComponent(
+                                  `${(process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.payparq.com').replace(/\/+$/, '')}/checkout?loc=${selectedLocation.id}${selectedLocation.signPrice != null ? `&price=${selectedLocation.signPrice.toFixed(2)}` : ''}`
+                                )}`}
+                                alt="Live QR code"
+                                width={120}
+                                height={120}
+                                className="rounded-lg border border-white/20 bg-white p-2"
+                              />
+                              <p className="text-[10px] text-white/40 mt-1 break-all">
+                                {`/checkout?loc=${selectedLocation.id}`}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
                       <label className="space-y-1 block">
