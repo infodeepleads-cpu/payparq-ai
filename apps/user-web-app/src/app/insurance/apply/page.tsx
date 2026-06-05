@@ -4,8 +4,19 @@ import { useState } from "react";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FooterBrand } from "@/components/FooterBrand";
+import { useLocale } from "@/components/LocaleProvider";
+
+const INSURANCE_TRANSLATIONS = {
+  'Note': { en: 'Note', hr: 'Napomena' },
+} as const;
+
+const insuranceT = (key: string, locale: 'en' | 'hr'): string => {
+  const trans = INSURANCE_TRANSLATIONS[key as keyof typeof INSURANCE_TRANSLATIONS];
+  return trans ? trans[locale] : key;
+};
 
 export default function InsuranceApplyPage() {
+  const { locale } = useLocale();
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error" | "config_error">("idle");
   const [phoneError, setPhoneError] = useState("");
 
@@ -119,7 +130,7 @@ export default function InsuranceApplyPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-black/70 mb-1">Napomena</label>
+                  <label className="block text-xs font-semibold text-black/70 mb-1">{insuranceT('Note', locale)}</label>
                   <textarea name="notes" rows={4} className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40" />
                 </div>
                 {status === "success" ? (

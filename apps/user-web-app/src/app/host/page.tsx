@@ -80,6 +80,7 @@ const HOST_TRANSLATIONS = {
   'VIP Valet': { en: 'VIP Valet (All-inclusive)', hr: 'VIP Valet (Sveobuhvatno)' },
   'Unlimited charging/washing, Red Carpet': { en: 'Unlimited charging/washing, Red Carpet', hr: 'Neograničeno punjenje/pranje, Red Carpet' },
   'Late Checkout': { en: 'Late Checkout', hr: 'Kasnije odjavljivanje' },
+  'Days': { en: 'Days', hr: 'Dani' },
   'Mon': { en: 'Mon', hr: 'Pon' },
   'Tue': { en: 'Tue', hr: 'Uto' },
   'Wed': { en: 'Wed', hr: 'Sri' },
@@ -102,6 +103,7 @@ const HOST_TRANSLATIONS = {
   'PayParq Business Package': { en: 'PayParq Business Package', hr: 'Payparq Poslovni paket' },
   'By submitting you agree with our': { en: 'By submitting you agree with our', hr: 'Slanjem se slažete s našim' },
   'Terms of Use': { en: 'Terms of Use', hr: 'Uvjetima korištenja' },
+  'Owner comment': { en: 'Owner comment', hr: 'Komentar Vlasnika' },
 } as const;
 
 const hostT = (key: string, locale: string): string => {
@@ -1027,9 +1029,9 @@ export default function HostPage() {
 
                 {/* Owner comment */}
                 <div>
-                  <label className={labelClass}>{locale === 'en' ? 'Owner comment' : 'Komentar Vlasnika'}</label>
+                  <label className={labelClass}>{hostT('Owner comment', locale)}</label>
                   <textarea
-                    placeholder={"npr. Parking je zaštićen 24/7 video nadzorom. Molimo vozače da ne parkiraju ispred rampe. Za hitne slučajeve nazovite broj na ulazu."}
+                    placeholder={locale === 'en' ? 'e.g. Parking is protected 24/7 by CCTV. Please do not park in front of the gate. For emergencies, call the number at the entrance.' : 'npr. Parking je zaštićen 24/7 video nadzorom. Molimo vozače da ne parkiraju ispred rampe. Za hitne slučajeve nazovite broj na ulazu.'}
                     value={ownerComment}
                     onChange={(e) => setOwnerComment(e.target.value)}
                     rows={3}
@@ -1077,12 +1079,12 @@ export default function HostPage() {
                   <div className="space-y-3 pt-1" translate="no">
                     {/* Days */}
                     <div>
-                      <label className={subLabelClass} translate="no">Dani</label>
-                      <div className="flex gap-1.5 flex-wrap" translate="no">
-                        {['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned'].map((d) => (
-                          <button key={d} type="button" translate="no" onClick={() => toggleDay(d)}
+                      <label className={subLabelClass}>{hostT('Days', locale)}</label>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
+                          <button key={d} type="button" onClick={() => toggleDay(d)}
                             className={`w-10 h-8 rounded text-xs font-bold border transition-colors ${openDays.includes(d) ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-500 border-gray-300 hover:border-gray-500'}`}>
-                            <span translate="no">{d}</span>
+                            <span>{hostT(d, locale)}</span>
                           </button>
                         ))}
                       </div>
@@ -1136,7 +1138,7 @@ export default function HostPage() {
               <CollapsibleSection title={hostT('Price', locale)} defaultOpen={false}>
                 {/* Info box */}
                 <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
-                  <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> Napomena</p>
+                  <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> {hostT('Note', locale)}</p>
                   <p className="text-xs text-black leading-relaxed space-y-2" translate="no">
                     <span className="block">PayParq na Vašu cijenu dodaje marginalnu naknadu za uslugu koju plaća kupac koja uključuje: Zajamčeno mjesto, Prioritetnu podršku, SOS poziv za zamjenu mjesta.</span>
                     <span className="block">Za udaljene lotove — prazne parcele bez nadzora uz zračne luke, događaje i plaže — dodaje se dodatna naknada.</span>

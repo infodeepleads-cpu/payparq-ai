@@ -514,6 +514,22 @@ const MEMBERS_TRANSLATIONS = {
   'Included in price': { en: 'Included in price', hr: 'Uključeno u cijenu' },
   'Included': { en: 'Included', hr: 'Uključeno' },
   'Not included': { en: 'Not included', hr: 'Isključeno' },
+  'Loading...': { en: 'Loading...', hr: 'Učitavanje...' },
+  'No active reservations': { en: 'No active reservations.', hr: 'Nema aktivne rezervacije.' },
+  'Shuttle confirmation': { en: 'Shuttle confirmation', hr: 'Shuttle potvrda' },
+  'Come to boarding point': { en: 'Come to boarding point', hr: 'Dođite na ukrcajnu točku' },
+  'Show pickup/dropoff zone': { en: 'Show pickup/dropoff zone', hr: 'Prikaži pick-up / drop-off zonu' },
+  'On arrival press call shuttle': { en: 'On arrival press "Call shuttle"', hr: 'Po dolasku pritisnite "Pozovi shuttle"' },
+  'ETA 3-8 min': { en: 'ETA 3–8 min', hr: 'ETA 3–8 min' },
+  'Call shuttle via button below': { en: 'Call shuttle via the "Call shuttle" button below.', hr: 'Pozovite shuttle putem gumba "Pozovi shuttle" ispod.' },
+  'Chat with driver': { en: 'Chat with driver', hr: 'Chat s vozačem' },
+  'Shuttle transport': { en: 'Shuttle transport', hr: 'Shuttle prijevoz' },
+  'Value': { en: 'Value', hr: 'Vrijednost' },
+  'Your car is on the way': { en: 'Your car is on the way · ETA ~6 min', hr: 'Vaš automobil je na putu · ETA ~6 min' },
+  'Shuttle called': { en: 'Shuttle called · Arriving in ~4 min', hr: 'Shuttle je pozvan · Dolazi za ~4 min' },
+  'Processing...': { en: 'Processing...', hr: 'Obrada...' },
+  'Request failed': { en: 'Request failed · Try again', hr: 'Zahtjev nije uspio · Pokušajte ponovo' },
+  'Error': { en: 'Error · Try again', hr: 'Greška · Pokušajte ponovo' },
 } as const;
 
 const membersT = (key: string, locale: 'en' | 'hr'): string => {
@@ -1128,14 +1144,14 @@ export default function MembersPage() {
       const res = await fetch('/api/service-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const json = await res.json();
       if (json.request) {
-        setSummonStatus(type === 'valet' ? 'Vaš automobil je na putu · ETA ~6 min' : 'Shuttle je pozvan · Dolazi za ~4 min');
+        setSummonStatus(type === 'valet' ? membersT('Your car is on the way', locale) : membersT('Shuttle called', locale));
         setTimeout(() => setSummonStatus(null), 6000);
       } else {
-        setSummonStatus('Zahtjev nije uspio · Pokušajte ponovo');
+        setSummonStatus(membersT('Request failed', locale));
         setTimeout(() => setSummonStatus(null), 4000);
       }
     } catch {
-      setSummonStatus('Greška · Pokušajte ponovo');
+      setSummonStatus(membersT('Error', locale));
       setTimeout(() => setSummonStatus(null), 4000);
     }
   }
@@ -2021,7 +2037,7 @@ export default function MembersPage() {
           <div className="rounded-xl border border-black/10 bg-white p-4">
             <div className="space-y-1.5">
               {homeContextLoading ? (
-                <p className="text-sm text-black/60">Učitavanje...</p>
+                <p className="text-sm text-black/60">{membersT('Loading...', locale)}</p>
               ) : homeContext ? (
                 <>
                   <p className="text-sm text-black/80">
@@ -2034,7 +2050,7 @@ export default function MembersPage() {
                   </p>
                 </>
               ) : (
-                <p className="text-sm text-black/60">Nema aktivne rezervacije.</p>
+                <p className="text-sm text-black/60">{membersT('No active reservations', locale)}</p>
               )}
             </div>
             <div className="mt-3 border-t border-black/10 pt-3">
@@ -2073,7 +2089,7 @@ export default function MembersPage() {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                       <rect x="1" y="8" width="22" height="10" rx="2"/><path d="M5 18v2M19 18v2"/><path d="M1 12h22"/><path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
                     </svg>
-                    <span className="text-white text-[11px] font-semibold uppercase tracking-widest">Shuttle potvrda</span>
+                    <span className="text-white text-[11px] font-semibold uppercase tracking-widest">{membersT('Shuttle confirmation', locale)}</span>
                   </div>
                   <span className="text-white/80 text-[11px] font-mono font-bold">{shtCode}</span>
                 </div>
@@ -2084,15 +2100,15 @@ export default function MembersPage() {
                       <span className="text-[9px] font-bold text-white">1</span>
                     </div>
                     <div>
-                      <p className="font-semibold text-black">Dođite na ukrcajnu točku</p>
+                      <p className="font-semibold text-black">{membersT('Come to boarding point', locale)}</p>
                       {pickup?.label && <p className="text-black/60 mt-0.5">{pickup.label}</p>}
                       {mapHref && (
                         <a href={mapHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-0.5 text-[#0F6E56] font-semibold underline underline-offset-2">
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                          Prikaži pick-up / drop-off zonu
+                          {membersT('Show pickup/dropoff zone', locale)}
                         </a>
                       )}
-                      <p className="text-black/60 mt-0.5">Po dolasku pritisnite &ldquo;Pozovi shuttle&rdquo; · <strong className="text-black">ETA 3–8 min</strong></p>
+                      <p className="text-black/60 mt-0.5">{membersT('On arrival press call shuttle', locale)} · <strong className="text-black">{membersT('ETA 3-8 min', locale)}</strong></p>
                     </div>
                   </div>
                   <div className="flex items-start gap-2.5">
@@ -2110,7 +2126,7 @@ export default function MembersPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-black">{membersT('Back', locale)}</p>
-                      <p className="text-black/60 mt-0.5">Pozovite shuttle putem gumba &ldquo;Pozovi shuttle&rdquo; ispod.</p>
+                      <p className="text-black/60 mt-0.5">{membersT('Call shuttle via button below', locale)}</p>
                     </div>
                   </div>
                 </div>
@@ -2125,7 +2141,7 @@ export default function MembersPage() {
                     target="_blank" rel="noopener noreferrer"
                     className="text-[11px] font-semibold text-[#0F6E56] underline underline-offset-2"
                   >
-                    Chat s vozačem
+                    {membersT('Chat with driver', locale)}
                   </a>
                 </div>
               </div>
@@ -2143,7 +2159,7 @@ export default function MembersPage() {
                     disabled={actionProcessing === "ride"}
                     className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
                   >
-                    {actionProcessing === "ride" ? "Obrada..." : "Ride"}
+                    {actionProcessing === "ride" ? membersT('Processing...', locale) : "Ride"}
                   </button>
                   <button
                     type="button"
@@ -2196,7 +2212,7 @@ export default function MembersPage() {
                 <div className="min-w-[210px] rounded-xl border border-[black]/20 bg-[#EFF6FF] p-3 space-y-2">
                   <p className="text-sm font-semibold text-[black]">Valet parking</p>
                   <p className="text-[11px] text-[black]/70">{membersT('Included in price', locale)} · kod <span className="font-mono font-bold">{valetCode}</span></p>
-                  <p className="text-[10px] text-black/40">Vrijednost: {formatCents(priceCents)}</p>
+                  <p className="text-[10px] text-black/40">{membersT('Value', locale)}: {formatCents(priceCents)}</p>
                   <button type="button" onClick={() => setValetToggled(v => !v)} className="flex items-center gap-2">
                     <div className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative shrink-0" style={{ background: valetToggled ? 'black' : '#f3f4f6', borderColor: valetToggled ? 'black' : '#e5e7eb' }}>
                       <div className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm" style={{ left: valetToggled ? '18px' : '2px' }} />
@@ -2229,7 +2245,7 @@ export default function MembersPage() {
 
               return (
                 <div className="min-w-[210px] rounded-xl border border-[#0F6E56]/20 bg-[#E1F5EE] p-3 space-y-2">
-                  <p className="text-sm font-semibold text-[#0F6E56]">Shuttle prijevoz</p>
+                  <p className="text-sm font-semibold text-[#0F6E56]">{membersT('Shuttle transport', locale)}</p>
                   <p className="text-[11px] text-[#0F6E56]/70">{membersT('Included in price', locale)} · kod <span className="font-mono font-bold">{shtCode}</span></p>
                   <p className="text-[10px] text-black/40">Vrijednost: {formatCents(priceCents)}</p>
                   <button type="button" onClick={() => setShuttleToggled(s => !s)} className="flex items-center gap-2">

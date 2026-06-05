@@ -55,6 +55,7 @@ function fmtAmount(price: number | null, currency: string | null): string {
 }
 
 const ARRIVALS_TRANSLATIONS = {
+  'Arrivals': { en: 'Arrivals', hr: 'Dolasci' },
   'Live': { en: 'Live', hr: 'Uživo' },
   'Upcoming': { en: 'Upcoming', hr: 'Nadolazeće' },
   'Expired': { en: 'Expired', hr: 'Završeno' },
@@ -170,7 +171,7 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
       {/* Header */}
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">Dolasci</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">{arrivalsT('Arrivals', locale)}</p>
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-black/40">{arrivalsT('Updated', locale)} {fmtTime(lastRefresh.toISOString())}</span>
             <button onClick={fetchSessions} className="text-[10px] text-black/40 hover:text-black px-2 py-0.5 rounded border border-black/10 transition-colors">↻</button>
