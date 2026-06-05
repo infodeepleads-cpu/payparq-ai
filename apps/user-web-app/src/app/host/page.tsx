@@ -109,6 +109,9 @@ const HOST_TRANSLATIONS = {
   'space': { en: 'space', hr: 'mjesto' },
   'spaces': { en: 'spaces', hr: 'mjesta' },
   'Number of spots': { en: 'Number of spots', hr: 'Broj mjesta' },
+  'e.g. Parking Center': { en: 'e.g. Parking Center Zagreb', hr: 'npr. Parking Centar Zagreb' },
+  'PayParq fee explanation': { en: 'PayParq adds a marginal service fee to your price, paid by the customer, which includes: Space guarantee, Priority support, SOS spot replacement.', hr: 'PayParq na Vašu cijenu dodaje marginalnu naknadu za uslugu koju plaća kupac koja uključuje: Zajamčeno mjesto, Prioritetnu podršku, SOS poziv za zamjenu mjesta.' },
+  'Remote lot surcharge': { en: 'For remote lots — empty parcels without supervision near airports, events, and beaches — an additional surcharge is added.', hr: 'Za udaljene lotove — prazne parcele bez nadzora uz zračne luke, događaje i plaže — dodaje se dodatna naknada.' },
 } as const;
 
 const hostT = (key: string, locale: string): string => {
@@ -365,7 +368,8 @@ function CalendarScheduler({ baseSpots, onConfigsChange, locale }: { baseSpots: 
     onConfigsChange?.(dateConfigs);
   }, [dateConfigs, onConfigsChange]);
 
-  const croatianMonths = ['siječnja','veljače','ožujka','travnja','svibnja','lipnja','srpnja','kolovoza','rujna','listopada','studenog','prosinca'];
+  const englishMonths = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthName = locale === 'en' ? englishMonths[month - 1] : ['siječnja','veljače','ožujka','travnja','svibnja','lipnja','srpnja','kolovoza','rujna','listopadu','studenog','prosinca'][month - 1];
   const year = calendarDate.getFullYear();
   const month = calendarDate.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -421,7 +425,7 @@ function CalendarScheduler({ baseSpots, onConfigsChange, locale }: { baseSpots: 
           onClick={() => setCalendarDate(new Date(year, month - 1, 1))}
           className="text-xs font-semibold text-gray-600 hover:text-gray-900"
         >{hostT('Previous', locale)}</button>
-        <h3 className="text-sm font-semibold text-gray-900" translate="no">{croatianMonths[month]} {year}</h3>
+        <h3 className="text-sm font-semibold text-gray-900" translate="no">{monthName} {year}</h3>
         <button
           type="button"
           onClick={() => setCalendarDate(new Date(year, month + 1, 1))}
@@ -432,8 +436,8 @@ function CalendarScheduler({ baseSpots, onConfigsChange, locale }: { baseSpots: 
       {/* Calendar Grid */}
       <div className="border border-gray-200 rounded-lg p-3 overflow-x-auto">
         <div className="grid grid-cols-7 gap-1.5 min-w-max md:min-w-full">
-          {['pon', 'uto', 'sri', 'čet', 'pet', 'sub', 'ned'].map((day) => (
-            <div key={day} className="text-center font-semibold text-xs text-gray-700 py-2" translate="no">{day}</div>
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+            <div key={day} className="text-center font-semibold text-xs text-gray-700 py-2">{hostT(day, locale)}</div>
           ))}
           {[...Array(emptyBefore)].map((_, i) => (
             <div key={`empty-${i}`}></div>
@@ -959,7 +963,7 @@ export default function HostPage() {
               <div className="space-y-3">
                 <div>
                   <label className={labelClass}>{hostT('Name', locale)}</label>
-                  <input type="text" placeholder="npr. Parking Centar Zagreb" value={lotName} onChange={(e) => setLotName(e.target.value)} className={inputClass} required />
+                  <input type="text" placeholder={hostT('e.g. Parking Center', locale)} value={lotName} onChange={(e) => setLotName(e.target.value)} className={inputClass} required />
                 </div>
                 <div>
                   <label className={labelClass}>{hostT('Address', locale)}</label>
@@ -1144,9 +1148,9 @@ export default function HostPage() {
                 {/* Info box */}
                 <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
                   <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> {hostT('Note', locale)}</p>
-                  <p className="text-xs text-black leading-relaxed space-y-2" translate="no">
-                    <span className="block">PayParq na Vašu cijenu dodaje marginalnu naknadu za uslugu koju plaća kupac koja uključuje: Zajamčeno mjesto, Prioritetnu podršku, SOS poziv za zamjenu mjesta.</span>
-                    <span className="block">Za udaljene lotove — prazne parcele bez nadzora uz zračne luke, događaje i plaže — dodaje se dodatna naknada.</span>
+                  <p className="text-xs text-black leading-relaxed space-y-2">
+                    <span className="block">{hostT('PayParq fee explanation', locale)}</span>
+                    <span className="block">{hostT('Remote lot surcharge', locale)}</span>
                   </p>
                 </div>
 
