@@ -505,8 +505,15 @@ const MEMBERS_TRANSLATIONS = {
   'Download PDF': { en: 'Download PDF', hr: 'Preuzmi PDF' },
   'Processing...': { en: 'Processing...', hr: 'Obrada...' },
   'Copy': { en: 'Copy', hr: 'Kopirati' },
-  'Share referral codes & earn 10% commission.': { en: 'Share referral codes & earn 10% commission.', hr: 'Dijeli referral kodove i zaradi 10% provizije.' },
+  'Share referral codes & earn 10% commission.': { en: 'Share referral codes & earn 10% commission.', hr: 'Dijeli referral kodove i inoltre 10% provizije.' },
   'Croatian': { en: 'Croatian', hr: 'Hrvatski' },
+  'Quick overview and actions': { en: 'Quick overview and actions.', hr: 'Brzi pregled i akcije.' },
+  'Insurance': { en: 'Insurance', hr: 'Osiguranje' },
+  'In your area, spaces can earn up to': { en: 'In your area, spaces can earn up to', hr: 'U vašem području, prostori mogu zaraditi i do' },
+  'annually': { en: 'annually', hr: 'godišnje' },
+  'Included in price': { en: 'Included in price', hr: 'Uključeno u cijenu' },
+  'Included': { en: 'Included', hr: 'Uključeno' },
+  'Not included': { en: 'Not included', hr: 'Isključeno' },
 } as const;
 
 const membersT = (key: string, locale: 'en' | 'hr'): string => {
@@ -1996,7 +2003,7 @@ export default function MembersPage() {
               <h2 className="text-lg font-semibold tracking-tight text-black">
                 Members Home
               </h2>
-              <p className="text-sm text-black/70">Brzi pregled i akcije.</p>
+              <p className="text-sm text-black/70">{membersT('Quick overview and actions', locale)}</p>
             </div>
             <div className="shrink-0 space-y-2">
               <div className="rounded-lg border border-[black]/25 bg-[#EFF6FF] px-3 py-2 text-right">
@@ -2165,7 +2172,7 @@ export default function MembersPage() {
               </div>
             )}
             <div className="min-w-[210px] rounded-xl border border-black/10 bg-white p-3 space-y-2">
-              <p className="text-sm font-semibold text-black">Osiguranje</p>
+              <p className="text-sm font-semibold text-black">{membersT('Insurance', locale)}</p>
               <button
                 type="button"
                 onClick={handleInsuranceAction}
@@ -2188,13 +2195,13 @@ export default function MembersPage() {
               return (
                 <div className="min-w-[210px] rounded-xl border border-[black]/20 bg-[#EFF6FF] p-3 space-y-2">
                   <p className="text-sm font-semibold text-[black]">Valet parking</p>
-                  <p className="text-[11px] text-[black]/70">Uključeno u cijenu · kod <span className="font-mono font-bold">{valetCode}</span></p>
+                  <p className="text-[11px] text-[black]/70">{membersT('Included in price', locale)} · kod <span className="font-mono font-bold">{valetCode}</span></p>
                   <p className="text-[10px] text-black/40">Vrijednost: {formatCents(priceCents)}</p>
                   <button type="button" onClick={() => setValetToggled(v => !v)} className="flex items-center gap-2">
                     <div className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative shrink-0" style={{ background: valetToggled ? 'black' : '#f3f4f6', borderColor: valetToggled ? 'black' : '#e5e7eb' }}>
                       <div className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm" style={{ left: valetToggled ? '18px' : '2px' }} />
                     </div>
-                    <span className="text-xs font-medium text-black">{valetToggled ? 'Uključeno' : 'Isključeno'}</span>
+                    <span className="text-xs font-medium text-black">{valetToggled ? membersT('Included', locale) : membersT('Not included', locale)}</span>
                   </button>
                   {valetToggled && (
                     <button
@@ -2223,13 +2230,13 @@ export default function MembersPage() {
               return (
                 <div className="min-w-[210px] rounded-xl border border-[#0F6E56]/20 bg-[#E1F5EE] p-3 space-y-2">
                   <p className="text-sm font-semibold text-[#0F6E56]">Shuttle prijevoz</p>
-                  <p className="text-[11px] text-[#0F6E56]/70">Uključeno u cijenu · kod <span className="font-mono font-bold">{shtCode}</span></p>
+                  <p className="text-[11px] text-[#0F6E56]/70">{membersT('Included in price', locale)} · kod <span className="font-mono font-bold">{shtCode}</span></p>
                   <p className="text-[10px] text-black/40">Vrijednost: {formatCents(priceCents)}</p>
                   <button type="button" onClick={() => setShuttleToggled(s => !s)} className="flex items-center gap-2">
                     <div className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative shrink-0" style={{ background: shuttleToggled ? '#1D9E75' : '#f3f4f6', borderColor: shuttleToggled ? '#0F6E56' : '#e5e7eb' }}>
                       <div className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm" style={{ left: shuttleToggled ? '18px' : '2px' }} />
                     </div>
-                    <span className="text-xs font-medium text-black">{shuttleToggled ? 'Uključeno' : 'Isključeno'}</span>
+                    <span className="text-xs font-medium text-black">{shuttleToggled ? membersT('Included', locale) : membersT('Not included', locale)}</span>
                   </button>
                   {shuttleToggled && (
                     <button
@@ -3243,10 +3250,10 @@ export default function MembersPage() {
             <div className="md:col-span-1">
               <div className="sticky top-6 space-y-4">
                 <div className="rounded-xl border border-black/10 bg-white p-4">
-                  <p className="text-xs text-black/70 leading-snug mb-2">U vašem području, prostori mogu zaraditi i do</p>
+                  <p className="text-xs text-black/70 leading-snug mb-2">{membersT('In your area, spaces can earn up to', locale)}</p>
                   <p className="text-2xl font-bold text-[black]">
                     €6,912.00
-                    <span className="text-sm font-normal text-black/60 block">godišnje</span>
+                    <span className="text-sm font-normal text-black/60 block">{membersT('annually', locale)}</span>
                   </p>
                 </div>
               </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Bell, X, BellOff, BellRing, Loader2 } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useLocale } from '@/components/LocaleProvider';
 import { initializeFirebase, getFCMToken } from '@/lib/firebase';
 import { supabase } from '@/lib/supabase';
 
@@ -10,7 +11,14 @@ interface NotificationCenterProps {
   userId: string | null;
 }
 
+const NOTIFICATION_TRANSLATIONS: Record<string, { en: string; hr: string }> = {
+  'Enabled': { en: 'Enabled', hr: 'Uključeno' },
+};
+
+const nt = (key: string, locale: 'en' | 'hr') => NOTIFICATION_TRANSLATIONS[key]?.[locale] ?? key;
+
 export function NotificationCenter({ userId }: NotificationCenterProps) {
+  const { locale } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [subscribed, setSubscribed] = useState(false);
@@ -164,7 +172,7 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
             className="px-2 py-1 text-[11px] font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-1"
           >
             <BellRing className="w-3 h-3" />
-            <span className="hidden md:inline">Uključeno</span>
+            <span className="hidden md:inline">{nt('Enabled', locale)}</span>
           </button>
         ) : (
           <button

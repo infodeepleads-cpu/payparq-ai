@@ -655,7 +655,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale, allCo
           onClick={onCancel}
           className="flex-1 px-3 md:px-4 py-2.5 md:py-3 border border-gray-300 text-gray-700 rounded-lg text-xs md:text-sm font-medium hover:bg-gray-50 transition-colors"
         >
-          {t('Odustani', locale)}
+          {t('Cancel', locale)}
         </button>
         <button
           onClick={() => onSave({
@@ -855,7 +855,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale, basePriceHo
           onClick={onCancel}
           className="flex-1 px-3 md:px-4 py-2.5 md:py-3 border border-gray-300 text-gray-700 rounded-lg text-xs md:text-sm font-medium hover:bg-gray-50 transition-colors"
         >
-          {t('Odustani', locale)}
+          {t('Cancel', locale)}
         </button>
         <button
           onClick={() => onApply({
@@ -870,7 +870,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale, basePriceHo
           })}
           className="flex-1 px-3 md:px-4 py-2.5 md:py-3 bg-black text-white rounded-lg text-xs md:text-sm font-medium hover:bg-gray-800 transition-colors"
         >
-          Primijeni
+          {t('Apply', locale)}
         </button>
       </div>
     </div>

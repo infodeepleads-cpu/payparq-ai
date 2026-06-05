@@ -99,6 +99,9 @@ const HOST_TRANSLATIONS = {
   'Minimum prices you will accept': { en: 'Minimum prices you will accept', hr: 'Minimalne cijene koje ćete prihvatiti' },
   'AI Dynamic Pricing': { en: 'AI Dynamic Pricing', hr: 'AI Dinamičko Određivanje Cijena' },
   'Price calculation for maximum earnings': { en: 'Price calculation for maximum earnings', hr: 'Kalkulacija cijene za maksimalnu zaradu' },
+  'PayParq Business Package': { en: 'PayParq Business Package', hr: 'Payparq Poslovni paket' },
+  'By submitting you agree with our': { en: 'By submitting you agree with our', hr: 'Slanjem se slažete s našim' },
+  'Terms of Use': { en: 'Terms of Use', hr: 'Uvjetima korištenja' },
 } as const;
 
 const hostT = (key: string, locale: string): string => {
@@ -1065,7 +1068,7 @@ export default function HostPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold text-gray-800">24/7</p>
-                    <p className="text-xs text-gray-400">Otvoreno cijelo vrijeme</p>
+                    <p className="text-xs text-gray-400">{hostT('Open all day', locale)}</p>
                   </div>
                   <Toggle checked={is247} onChange={setIs247} />
                 </div>
@@ -1240,7 +1243,7 @@ export default function HostPage() {
             {/* ── Toggles ── */}
             <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
               <div className="flex items-center justify-between gap-4 pb-3 border-b border-gray-100">
-                <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Payparq Poslovni paket</p>
+                <p className="text-xs font-black text-gray-500 uppercase tracking-widest">{hostT('PayParq Business Package', locale)}</p>
                 <Toggle checked={wantPartnership} onChange={(v) => {
                   setWantPartnership(v);
                   if (!v) { setWantQR(false); setWantLPR(false); setWantDashboard(false); setWantMarketing(false); }
@@ -1277,8 +1280,8 @@ export default function HostPage() {
               {submitting ? hostT('Sending...', locale) : hostT('Submit request', locale)}
             </button>
             <p className="text-center text-xs text-gray-400 pb-4">
-              Slanjem se slažete s našim{' '}
-              <a href="/terms" className="underline hover:text-gray-600">Uvjetima korištenja</a>.
+              {hostT('By submitting you agree with our', locale)}{' '}
+              <a href="/terms" className="underline hover:text-gray-600">{hostT('Terms of Use', locale)}</a>.
             </p>
           </form>
         </div>
