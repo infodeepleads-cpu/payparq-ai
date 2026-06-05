@@ -1072,10 +1072,26 @@ function CheckoutInner() {
     // For QR scans: fetch live prices via API (supabaseAdmin, bypasses RLS) then redirect
     if (source === 'qr') {
       fetch(`/api/listings/${locId}`)
-        .then((r) => r.ok ? r.json() : null)
+        .then((r) => {
+          if (!r.ok) {
+            console.error(`API error: ${r.status}`);
+            throw new Error(`HTTP ${r.status}`);
+          }
+          return r.json();
+        })
         .then((json) => {
+          console.log('API response:', json);
+          if (json?.error) {
+            console.error('API error:', json.error);
+            setFetchError('Location not found.');
+            return;
+          }
           const data = json?.location;
-          if (!data) { setFetchError('Location not found.'); return; }
+          if (!data) {
+            console.error('No location in response:', json);
+            setFetchError('Location not found.');
+            return;
+          }
           if (data?.verification_metadata?.checkoutSlots) {
             setCheckoutSlots(data.verification_metadata.checkoutSlots);
           }
