@@ -527,7 +527,6 @@ const MEMBERS_TRANSLATIONS = {
   'Value': { en: 'Value', hr: 'Vrijednost' },
   'Your car is on the way': { en: 'Your car is on the way · ETA ~6 min', hr: 'Vaš automobil je na putu · ETA ~6 min' },
   'Shuttle called': { en: 'Shuttle called · Arriving in ~4 min', hr: 'Shuttle je pozvan · Dolazi za ~4 min' },
-  'Processing...': { en: 'Processing...', hr: 'Obrada...' },
   'Request failed': { en: 'Request failed · Try again', hr: 'Zahtjev nije uspio · Pokušajte ponovo' },
   'Error': { en: 'Error · Try again', hr: 'Greška · Pokušajte ponovo' },
 } as const;
