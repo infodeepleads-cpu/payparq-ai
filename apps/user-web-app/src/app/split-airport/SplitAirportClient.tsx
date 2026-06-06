@@ -11,6 +11,7 @@ import { AirportParkingLots } from '@/components/AirportParkingLots';
 import { AirportSEOSection } from '@/components/AirportSEOSection';
 import { NearbyPlaces } from '@/components/NearbyPlaces';
 import { HowItWorks } from '@/components/HowItWorks';
+import { WhyPayParq } from '@/components/WhyPayParq';
 import type { Airport } from '@/data/airports';
 
 interface SplitAirportClientProps {
@@ -80,8 +81,11 @@ export default function SplitAirportClient({ airport }: SplitAirportClientProps)
         {/* Nearby Places Section */}
         <NearbyPlaces locationName={airport.name} locationKey="split" />
 
-        {/* How It Works + Why Choose PayParq */}
+        {/* How It Works */}
         <HowItWorks airport={airport.name} />
+
+        {/* Why PayParq */}
+        <WhyPayParq airport={airport.name} />
       </main>
 
       <footer className="bg-[#05020A] px-6 md:px-12 py-12 border-t border-white/10">

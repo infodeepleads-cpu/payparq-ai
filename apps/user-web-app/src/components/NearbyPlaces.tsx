@@ -76,17 +76,9 @@ export function NearbyPlaces({ locationName, locationKey, nearbyPlaces }: Nearby
             </p>
           </div>
 
-          {/* Hero Photo */}
-          <div className="relative w-full h-96 rounded-2xl overflow-hidden mb-12 shadow-lg">
-            <img
-              src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1200&h=600&fit=crop"
-              alt={locationName}
-              className="w-full h-full object-cover"
-            />
-          </div>
-
-          {/* Places List */}
-          <div>
+          {/* Two Column Layout */}
+          <div className="grid md:grid-cols-2 gap-12">
+            {/* Left: Places List */}
             <div className="space-y-3">
               {places.map((place, idx) => (
                 <button
@@ -112,6 +104,15 @@ export function NearbyPlaces({ locationName, locationKey, nearbyPlaces }: Nearby
                   </div>
                 </button>
               ))}
+            </div>
+
+            {/* Right: 1 Modern Photo */}
+            <div className="relative h-96 rounded-2xl overflow-hidden shadow-lg">
+              <img
+                src="https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=600&h=600&fit=crop"
+                alt={locationName}
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
 

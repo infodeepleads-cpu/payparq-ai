@@ -11,6 +11,7 @@ import { AirportParkingLots } from '@/components/AirportParkingLots';
 import { AirportSEOSection } from '@/components/AirportSEOSection';
 import { NearbyPlaces } from '@/components/NearbyPlaces';
 import { HowItWorks } from '@/components/HowItWorks';
+import { WhyPayParq } from '@/components/WhyPayParq';
 import { ArrowRight, Check } from 'lucide-react';
 
 export default function ZagrebAirportPage() {
@@ -57,6 +58,8 @@ export default function ZagrebAirportPage() {
         <NearbyPlaces locationName="Zagreb Airport" locationKey="zagreb" />
 
         <HowItWorks airport="Zagreb Airport" />
+
+        <WhyPayParq airport="Zagreb Airport" />
 
       </main>
       <footer className="bg-[#05020A] px-6 md:px-12 py-12 border-t border-white/10">
