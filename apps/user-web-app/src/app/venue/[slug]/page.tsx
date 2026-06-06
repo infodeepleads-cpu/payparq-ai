@@ -2,6 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useLocale } from '@/components/LocaleProvider';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
 import { AirportBookingFlow } from '@/components/AirportBookingFlow';
@@ -14,6 +15,7 @@ import { VENUES } from '@/data/venues';
 
 export default function VenuePage() {
   const params = useParams();
+  const { locale } = useLocale();
   const slug = params?.slug as string;
   const venue = VENUES[slug];
 
@@ -21,9 +23,9 @@ export default function VenuePage() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold text-black mb-2">Venue not found</h1>
+          <h1 className="text-2xl font-semibold text-black mb-2">{locale === 'hr' ? 'Lokacija nije pronađena' : 'Venue not found'}</h1>
           <Link href="/locations" className="text-blue-600 hover:underline">
-            Back to locations
+            {locale === 'hr' ? 'Natrag na lokacije' : 'Back to locations'}
           </Link>
         </div>
       </div>
@@ -40,11 +42,13 @@ export default function VenuePage() {
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-4 break-words">
-                  Parking near {venue.name}
+                  {locale === 'hr' ? `Parkiranje blizu ${venue.name}` : `Parking near ${venue.name}`}
                 </h1>
 
                 <p className="text-base text-black/70 mb-8 leading-relaxed">
-                  Find secure parking near {venue.name} with {venue.capacity.toLocaleString()} capacity spaces. Book in advance for all matches and events. Instant confirmation and best prices guaranteed.
+                  {locale === 'hr'
+                    ? `Pronađite sigurno parkiranje blizu ${venue.name} s kapacitetom od ${venue.capacity.toLocaleString()} mjesta. Rezervirajte unaprijed za sve utakmice i događaje. Trenutna potvrda i zajamčene best cijene.`
+                    : `Find secure parking near ${venue.name} with ${venue.capacity.toLocaleString()} capacity spaces. Book in advance for all matches and events. Instant confirmation and best prices guaranteed.`}
                 </p>
 
                 <div className="bg-white border border-black/10 rounded-xl p-6 shadow-sm">

@@ -1,12 +1,13 @@
 'use client';
 
 import { Check, Search, MousePointerClick, Ticket } from 'lucide-react';
+import { useLocale } from '@/components/LocaleProvider';
 
 interface HowItWorksProps {
   airport?: string;
 }
 
-const STEPS = [
+const STEPS_EN = [
   {
     num: 1,
     icon: Search,
@@ -27,7 +28,28 @@ const STEPS = [
   },
 ];
 
-const BENEFITS = [
+const STEPS_HR = [
+  {
+    num: 1,
+    icon: Search,
+    title: 'Pronađi',
+    desc: 'Pregledajte provjerena parkirna mjesta s dostupnošću i cijenama u stvarnom vremenu.',
+  },
+  {
+    num: 2,
+    icon: MousePointerClick,
+    title: 'Odaberi',
+    desc: 'Odaberite svoje mjesto i potvrdite. Trenutna potvrda dostavljena na vašu e-poštu.',
+  },
+  {
+    num: 3,
+    icon: Ticket,
+    title: 'Parking dozvola',
+    desc: 'Primite digitalnu parking dozvolu trenutno. Pokažite je pri dolasku — nije potrebno ispisivanje.',
+  },
+];
+
+const BENEFITS_EN = [
   {
     title: 'Guaranteed Parking Space',
     description: 'Your spot is reserved and waiting for you. No searching, no disappointments.',
@@ -42,18 +64,39 @@ const BENEFITS = [
   },
 ];
 
+const BENEFITS_HR = [
+  {
+    title: 'Zajamčeno parkirno mjesto',
+    description: 'Vaše mjesto je rezervirano i čeka vas. Bez pretraživanja, bez razočaranja.',
+  },
+  {
+    title: 'Rezervirajte u 2 minute',
+    description: 'Brz i jednostavan proces rezervacije s trenutnom potvrdom.',
+  },
+  {
+    title: 'Uštedite do 70%',
+    description: 'Znatno jeftinije od aerodromskog parkinga s zajamčenom kvalitetom.',
+  },
+];
+
 export function HowItWorks({ airport = 'Airport' }: HowItWorksProps) {
+  const { locale } = useLocale();
+  const steps = locale === 'hr' ? STEPS_HR : STEPS_EN;
+  const benefits = locale === 'hr' ? BENEFITS_HR : BENEFITS_EN;
+  const howItWorksTitle = locale === 'hr' ? 'Kako to radi' : 'How It Works';
+  const whyPayParqTitle = locale === 'hr' ? 'Zašto PayParq?' : 'Why PayParq?';
+
   return (
     <section className="w-full px-6 md:px-12 py-16 bg-white border-b border-black/10">
       <div className="max-w-4xl mx-auto">
 
         {/* How It Works */}
         <h2 className="text-2xl font-semibold tracking-tight text-black mb-8">
-          How It Works
+          {howItWorksTitle}
         </h2>
 
         <div className="grid md:grid-cols-3 gap-6 mb-12">
-          {STEPS.map((step) => {
+          {steps.map((step) => {
             const Icon = step.icon;
             return (
               <div key={step.num} className="flex gap-4">
@@ -71,9 +114,9 @@ export function HowItWorks({ airport = 'Airport' }: HowItWorksProps) {
 
         {/* Why PayParq */}
         <div className="border-t border-black/10 pt-12">
-          <h2 className="text-2xl font-semibold tracking-tight text-black mb-8">Why PayParq?</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-black mb-8">{whyPayParqTitle}</h2>
           <div className="grid md:grid-cols-3 gap-6">
-            {BENEFITS.map((b, idx) => (
+            {benefits.map((b, idx) => (
               <div key={idx} className="flex gap-4">
                 <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Check size={13} />

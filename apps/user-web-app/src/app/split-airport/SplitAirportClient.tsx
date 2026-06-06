@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useLocale } from '@/components/LocaleProvider';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
 import { AirportBookingFlow } from '@/components/AirportBookingFlow';
@@ -18,6 +19,7 @@ interface SplitAirportClientProps {
 
 export default function SplitAirportClient({ airport }: SplitAirportClientProps) {
   const router = useRouter();
+  const { locale } = useLocale();
 
   const handleBookNow = () => {
     router.push(`/search?lat=${airport.lat}&lng=${airport.lng}&name=${encodeURIComponent(airport.name)}&source=airport`);
@@ -34,10 +36,14 @@ export default function SplitAirportClient({ airport }: SplitAirportClientProps)
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-4 break-words">
-                  Park at {airport.name}
+                  {locale === 'hr' ? `Parkiraj kod ${airport.name}` : `Park at ${airport.name}`}
                 </h1>
 
-                <p className="text-base text-black/70 mb-8 leading-relaxed">{airport.description}</p>
+                <p className="text-base text-black/70 mb-8 leading-relaxed">
+                  {locale === 'hr'
+                    ? `Pronađite parking blizu ${airport.name} sa 100+ rezervabilnih mjesta. Sigurno, pristupačno parkiranje po najboljim cijenama. Rezervirajte online i uštedite vrijeme.`
+                    : airport.description}
+                </p>
 
                 <div className="bg-white border border-black/10 rounded-xl p-6 shadow-sm">
                   <AirportBookingFlow defaultLat={airport.lat} defaultLng={airport.lng} defaultName={airport.name} />
@@ -71,11 +77,11 @@ export default function SplitAirportClient({ airport }: SplitAirportClientProps)
           nearbyAreas={airport.nearbyAreas}
         />
 
-        {/* How It Works + Why Choose PayParq */}
-        <HowItWorks airport={airport.name} />
-
         {/* Nearby Places Section */}
         <NearbyPlaces locationName={airport.name} locationKey="split" />
+
+        {/* How It Works + Why Choose PayParq */}
+        <HowItWorks airport={airport.name} />
       </main>
 
       <footer className="bg-[#05020A] px-6 md:px-12 py-12 border-t border-white/10">

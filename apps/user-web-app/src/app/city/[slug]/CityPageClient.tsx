@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useLocale } from '@/components/LocaleProvider';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
 import { AirportBookingFlow } from '@/components/AirportBookingFlow';
@@ -17,6 +18,7 @@ interface CityPageClientProps {
 }
 
 export default function CityPageClient({ city, slug }: CityPageClientProps) {
+  const { locale } = useLocale();
   return (
     <div className="min-h-screen bg-white flex flex-col overflow-hidden">
       <SiteHeader />
@@ -27,7 +29,7 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-4 break-words">
-                  Find Parking in {city.name}
+                  {locale === 'hr' ? `Pronađite parking u ${city.name}` : `Find Parking in ${city.name}`}
                 </h1>
 
                 <p className="text-base text-black/70 mb-8 leading-relaxed">{city.description}</p>

@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useLocale } from '@/components/LocaleProvider';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
 import { AirportBookingFlow } from '@/components/AirportBookingFlow';
@@ -14,6 +15,7 @@ import { ArrowRight, Check } from 'lucide-react';
 
 export default function ZagrebAirportPage() {
   const router = useRouter();
+  const { locale } = useLocale();
 
   const handleBookNow = () => {
     router.push('/search?lat=45.7429&lng=16.0688&name=Zagreb+Airport&source=airport');
@@ -28,10 +30,12 @@ export default function ZagrebAirportPage() {
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-4 break-words">
-                  Park at Zagreb Airport
+                  {locale === 'hr' ? 'Parkiraj kod Aerodroma Zagreb' : 'Park at Zagreb Airport'}
                 </h1>
                 <p className="text-base text-black/70 mb-8 leading-relaxed">
-                  Find parking near Zagreb Airport with 150+ reservable spaces. Guaranteed spot at the best price. Book in 2 minutes with instant confirmation.
+                  {locale === 'hr'
+                    ? 'Pronađite parking blizu Aerodroma Zagreb sa 150+ rezervabilnih mjesta. Zajamčeno mjesto po najboljoj cijeni. Rezervirajte u 2 minute s trenutnom potvrdom.'
+                    : 'Find parking near Zagreb Airport with 150+ reservable spaces. Guaranteed spot at the best price. Book in 2 minutes with instant confirmation.'}
                 </p>
                 <div className="bg-white border border-black/10 rounded-xl p-6 shadow-sm">
                   <AirportBookingFlow defaultLat={45.7429} defaultLng={16.0688} defaultName="Zagreb Airport" />
@@ -50,9 +54,9 @@ export default function ZagrebAirportPage() {
 
         <AirportSEOSection location="zagreb" locationName="Zagreb Airport" city="Zagreb" region="Central Croatia" nearbyAreas={['Grad', 'Airport Area']} />
 
-        <HowItWorks airport="Zagreb Airport" />
-
         <NearbyPlaces locationName="Zagreb Airport" locationKey="zagreb" />
+
+        <HowItWorks airport="Zagreb Airport" />
 
       </main>
       <footer className="bg-[#05020A] px-6 md:px-12 py-12 border-t border-white/10">

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Star, MapPin, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useLocale } from '@/components/LocaleProvider';
 
 interface ParkingLot {
   id: string;
@@ -30,6 +31,7 @@ const MAX_DISTANCE_KM = 25; // Only show lots within 25km
 
 export function AirportParkingLots({ airport, lat, lng, airportName }: AirportParkingLotsProps) {
   const router = useRouter();
+  const { locale } = useLocale();
   const [lots, setLots] = useState<ParkingLot[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -51,7 +53,7 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
               bookings: '1000+',
               description: `Secure parking at ${lot.name}. Book in advance and guarantee your spot near ${airportName}.`,
               priceFrom: lot.dailyPrice > 0 ? `€${lot.dailyPrice.toFixed(2)}/day` : 'From €2.00/day',
-              badge: 'Best price guaranteed',
+              badge: 'best-price-guaranteed',
               image: lot.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop',
               distance: lot.distance,
               slug: lot.slug,
@@ -142,10 +144,10 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col gap-6 mb-10">
             <div>
-              <p className="text-xs uppercase tracking-[0.12em] text-black/50 mb-2 font-semibold">Premium Parking</p>
-              <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-black">Guaranteed Spots Near {airportName}</h2>
+              <p className="text-xs uppercase tracking-[0.12em] text-black/50 mb-2 font-semibold">{locale === 'hr' ? 'Premium Parkiranje' : 'Premium Parking'}</p>
+              <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-black">{locale === 'hr' ? `Zajamčena mjesta blizu ${airportName}` : `Guaranteed Spots Near ${airportName}`}</h2>
             </div>
-            <p className="text-base text-black/60 max-w-2xl">Secure your parking space at premium locations. Instant confirmation, best prices guaranteed, and exceptional service.</p>
+            <p className="text-base text-black/60 max-w-2xl">{locale === 'hr' ? 'Osigurajte parkirno mjesto na premium lokacijama. Trenutna potvrda, zajamčene best cijene i iznimna usluga.' : 'Secure your parking space at premium locations. Instant confirmation, best prices guaranteed, and exceptional service.'}</p>
           </div>
 
           <div className="flex items-center gap-4">
@@ -193,21 +195,21 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
                         {/* Badge */}
                         {lot.badge && (
                           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 rounded-full mb-3">
-                            <span className="text-xs font-semibold text-green-700">{lot.badge}</span>
+                            <span className="text-xs font-semibold text-green-700">{locale === 'hr' ? 'Zajamčena best cijena' : 'Best price guaranteed'}</span>
                           </div>
                         )}
                       </div>
 
                       {/* Price & CTA - Always at bottom */}
                       <div className="pt-4 border-t border-black/8 mt-auto flex-shrink-0">
-                        <p className="text-xs text-black/50 font-semibold mb-2 uppercase tracking-wider">From</p>
+                        <p className="text-xs text-black/50 font-semibold mb-2 uppercase tracking-wider">{locale === 'hr' ? 'Od' : 'From'}</p>
                         <div className="flex items-center justify-between gap-3">
                           <p className="text-xl font-bold text-black whitespace-nowrap">{lot.priceFrom}</p>
                           <button
                             onClick={() => handleBookNow(lot as any)}
                             className="bg-black text-white font-semibold py-2 px-4 rounded-lg hover:bg-black/90 active:scale-95 transition text-xs shadow-sm hover:shadow-md flex-shrink-0"
                           >
-                            Reserve
+                            {locale === 'hr' ? 'Rezerviraj' : 'Reserve'}
                           </button>
                         </div>
                       </div>

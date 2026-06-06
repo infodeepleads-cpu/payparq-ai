@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { useLocale } from '@/components/LocaleProvider';
 
 interface LocationSEOSectionProps {
   location: string;
@@ -9,6 +10,97 @@ interface LocationSEOSectionProps {
   city: string;
   region: string;
   nearbyAreas: string[];
+}
+
+const SEO_CONTENT_HR: Record<string, any> = {
+  split: {
+    title: "Sve što trebate znati o parkiranju blizu Aerodroma Split",
+    intro: "Ne dopustite da parkiranje pokvari vaše putovanje. <strong>PayParqova mreža rezervabilnih parkirnih mjesta</strong> - uključujući privatna parkirališta i osigurane objekte - dovodi vas bliže Aerodromu Split. <strong>Rezervacijom unaprijed</strong> osiguravate najbolju cijenu i slobodno mjesto.",
+    paragraphs: [
+      "<strong>PayParq je vodeće hrvatsko rješenje za parkiranje</strong>, kojemu vjeruje više od <strong>100.000+ vozača</strong>. Naša mreža uključuje <strong>aerodromska parkirišta, privatna parkirališta i osigurana dvorišta</strong>. Bilo da letite iz Aerodroma Split ili trebate kratkoročno ili dugoročno parkiranje, PayParq vas pokriva.",
+      "Naš <strong>inteligentni tražilac</strong> omogućuje vam lako pronalaženje najboljeg parkirnog mjesta za Aerodrom Split - birajte prema <strong>najnižoj cijeni, najbližoj lokaciji</strong> ili dodatnim značajkama poput <strong>CCTV-a, punjenja EV vozila ili natkrivenog parkinga</strong>.",
+      "Rezervirajte parkiranje na Aerodromu Split unaprijed - i imat ćete <strong>pouzdano mjesto koje čeka kad stignete</strong>. Dostupno za <strong>kratke ili dugoročne boravke, uključujući noćno parkiranje</strong>.",
+      "PayParq nudi više od tradicionalnih parkirališta. Pružamo pristup <strong>pristupačnim alternativama poput osiguranih privatnih dvorišta</strong>, često bliže Aerodromu Split i po boljim cijenama."
+    ],
+    faqs: [
+      { question: "Zašto rezervirati parkiranje unaprijed blizu Aerodroma Split?", answer: "<strong>Rezervacija unaprijed jamči vaše mjesto</strong>, osigurava najbolje cijene i eliminira stres pronalaska parkinga. PayParqov <strong>proces rezervacije traje samo 2 minute</strong>." },
+      { question: "Nudi li PayParq sigurno parkiranje blizu Aerodroma Split?", answer: "Apsolutno! PayParq pruža <strong>provjerene sigurnosne opcije</strong>, uključujući mjesta s <strong>CCTV-om, ograđenim prostorima i privatnim dvorištima</strong>." },
+      { question: "Koliko košta parkiranje blizu Aerodroma Split?", answer: "PayParq nudi <strong>konkurentne cijene</strong> od samo <strong>€2-5 dnevno</strong>. Koristite našu pretragu kako biste pronašli cijene koje odgovaraju vašem budžetu." },
+      { question: "Koje opcije parkinga PayParq nudi blizu Aerodroma Split?", answer: "Nudimo <strong>natkriveno parkiranje, otvorene prostore, objekte s 24/7 nadzorom, EV punionice</strong> i pristupačno parkiranje." },
+      { question: "Ima li pristupačnog parkinga blizu Aerodroma Split?", answer: "Da! Naša mreža uključuje <strong>privatna dvorišta koja su često 50-70% jeftinija</strong> od tradicionalnih aerodromskih parkirišta." }
+    ]
+  },
+  zadar: {
+    title: "Sve što trebate znati o parkiranju blizu Aerodroma Zadar",
+    intro: "Osigurajte parkirno mjesto na Aerodromu Zadar uz PayParq. Naša <strong>mreža rezervabilnih mjesta</strong> osigurava vam lak pristup aerodromu. <strong>Rezervirajte unaprijed</strong> i zaključajte konkurentne cijene.",
+    paragraphs: [
+      "PayParq je <strong>pouzdana hrvatska platforma za parkiranje</strong>, kojoj vjeruje više od <strong>100.000+ vozača</strong>. Od kratkih dolazaka do tjednih odmora, PayParq pojednostavljuje vaše putovanje.",
+      "Naš <strong>napredni sustav pretrage</strong> omogućuje pronalaženje parkinga na Aerodromu Zadar prema vašim preferencijama - <strong>pristupačnost, blizina, sigurnosne značajke</strong> ili EV punjenje.",
+      "Rezervirajte parkiranje na Aerodromu Zadar za samo nekoliko minuta. <strong>Zajamčena mjesta osiguravaju mirno putovanje</strong>.",
+      "Osim tradicionalnih parkirišta, PayParq vas povezuje s <strong>privatnim alternativama blizu Aerodroma Zadar</strong> koje često nude bolju vrijednost."
+    ],
+    faqs: [
+      { question: "Zašto rezervirati parkiranje unaprijed blizu Aerodroma Zadar?", answer: "<strong>Rezervacija unaprijed jamči vaše mjesto</strong> i osigurava najbolje dostupne cijene. PayParq to čini jednostavnim." },
+      { question: "Nudi li PayParq sigurno parkiranje blizu Aerodroma Zadar?", answer: "Da, sva PayParq mjesta su <strong>provjerena i sigurna</strong>. Birajte između opcija s <strong>CCTV-om, ograđenim pristupom i 24/7 nadzorom</strong>." },
+      { question: "Koliko košta parkiranje blizu Aerodroma Zadar?", answer: "Parkiranje na Aerodromu Zadar kreće od <strong>€2-5 dnevno</strong>." },
+      { question: "Koje opcije parkinga PayParq nudi blizu Aerodroma Zadar?", answer: "Naša mreža uključuje <strong>natkriveno parkiranje, otvorene prostore i nadzirane objekte</strong>." },
+      { question: "Mogu li pronaći pristupačno dugoročno parkiranje blizu Aerodroma Zadar?", answer: "Apsolutno! PayParq nudi <strong>značajne popuste za dulje parkiranje</strong> po cijenama nižim od aerodromskih objekata." }
+    ]
+  },
+  zagreb: {
+    title: "Sve što trebate znati o parkiranju blizu Aerodroma Zagreb",
+    intro: "Pronađite idealno parkirno mjesto blizu Aerodroma Zagreb uz PayParq. Naša <strong>mreža rezervabilnih mjesta</strong> uključuje privatna parkirališta i osigurane objekte. <strong>Rezervirajte unaprijed</strong> za best cijene.",
+    paragraphs: [
+      "PayParq je <strong>vodeća hrvatska aplikacija za parkiranje</strong>, kojoj vjeruje <strong>100.000+ vozača</strong>. Naša raznovrsna mreža blizu Aerodroma Zagreb nudi <strong>sigurno, pristupačno i dostupno parkiranje</strong>.",
+      "Koristite <strong>PayParqovu inteligentnu pretragu</strong> za pronalaženje parkinga na Aerodromu Zagreb koji odgovara vašim potrebama - <strong>najniža cijena, najbliža lokacija, natkrivena zaštita, EV punjenje</strong>.",
+      "Rezervacija parkinga na Aerodromu Zagreb traje samo <strong>2 minute</strong>. Uživajte u <strong>zajamčenoj dostupnosti i trenutnoj potvrdi</strong>.",
+      "PayParq nudi pristup <strong>privatnim dvorištima i stambenim parkirnim mjestima blizu Aerodroma Zagreb</strong> po boljim cijenama i blizini terminala."
+    ],
+    faqs: [
+      { question: "Zašto rezervirati parkiranje unaprijed blizu Aerodroma Zagreb?", answer: "<strong>Rezervacija unaprijed jamči vaše parkirno mjesto</strong> i osigurava bolje cijene. PayParqov <strong>jednostavan proces rezervacije traje samo nekoliko minuta</strong>." },
+      { question: "Nudi li PayParq sigurno parkiranje blizu Aerodroma Zagreb?", answer: "Da! Svaka PayParq opcija je <strong>temeljito provjerena</strong>. Birajte između mjesta s <strong>CCTV nadzorom, ograđenom sigurnošću i non-stop nadzorom</strong>." },
+      { question: "Koliko košta parkiranje blizu Aerodroma Zagreb?", answer: "Parkiranje blizu Aerodroma Zagreb kreće od <strong>€2-5 dnevno</strong> s popustima za dulje boravke." },
+      { question: "Koje vrste parkinga PayParq nudi blizu Aerodroma Zagreb?", answer: "Nudimo <strong>natkriveno parkiranje, otvorene prostore, nadzirane objekte, EV punionice</strong> i pristupačno parkiranje." },
+      { question: "Gdje mogu pronaći jeftino parkiranje blizu Aerodroma Zagreb?", answer: "PayParq se specijalizira za <strong>pristupačne alternative</strong>, uključujući <strong>privatna dvorišta obično 50-70% jeftinija</strong> od tradicionalnih aerodromskih parkirišta." }
+    ]
+  },
+  dubrovnik: {
+    title: "Sve što trebate znati o parkiranju blizu Aerodroma Dubrovnik",
+    intro: "Otkrijte pouzdano parkiranje blizu Aerodroma Dubrovnik uz PayParq. Naša <strong>platforma vas povezuje s rezervabilnim mjestima</strong> u sigurnim parkiralištima. <strong>Osigurajte svoje mjesto unaprijed</strong> za best cijene.",
+    paragraphs: [
+      "PayParq je <strong>pouzdano rješenje za parkiranje za hrvatske putnike</strong>, koje koristi <strong>100.000+ vozača</strong> za prikladno parkiranje blizu Aerodroma Dubrovnik.",
+      "PayParqov <strong>pametni tražilac</strong> pomaže vam pronaći savršeno parkiranje na Aerodromu Dubrovnik - filtrirajte po <strong>cijeni, udaljenosti, amenitijima poput natkrivenih mjesta, EV punjenja ili 24/7 sigurnosnog nadzora</strong>.",
+      "Rezervirajte parkiranje na Aerodromu Dubrovnik za samo <strong>2 minute</strong>. Primite <strong>trenutnu potvrdu i fleksibilno otkazivanje</strong>.",
+      "Osim konvencionalnog aerodromskog parkinga, PayParq vas povezuje s <strong>privatnim alternativama blizu Aerodroma Dubrovnik</strong> po znatno nižim cijenama."
+    ],
+    faqs: [
+      { question: "Zašto rezervirati parkiranje unaprijed blizu Aerodroma Dubrovnik?", answer: "<strong>Rezervacija unaprijed jamči vaše mjesto</strong> i osigurava bolje cijene. PayParqova <strong>rezervacija traje manje od 2 minute</strong>." },
+      { question: "Nudi li PayParq sigurno parkiranje blizu Aerodroma Dubrovnik?", answer: "U potpunosti! Sva PayParq mjesta su <strong>provjerena za sigurnost</strong>. Birajte opcije s <strong>CCTV-om, sigurnim ulazima i 24/7 nadzorom</strong>." },
+      { question: "Koliko košta parkiranje blizu Aerodroma Dubrovnik?", answer: "Parkiranje na Aerodromu Dubrovnik kreće od <strong>€2-5 dnevno</strong>. Dulje boravke nagrađujemo posebnim cijenama." },
+      { question: "Koje opcije parkinga PayParq nudi blizu Aerodroma Dubrovnik?", answer: "Naša mreža uključuje <strong>natkriveno parkiranje, nadzirane objekte, pristupačno parkiranje</strong> i <strong>EV punionice</strong>." },
+      { question: "Mogu li pronaći pristupačno dugoročno parkiranje blizu Aerodroma Dubrovnik?", answer: "Da! PayParqova <strong>privatna parkirna mreža nudi značajne uštedine</strong> za dulje boravke - često <strong>50-70% manje</strong> od standardnih aerodromskih objekata." }
+    ]
+  }
+};
+
+function generateContentHR(locationName: string) {
+  return {
+    title: `Sve što trebate znati o parkiranju blizu ${locationName}`,
+    intro: `Osigurajte parkirno mjesto na ${locationName} uz PayParq. Naša <strong>mreža rezervabilnih mjesta</strong> osigurava vam prikladan pristup. <strong>Rezervirajte unaprijed</strong> i zaključajte konkurentne cijene.`,
+    paragraphs: [
+      `PayParq je pouzdana hrvatska platforma za parkiranje s mrežom koja poslužuje više od <strong>100.000+ kupaca</strong>. Od kratkih dolazaka do tjednih odmora, PayParq pojednostavljuje vaše putovanje blizu ${locationName}.`,
+      `Naš <strong>napredni sustav pretrage</strong> omogućuje pronalaženje parkinga na ${locationName} prema vašim preferencijama - <strong>pristupačnost, blizina, sigurnosne značajke</strong> ili EV punjenje.`,
+      `Rezervirajte parkiranje na ${locationName} za samo nekoliko minuta. Naša <strong>zajamčena mjesta osiguravaju mirno putovanje</strong>.`,
+      `Osim tradicionalnih parkirišta, PayParq vas povezuje s <strong>sigurnim privatnim alternativama blizu ${locationName}</strong> koje često nude bolju vrijednost.`,
+    ],
+    faqs: [
+      { question: `Zašto rezervirati parkiranje unaprijed blizu ${locationName}?`, answer: `<strong>Rezervacija unaprijed jamči vaše mjesto</strong>, osigurava best cijene i eliminira stres. PayParqov <strong>proces rezervacije traje samo 2 minute</strong>.` },
+      { question: `Nudi li PayParq sigurno parkiranje blizu ${locationName}?`, answer: `Apsolutno! PayParq pruža <strong>provjerene sigurnosne opcije</strong> s <strong>CCTV-om, ograđenim objektima i privatnim dvorištima</strong>.` },
+      { question: `Koliko košta parkiranje blizu ${locationName}?`, answer: `PayParq nudi <strong>konkurentne cijene</strong> od samo <strong>€2-5 dnevno</strong>.` },
+      { question: `Koje opcije parkinga PayParq nudi blizu ${locationName}?`, answer: `Nudimo <strong>natkriveno parkiranje, otvorene prostore, 24/7 nadzirane objekte, EV punionice</strong> i pristupačno parkiranje.` },
+      { question: `Mogu li pronaći pristupačno dugoročno parkiranje blizu ${locationName}?`, answer: `Da! Naša mreža uključuje <strong>privatna dvorišta koja su često 50-70% jeftinija</strong> od tradicionalnih aerodromskih parkirišta.` },
+    ],
+  };
 }
 
 const SEO_CONTENT: Record<string, any> = {
@@ -178,7 +270,11 @@ function generateContent(locationName: string, city: string, region: string) {
 }
 
 export function AirportSEOSection({ location, locationName, city, region, nearbyAreas }: LocationSEOSectionProps) {
-  const content = SEO_CONTENT[location] || generateContent(locationName, city, region);
+  const { locale } = useLocale();
+  const contentMap = locale === 'hr' ? SEO_CONTENT_HR : SEO_CONTENT;
+  const fallback = locale === 'hr' ? generateContentHR(locationName) : generateContent(locationName, city, region);
+  const content = contentMap[location] || fallback;
+  const faqTitle = locale === 'hr' ? 'Česta pitanja' : 'Frequently Asked Questions';
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
 
   return (
@@ -218,7 +314,7 @@ export function AirportSEOSection({ location, locationName, city, region, nearby
 
           {/* Right Side - FAQ Accordion */}
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight text-black mb-6">Frequently Asked Questions</h2>
+            <h2 className="text-2xl font-semibold tracking-tight text-black mb-6">{faqTitle}</h2>
 
             <div className="space-y-4">
               {content.faqs.map((faq: any, idx: number) => (

@@ -1,6 +1,7 @@
 'use client';
 
 import { MapPin } from 'lucide-react';
+import { useLocale } from '@/components/LocaleProvider';
 import { NEARBY_PLACES } from '@/data/nearbyPlaces';
 
 interface NearbyPlace {
@@ -19,10 +20,17 @@ interface NearbyPlacesProps {
 }
 
 export function NearbyPlaces({ locationName, locationKey, nearbyPlaces }: NearbyPlacesProps) {
+  const { locale } = useLocale();
   // Use provided nearbyPlaces or fetch from data file using locationKey
   const places = nearbyPlaces || (locationKey && NEARBY_PLACES[locationKey]) || [];
 
   if (!places || places.length === 0) return null;
+
+  const nearbyTitle = locale === 'hr' ? "Što je blizu" : "What's Nearby";
+  const discoverText = locale === 'hr' ? "Otkrijte atrakcije blizu" : "Discover attractions near";
+  const tipText = locale === 'hr'
+    ? "Savjet: Udaljenosti su prikazane u kilometrima. Kliknite na bilo koju lokaciju ili foto da biste je otvorili na Google Mapama i dobili upute od"
+    : "Tip: Distances are shown in kilometres. Click any location or photo to open it in Google Maps and get directions from";
 
   const handleOpenMaps = (place: NearbyPlace) => {
     const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(place.name)}/@${place.lat},${place.lng},15z`;
@@ -61,16 +69,24 @@ export function NearbyPlaces({ locationName, locationKey, nearbyPlaces }: Nearby
           {/* Header */}
           <div className="mb-10">
             <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-3">
-              What's Nearby
+              {nearbyTitle}
             </h2>
             <p className="text-lg text-black/70">
-              Discover attractions near <strong>{locationName}</strong>.
+              {discoverText} <strong>{locationName}</strong>.
             </p>
           </div>
 
-          {/* Two Column Layout */}
-          <div className="grid md:grid-cols-2 gap-12">
-            {/* Left: Places List */}
+          {/* Hero Photo */}
+          <div className="relative w-full h-96 rounded-2xl overflow-hidden mb-12 shadow-lg">
+            <img
+              src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1200&h=600&fit=crop"
+              alt={locationName}
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          {/* Places List */}
+          <div>
             <div className="space-y-3">
               {places.map((place, idx) => (
                 <button
@@ -97,54 +113,12 @@ export function NearbyPlaces({ locationName, locationKey, nearbyPlaces }: Nearby
                 </button>
               ))}
             </div>
-
-            {/* Right: 4 photos — bottom-left 2, upper-right 2 */}
-            <div className="relative h-96 grid grid-cols-2 gap-3">
-              {/* Left column — photos sit at the bottom half */}
-              <div className="flex flex-col gap-3">
-                <div className="flex-1" /> {/* spacer pushes photos down */}
-                {places.slice(0, 2).map((place, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleOpenMaps(place)}
-                    className="group relative overflow-hidden rounded-xl cursor-pointer h-40"
-                    title={place.name}
-                  >
-                    <img
-                      src={place.image || 'https://images.unsplash.com/photo-1505228395891-9a51e7e86e81?w=300&h=300&fit=crop'}
-                      alt={place.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />
-                  </button>
-                ))}
-              </div>
-              {/* Right column — photos sit at the top half */}
-              <div className="flex flex-col gap-3">
-                {places.slice(2, 4).map((place, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleOpenMaps(place)}
-                    className="group relative overflow-hidden rounded-xl cursor-pointer h-40"
-                    title={place.name}
-                  >
-                    <img
-                      src={place.image || 'https://images.unsplash.com/photo-1505228395891-9a51e7e86e81?w=300&h=300&fit=crop'}
-                      alt={place.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />
-                  </button>
-                ))}
-                <div className="flex-1" /> {/* spacer fills bottom */}
-              </div>
-            </div>
           </div>
 
           {/* Footer Note */}
           <div className="mt-10 p-6 rounded-xl bg-black/5">
             <p className="text-sm text-black/60">
-              <strong>Tip:</strong> Distances are shown in kilometres. Click any location or photo to open it in Google Maps and get directions from {locationName}.
+              <strong>{locale === 'hr' ? 'Savjet:' : 'Tip:'}</strong> {tipText} {locationName}.
             </p>
           </div>
         </div>
