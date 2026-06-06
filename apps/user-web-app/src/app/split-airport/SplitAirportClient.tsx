@@ -71,11 +71,11 @@ export default function SplitAirportClient({ airport }: SplitAirportClientProps)
           nearbyAreas={airport.nearbyAreas}
         />
 
-        {/* Nearby Places Section */}
-        <NearbyPlaces locationName={airport.name} locationKey="split" />
-
         {/* How It Works + Why Choose PayParq */}
         <HowItWorks airport={airport.name} />
+
+        {/* Nearby Places Section */}
+        <NearbyPlaces locationName={airport.name} locationKey="split" />
       </main>
 
       <footer className="bg-[#05020A] px-6 md:px-12 py-12 border-t border-white/10">

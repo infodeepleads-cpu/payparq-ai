@@ -50,9 +50,9 @@ export default function ZagrebAirportPage() {
 
         <AirportSEOSection location="zagreb" locationName="Zagreb Airport" city="Zagreb" region="Central Croatia" nearbyAreas={['Grad', 'Airport Area']} />
 
-        <NearbyPlaces locationName="Zagreb Airport" locationKey="zagreb" />
-
         <HowItWorks airport="Zagreb Airport" />
+
+        <NearbyPlaces locationName="Zagreb Airport" locationKey="zagreb" />
 
       </main>
       <footer className="bg-[#05020A] px-6 md:px-12 py-12 border-t border-white/10">

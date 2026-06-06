@@ -50,9 +50,9 @@ export default function ZadarAirportPage() {
 
         <AirportSEOSection location="zadar" locationName="Zadar Airport" city="Zadar" region="Dalmatia" nearbyAreas={['City Center', 'Airport Area']} />
 
-        <NearbyPlaces locationName="Zadar Airport" locationKey="zadar" />
-
         <HowItWorks airport="Zadar Airport" />
+
+        <NearbyPlaces locationName="Zadar Airport" locationKey="zadar" />
 
       </main>
       <footer className="bg-[#05020A] px-6 md:px-12 py-12 border-t border-white/10">

@@ -50,9 +50,9 @@ export default function DubrovnikAirportPage() {
 
         <AirportSEOSection location="dubrovnik" locationName="Dubrovnik Airport" city="Dubrovnik" region="Dalmatia" nearbyAreas={['Old Town', 'Airport Area']} />
 
-        <NearbyPlaces locationName="Dubrovnik Airport" locationKey="dubrovnik" />
-
         <HowItWorks airport="Dubrovnik Airport" />
+
+        <NearbyPlaces locationName="Dubrovnik Airport" locationKey="dubrovnik" />
 
       </main>
       <footer className="bg-[#05020A] px-6 md:px-12 py-12 border-t border-white/10">
