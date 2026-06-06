@@ -86,7 +86,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
   };
 
   const subtotal = getDisplayPrice(listing, durationHours, reservationType);
-  const total = parseFloat((showFee ? subtotal + 0.99 + (subtotal * 0.05) : subtotal).toFixed(2));
+  const total = parseFloat((showFee ? subtotal + Math.min(1.99, 0.99 + (subtotal * 0.10)) : subtotal).toFixed(2));
   return (
     <div
       onClick={(e) => {

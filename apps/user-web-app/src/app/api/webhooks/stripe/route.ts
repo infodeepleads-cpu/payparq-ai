@@ -133,8 +133,8 @@ export async function POST(request: NextRequest) {
             // Stripe fee: ~2.9% + €0.30
             const stripeFee = Math.round(chargedCents * 0.029) + 30;
             const afterStripeFee = chargedCents - stripeFee;
-            // Service fee: €0.99 + 5% of charged amount (always to PayParq)
-            const serviceFee = 99 + Math.round(chargedCents * 0.05);
+            // Service fee: €0.99 + 10% of charged amount, capped at €1.99
+            const serviceFee = Math.min(199, 99 + Math.round(chargedCents * 0.10));
             const distributable = Math.max(0, afterStripeFee - serviceFee);
             // Owner gets (1 - commissionRate) of distributable
             const ownerReserved = Math.round(distributable * (1 - commissionRate));

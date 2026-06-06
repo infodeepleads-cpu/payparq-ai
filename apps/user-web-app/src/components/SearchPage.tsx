@@ -422,7 +422,7 @@ export function SearchPage() {
     const liveListing = { ...selectedListing, pricePerHour: rates.hourly, pricePerDay: rates.daily };
     return parseFloat(getDisplayPrice(liveListing, durationHours, reservationType).toFixed(2));
   })() : 0;
-  const serviceFee = parseFloat((0.99 + subtotal * 0.10).toFixed(2));
+  const serviceFee = Math.min(1.99, parseFloat((0.99 + subtotal * 0.10).toFixed(2)));
   const totalPrice = parseFloat((subtotal + serviceFee).toFixed(2));
 
   const formatDuration = () => {
@@ -1149,8 +1149,8 @@ export function SearchPage() {
           const bPricePerUnit = getDisplayPrice(b, durationHours, reservationType);
           const aCalc = reservationType === 'Mjesečna' ? aPricePerUnit : aPricePerUnit * durationHours;
           const bCalc = reservationType === 'Mjesečna' ? bPricePerUnit : bPricePerUnit * durationHours;
-          const aTotal = aCalc + 0.99 + (aCalc * 0.10);
-          const bTotal = bCalc + 0.99 + (bCalc * 0.10);
+          const aTotal = aCalc + Math.min(1.99, 0.99 + (aCalc * 0.10));
+          const bTotal = bCalc + Math.min(1.99, 0.99 + (bCalc * 0.10));
           return aTotal - bTotal;
         });
         break;
@@ -1160,8 +1160,8 @@ export function SearchPage() {
           const bPricePerUnit = getDisplayPrice(b, durationHours, reservationType);
           const aCalc = reservationType === 'Mjesečna' ? aPricePerUnit : aPricePerUnit * durationHours;
           const bCalc = reservationType === 'Mjesečna' ? bPricePerUnit : bPricePerUnit * durationHours;
-          const aTotal = aCalc + 0.99 + (aCalc * 0.10);
-          const bTotal = bCalc + 0.99 + (bCalc * 0.10);
+          const aTotal = aCalc + Math.min(1.99, 0.99 + (aCalc * 0.10));
+          const bTotal = bCalc + Math.min(1.99, 0.99 + (bCalc * 0.10));
           return bTotal - aTotal;
         });
         break;
@@ -2572,7 +2572,7 @@ export function SearchPage() {
             {filteredListings.map((listing) => {
               const totalPrice = getDisplayPrice(listing, durationHours, reservationType);
               const subtotal = parseFloat(totalPrice.toFixed(2));
-              const price = parseFloat((showTotalPrice ? subtotal + 0.99 + (subtotal * 0.10) : subtotal).toFixed(2));
+              const price = parseFloat((showTotalPrice ? subtotal + Math.min(1.99, 0.99 + (subtotal * 0.10)) : subtotal).toFixed(2));
               const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
               const shouldShowIntegerOnly = showTotalPrice && (reservationType === 'Mjesečna' || price >= 100);
               const mapLabel = shouldShowIntegerOnly ? `€${Math.floor(price)}` : label;
@@ -2727,7 +2727,7 @@ export function SearchPage() {
                 {filteredListings.map((listing) => {
                   const totalPrice = getDisplayPrice(listing, durationHours, reservationType);
                   const subtotal = parseFloat(totalPrice.toFixed(2));
-                  const price = parseFloat((showTotalPrice ? subtotal + 0.99 + (subtotal * 0.10) : subtotal).toFixed(2));
+                  const price = parseFloat((showTotalPrice ? subtotal + Math.min(1.99, 0.99 + (subtotal * 0.10)) : subtotal).toFixed(2));
                   const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
                   const shouldShowIntegerOnly = showTotalPrice && (reservationType === 'Mjesečna' || price >= 100);
                   const mapLabel = shouldShowIntegerOnly ? `€${Math.floor(price)}` : label;

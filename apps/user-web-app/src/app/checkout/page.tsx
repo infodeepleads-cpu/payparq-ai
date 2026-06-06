@@ -156,7 +156,7 @@ function SummaryPanel({
   locale: 'en' | 'hr';
 }) {
   const subtotalEur = originalAmountCents / 100;
-  const serviceFeeEurCents = promoDiscountPercent === 100 ? 0 : Math.round(99 + (originalAmountCents * 0.10));
+  const serviceFeeEurCents = promoDiscountPercent === 100 ? 0 : Math.min(199, Math.round(99 + (originalAmountCents * 0.10)));
   const serviceFeeEur = serviceFeeEurCents / 100;
   const discountEur = promoDiscountCents / 100;
   const isFree = amountEur <= 0;
@@ -615,7 +615,7 @@ function PaidCheckoutForm({
   }, [isFree]);
 
   // Service fee: 0.99€ + 10% of parking price
-  const serviceFeeEurCents = Math.round((99 + (displayAmountCents * 0.10)));
+  const serviceFeeEurCents = Math.min(199, Math.round(99 + (displayAmountCents * 0.10)));
   const totalWithFeeEurCents = displayAmountCents + serviceFeeEurCents;
 
   function calcAmountCents(durationHours: number): number {
@@ -1163,7 +1163,7 @@ function CheckoutInner() {
     if (cents < 50) { setClientSecret('free'); return; }
     try {
       const commissionCents = Math.round(cents * getCommissionRate(source));
-      const serviceFee = Math.round(99 + (cents * 0.10));
+      const serviceFee = Math.min(199, Math.round(99 + (cents * 0.10)));
       const res = await fetch('/api/stripe/payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

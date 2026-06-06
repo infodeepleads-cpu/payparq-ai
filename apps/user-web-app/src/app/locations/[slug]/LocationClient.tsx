@@ -301,14 +301,14 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const mixedTotal = fullDays > 0 ? fullDays * dailyPrice + remainingHours * hourlyPrice : allHourly;
   const reserveSubtotal = dailyPrice > 0 ? Math.min(allHourly, ceilDaysTotal, mixedTotal) : allHourly;
   const reserveUsesDailyPricing = dailyPrice > 0 && reserveSubtotal < allHourly;
-  const reserveServiceFee = +(0.99 + reserveSubtotal * 0.10).toFixed(2);
+  const reserveServiceFee = Math.min(1.99, +(0.99 + reserveSubtotal * 0.10).toFixed(2));
   const reserveTotalAmount = reserveSubtotal + reserveServiceFee;
   const reserveTotalPriceLabel = `€${reserveTotalAmount.toFixed(2)}`;
   const reserveDurationLabel = reserveUsesDailyPricing
     ? `${totalDays} days (${formatEur(dailyPrice)}/day)`
     : `${totalHours} hours (${formatEur(hourlyPrice)}/hr)`;
   const parkTaxiSubtotal = parkTaxiUnitPrice + (totalDays - 1) * dailyPrice;
-  const parkTaxiServiceFee = +(0.99 + parkTaxiSubtotal * 0.10).toFixed(2);
+  const parkTaxiServiceFee = Math.min(1.99, +(0.99 + parkTaxiSubtotal * 0.10).toFixed(2));
   const parkTaxiTotal = parkTaxiSubtotal + parkTaxiServiceFee;
   const parkTaxiTotalPriceLabel = `€${parkTaxiTotal.toFixed(2)}`;
   const parkTaxiBreakdownLabel = totalDays > 1
