@@ -155,3 +155,40 @@ export function generateFAQSchema(faqs: Array<{ question: string; answer: string
     })),
   };
 }
+
+export function generateAirportSchema(airport: {
+  name: string;
+  slug: string;
+  city: string;
+  lat: number;
+  lng: number;
+  description?: string;
+  spaceCount?: number;
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': ['ParkingFacility', 'LocalBusiness'],
+    name: airport.name,
+    description: airport.description || `Parking facility at ${airport.name}`,
+    url: `https://www.payparq.com/${airport.slug}`,
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: airport.lat,
+      longitude: airport.lng,
+    },
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: airport.city,
+      addressCountry: 'HR',
+    },
+    ...(airport.spaceCount && {
+      numberOfCapacities: airport.spaceCount,
+    }),
+    openingHoursSpecification: {
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      opens: '00:00',
+      closes: '23:59',
+    },
+  };
+}

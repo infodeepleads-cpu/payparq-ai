@@ -6,6 +6,10 @@
     {
       "path": "/api/cron/review-emails",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/ping-search-engines",
+      "schedule": "0 9 * * *"
     }
   ]
 }
