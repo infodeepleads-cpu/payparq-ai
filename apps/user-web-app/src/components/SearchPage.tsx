@@ -89,6 +89,7 @@ const TRANSLATIONS = {
   'Nema dostupnih informacija.': { en: 'No information available.', hr: 'Nema dostupnih informacija.' },
   'Nema dostupnih informacija o radnom vremenu.': { en: 'No schedule information available.', hr: 'Nema dostupnih informacija o radnom vremenu.' },
   'Nema dostupnih uputa za dolazak.': { en: 'No getting there instructions available.', hr: 'Nema dostupnih uputa za dolazak.' },
+  'Nema dostupnih uputa za dolazak.': { en: 'No getting there instructions available.', hr: 'Nema dostupnih uputa za dolazak.' },
   'Nema dostupnih uputa za dolazak.': { en: 'No directions available.', hr: 'Nema dostupnih uputa za dolazak.' },
   'Popis': { en: 'List', hr: 'Popis' },
   'Karta': { en: 'Map', hr: 'Karta' },
