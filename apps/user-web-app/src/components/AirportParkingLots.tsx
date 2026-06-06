@@ -26,6 +26,8 @@ interface AirportParkingLotsProps {
   airportName: string;
 }
 
+const MAX_DISTANCE_KM = 25; // Only show lots within 25km
+
 export function AirportParkingLots({ airport, lat, lng, airportName }: AirportParkingLotsProps) {
   const router = useRouter();
   const [lots, setLots] = useState<ParkingLot[]>([]);
@@ -39,20 +41,23 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
         const { lots: apiLots } = await res.json();
 
         if (apiLots && apiLots.length > 0) {
-          const lotsWithDetails = apiLots.map((lot: any) => ({
-            id: lot.id,
-            name: lot.name,
-            location: lot.address || lot.name,
-            rating: 4.9,
-            reviewCount: Math.floor(Math.random() * 200) + 50,
-            bookings: '1000+',
-            description: `Secure parking at ${lot.name}. Book in advance and guarantee your spot near ${airportName}.`,
-            priceFrom: lot.dailyPrice > 0 ? `€${lot.dailyPrice.toFixed(2)}/day` : 'From €2.00/day',
-            badge: 'Best price guaranteed',
-            image: lot.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop',
-            distance: lot.distance,
-            slug: lot.slug,
-          }));
+          const lotsWithDetails = apiLots
+            .map((lot: any) => ({
+              id: lot.id,
+              name: lot.name,
+              location: lot.address || lot.name,
+              rating: 4.9,
+              reviewCount: Math.floor(Math.random() * 200) + 50,
+              bookings: '1000+',
+              description: `Secure parking at ${lot.name}. Book in advance and guarantee your spot near ${airportName}.`,
+              priceFrom: lot.dailyPrice > 0 ? `€${lot.dailyPrice.toFixed(2)}/day` : 'From €2.00/day',
+              badge: 'Best price guaranteed',
+              image: lot.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop',
+              distance: lot.distance,
+              slug: lot.slug,
+            }))
+            // Filter: only show lots within MAX_DISTANCE_KM
+            .filter((lot: ParkingLot) => lot.distance === undefined || lot.distance <= MAX_DISTANCE_KM);
 
           setLots(lotsWithDetails);
         }
