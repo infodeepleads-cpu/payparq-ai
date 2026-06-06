@@ -1,22 +1,75 @@
-# Robots.txt for Payparq
+# robots.txt for Payparq — EU Parking Platform
+# Last updated: 2026-06-05
+
+# Default rules for all bots
 User-agent: *
 Allow: /
+Allow: /city/
+Allow: /locations/
+Allow: /guides/
+Allow: /news/
+Allow: /blog/
+
+# Disallow private areas
 Disallow: /api/
 Disallow: /admin/
-Disallow: /search?
+Disallow: /auth/
 Disallow: /_next/
 Disallow: /*.json$
+Disallow: /members/
+Disallow: /host/
+Disallow: /drivers/
 
-# Specific rules for search engines
+# Query string handling
+Disallow: /*?
+Allow: /*?sort=
+Allow: /*?page=
+
+# Crawl-delay for respecting server resources
+Crawl-delay: 0.5
+
+# Specific optimized rules for major search engines
 User-agent: Googlebot
 Allow: /
+Allow: /city/
+Allow: /locations/
+Allow: /guides/
+Disallow: /api/
+Disallow: /admin/
+Disallow: /_next/
+Crawl-delay: 0
 
 User-agent: Bingbot
 Allow: /
+Allow: /city/
+Allow: /locations/
+Allow: /guides/
+Disallow: /api/
+Crawl-delay: 0.5
 
-# Sitemap
+User-agent: Slurp
+Allow: /
+Crawl-delay: 1
+
+User-agent: DuckDuckBot
+Allow: /
+Crawl-delay: 0.5
+
+# Block bad bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+# Sitemaps (multiple for better indexing)
 Sitemap: https://www.payparq.com/sitemap.xml
+Sitemap: https://www.payparq.com/blog/sitemap.xml
 Sitemap: https://payparq.com/sitemap.xml
 
-# Crawl delay
-Crawl-delay: 1
+# Cache-related
+Vary: Accept-Encoding
+Vary: Accept-Language

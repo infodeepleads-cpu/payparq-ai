@@ -1,9 +1,8 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import LocationClient from './LocationClient';
+import type { Metadata } from 'next';
+import { supabase } from '@/lib/supabase';
+import { generateMetadata as generateSEOMetadata, generateLocationSchema, generateBreadcrumbSchema } from '@/lib/seo';
 import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
+import LocationPageClient from './LocationPageClient';
 
 type HubData = {
   id: string;
@@ -22,56 +21,120 @@ type HubData = {
   base_price_monthly?: number;
 };
 
-export default function LocationPage({ params }: { params: Promise<{ slug: string }> }) {
-  const [hub, setHub] = useState<HubData | null>(null);
-  const [loading, setLoading] = useState(true);
+interface LocationPageProps {
+  params: Promise<{ slug: string }>;
+}
 
-  useEffect(() => {
-    params.then(({ slug }) => {
-      fetchHub(slug);
-    });
-  }, [params]);
+async function fetchLocationData(slug: string): Promise<HubData | null> {
+  try {
+    if (!supabase) return null;
+    const { data } = await supabase
+      .from('locations')
+      .select('*')
+      .eq('canonical_slug', slug)
+      .eq('verification_metadata->>hub_enabled', 'true')
+      .limit(1)
+      .single();
+    return data as HubData | null;
+  } catch (error) {
+    console.error('Failed to fetch location:', error);
+    return null;
+  }
+}
 
-  const fetchHub = async (slug: string) => {
-    try {
-      const res = await fetch(`/api/locations/${slug}`);
-      if (!res.ok) {
-        console.error('Failed to fetch location:', res.status);
-        return;
-      }
-      const data = await res.json();
-      if (data.location) {
-        setHub(data.location);
-      }
-    } catch (error) {
-      console.error('Failed to fetch location:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+export async function generateMetadata({ params }: LocationPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const location = await fetchLocationData(slug);
 
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  if (!location) {
+    return { title: 'Location Not Found | Payparq' };
   }
 
-  if (!hub) {
-    return <div className="flex items-center justify-center min-h-screen">Location not found</div>;
+  const title = `${location.name} Parking | Reserve & Book | Payparq`;
+  const description = `Reserve parking at ${location.name}${location.address ? ` (${location.address})` : ''}. Safe, affordable parking with real-time availability. Book online with Payparq.`;
+  const keywords = [
+    `${location.name} parking`,
+    `parking at ${location.name}`,
+    `reserve parking ${location.name}`,
+    `book parking ${location.name}`,
+    `secure parking ${location.name}`,
+    `affordable ${location.name} parking`,
+  ];
+
+  return generateSEOMetadata({
+    title,
+    description,
+    keywords,
+    canonical: `https://www.payparq.com/locations/${slug}`,
+    ogImage: 'https://www.payparq.com/og-parking.jpg',
+    ogType: 'website',
+  });
+}
+
+export const revalidate = 3600; // Revalidate every hour
+
+export default async function LocationPage({ params }: LocationPageProps) {
+  const { slug } = await params;
+  const location = await fetchLocationData(slug);
+
+  if (!location) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold text-black mb-2">Location not found</h1>
+          <a href="/locations" className="text-blue-600 hover:underline">
+            Back to locations
+          </a>
+        </div>
+      </div>
+    );
   }
 
-  const pricePerHour = resolveScannerTruthPriceEuro({
-    rate_per_hour: hub.rate_per_hour,
-    base_price_hourly: hub.base_price_hourly,
-    rate_per_hour_floor: hub.rate_per_hour_floor,
-    rate_per_hour_ceiling: hub.rate_per_hour_ceiling,
-  }, 'hourly');
+  const pricePerHour = resolveScannerTruthPriceEuro(
+    {
+      rate_per_hour: location.rate_per_hour,
+      base_price_hourly: location.base_price_hourly,
+      rate_per_hour_floor: location.rate_per_hour_floor,
+      rate_per_hour_ceiling: location.rate_per_hour_ceiling,
+    },
+    'hourly'
+  );
+
+  const locationSchema = generateLocationSchema({
+    name: location.name,
+    address: location.address,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    canonicalSlug: location.canonical_slug,
+    description: `${location.name}${location.address ? ` located at ${location.address}` : ''}. Reserve safe parking online with Payparq.`,
+    pricePerHour: pricePerHour,
+  });
+
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: 'Home', url: 'https://www.payparq.com' },
+    { name: 'Parking Locations', url: 'https://www.payparq.com/locations' },
+    { name: location.name, url: `https://www.payparq.com/locations/${slug}` },
+  ]);
 
   return (
-    <LocationClient
-      hub={hub}
-      priceLabel={`${pricePerHour || 'Contact'}€/hr`}
-      hero=""
-      faqItems={[]}
-      travelTime="15 min"
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(locationSchema) }}
+        suppressHydrationWarning
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        suppressHydrationWarning
+      />
+      <LocationPageClient
+        hub={location}
+        priceLabel={`${pricePerHour || 'Contact'}€/hr`}
+        hero=""
+        faqItems={[]}
+        travelTime="15 min"
+      />
+    </>
   );
 }
