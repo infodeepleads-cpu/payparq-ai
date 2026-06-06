@@ -473,7 +473,7 @@ export default function ListYourSpace() {
                   e.preventDefault();
                   document.documentElement.scrollTop = 0;
                 }}
-                className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white font-bold text-lg hover:shadow-xl transition-all cursor-pointer"
+                className="inline-flex items-center gap-3 px-10 py-5 rounded-full bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white font-bold text-xl hover:shadow-xl transition-all cursor-pointer"
               >
                 <span>Oglasite svojе parkirno mjesto odmah</span>
                 <span>→</span>
