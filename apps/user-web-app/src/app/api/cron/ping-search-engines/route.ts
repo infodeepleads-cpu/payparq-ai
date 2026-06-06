@@ -32,8 +32,8 @@ export async function GET(req: NextRequest) {
 
     const results = await Promise.all(pingRequests);
 
-    const successful = results.filter((r) => r.status === 200).length;
-    const failed = results.filter((r) => r.error).length;
+    const successful = results.filter((r) => 'status' in r && r.status === 200).length;
+    const failed = results.filter((r) => 'error' in r && r.error).length;
 
     console.log(`[SEARCH ENGINE PING] Success: ${successful}, Failed: ${failed}`);
 
