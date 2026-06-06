@@ -3231,7 +3231,7 @@ export default function MembersPage() {
                     {loc.verification_status === 'verified' && (
                       <div className="px-3 md:px-4 py-2 border-t border-black/5 flex items-center justify-between bg-black/2">
                         <Link
-                          href={`/search?hubId=${loc.id}`}
+                          href={`/search?hubId=${loc.id}&locale=${locale}`}
                           className="text-xs font-semibold text-black hover:text-black/70 transition-colors"
                         >
                           {membersT('Brza rezervacija', locale)}
@@ -3241,7 +3241,7 @@ export default function MembersPage() {
                           title={membersT('Kopiraj link', locale)}
                           onClick={(e) => {
                             e.stopPropagation();
-                            const url = `${window.location.origin}/search?hubId=${loc.id}&source=member`;
+                            const url = `${window.location.origin}/search?hubId=${loc.id}&source=member&locale=${locale}`;
                             navigator.clipboard.writeText(url).then(() => {
                               setCopiedLotId(loc.id);
                               setTimeout(() => setCopiedLotId(null), 1500);

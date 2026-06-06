@@ -599,6 +599,14 @@ export function SearchPage() {
   }, [searchParams, isLoaded]);
 
 
+  // Handle locale from URL parameter (for quick reservation links)
+  useEffect(() => {
+    const urlLocale = searchParams.get('locale') as 'en' | 'hr' | null;
+    if (urlLocale && (urlLocale === 'en' || urlLocale === 'hr') && urlLocale !== locale) {
+      setLocale(urlLocale);
+    }
+  }, [searchParams, locale, setLocale]);
+
   // Reset date picker when modal opens
   useEffect(() => {
     if (showMobileSearchEdit) {
@@ -3031,7 +3039,7 @@ export function SearchPage() {
               {/* Reservation Details Widget */}
               <div className="flex-shrink-0 w-full bg-white border-b border-gray-200 py-3">
                 <div className="px-4">
-                  <p className="text-sm text-gray-700 font-semibold mb-4">Rezervacija parkinga</p>
+                  <p className="text-sm text-gray-700 font-semibold mb-4">{t('Rezervacija parkinga', locale)}</p>
 
                   {/* Date, Time and Price Row */}
                   <button
