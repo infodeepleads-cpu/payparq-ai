@@ -22,7 +22,10 @@ export function generateMetadata(config: SEOConfig): Metadata {
     title: config.title,
     description: config.description,
     keywords: config.keywords,
-    canonical: canonical,
+    alternates: {
+      canonical: canonical,
+      ...(config.alternates && { languages: config.alternates }),
+    },
     openGraph: {
       title: config.title,
       description: config.description,
@@ -38,13 +41,6 @@ export function generateMetadata(config: SEOConfig): Metadata {
       ...(config.ogImage && { images: [config.ogImage] }),
     },
   };
-
-  if (config.alternates) {
-    metadata.alternates = {
-      languages: config.alternates,
-      canonical: canonical,
-    };
-  }
 
   if (config.articlePublishedTime) {
     metadata.openGraph = {
