@@ -17,6 +17,7 @@ import { useLocale } from './LocaleProvider';
 import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle, List, DollarSign, Globe } from 'lucide-react';
 import { resolveScannerTruthPriceEuro, getViablePrice } from '@/lib/locationPricing';
 import { AMENITIES_LIST, normalizeAmenityLabels } from '@/lib/amenities';
+import { LOCALE_COOKIE_NAME } from '@/lib/locale';
 import { AmenitiesChips } from './AmenitiesChips';
 
 const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
@@ -632,9 +633,11 @@ export function SearchPage() {
   useEffect(() => {
     const urlLocale = searchParams.get('locale') as 'en' | 'hr' | null;
     if (urlLocale && (urlLocale === 'en' || urlLocale === 'hr') && urlLocale !== locale) {
-      setLocale(urlLocale);
+      // Set cookie and trigger a reload to apply the locale throughout the app
+      document.cookie = `${LOCALE_COOKIE_NAME}=${urlLocale}; path=/; max-age=31536000; SameSite=Lax`;
+      window.location.reload();
     }
-  }, [searchParams, locale, setLocale]);
+  }, [searchParams, locale]);
 
   // Reset date picker when modal opens
   useEffect(() => {
