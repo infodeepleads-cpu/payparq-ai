@@ -29,7 +29,7 @@ const STEPS = [
 
 const BENEFITS = [
   {
-    title: 'Garantovano parking mjesto',
+    title: 'Garantirano parking mjesto',
     description: 'Vaše mjesto je rezervirano i čeka vas. Bez pretraživanja, bez razočaranja.',
   },
   {
@@ -47,12 +47,12 @@ export function HowItWorks({ airport = 'Airport' }: HowItWorksProps) {
     <section className="w-full px-6 md:px-12 py-16 bg-white border-b border-black/10">
       <div className="max-w-6xl mx-auto">
 
-        {/* How It Works */}
+        {/* How It Works — Same width as Zašto PayParq */}
         <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-black mb-12">
           Kako radi
         </h2>
 
-        <div className="space-y-16 mb-20">
+        <div className="max-w-4xl space-y-16 mb-20">
           {STEPS.map((step, idx) => (
             <div
               key={step.num}
@@ -76,8 +76,8 @@ export function HowItWorks({ airport = 'Airport' }: HowItWorksProps) {
           ))}
         </div>
 
-        {/* Why Choose PayParq — horizontal */}
-        <div className="border-t border-black/10 pt-12">
+        {/* Why Choose PayParq — Same width as How It Works */}
+        <div className="border-t border-black/10 pt-12 max-w-4xl">
           <h2 className="text-2xl font-semibold tracking-tight text-black mb-8">Zašto PayParq?</h2>
           <div className="grid md:grid-cols-3 gap-6">
             {BENEFITS.map((b, idx) => (
