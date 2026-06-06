@@ -124,16 +124,15 @@ function normalizeInput(text: unknown) {
 }
 
 async function translateText(text: string, target: AppLocale): Promise<string | null> {
-  if (target === "en") return text;
   const override = hrOverrides.get(text);
-  if (override) return override;
+  if (override && target === "hr") return override;
   const cacheKey = `${target}:${text}`;
   const cached = memoryCache.get(cacheKey);
   if (cached) return cached;
 
   const url = new URL("https://translate.googleapis.com/translate_a/single");
   url.searchParams.set("client", "gtx");
-  url.searchParams.set("sl", "en");
+  url.searchParams.set("sl", target === "en" ? "hr" : "en");
   url.searchParams.set("tl", target);
   url.searchParams.set("dt", "t");
   url.searchParams.set("q", text);

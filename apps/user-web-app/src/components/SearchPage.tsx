@@ -345,6 +345,35 @@ export function SearchPage() {
   const [showGuaranteedParking, setShowGuaranteedParking] = useState(false);
   const [showDestinationPicker, setShowDestinationPicker] = useState(false);
   const [destinationVenueType, setDestinationVenueType] = useState<'airport' | 'city' | 'event' | 'hotel'>('airport');
+  const [translatedContent, setTranslatedContent] = useState<{ thingsToKnow?: string; accessHours?: string; gettingThere?: string } | null>(null);
+
+  // Translate fetched Croatian listing content to English via API
+  useEffect(() => {
+    if (!selectedListing || locale !== 'en') {
+      setTranslatedContent(null);
+      return;
+    }
+    const textsToTranslate = [
+      selectedListing.thingsToKnow || '',
+      selectedListing.accessHours || '',
+      selectedListing.gettingThere || '',
+    ];
+    fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texts: textsToTranslate, target: 'en' }),
+    })
+      .then(r => r.json())
+      .then((data: { translations?: Array<string | null> }) => {
+        const [ttk, ah, gt] = data.translations ?? [];
+        setTranslatedContent({
+          thingsToKnow: ttk || selectedListing.thingsToKnow,
+          accessHours: ah || selectedListing.accessHours,
+          gettingThere: gt || selectedListing.gettingThere,
+        });
+      })
+      .catch(() => setTranslatedContent(null));
+  }, [selectedListing?.id, locale]);
 
   useEffect(() => {
     if (!selectedListing) return;
@@ -2353,8 +2382,8 @@ export function SearchPage() {
 
                       {/* Things to Know Content */}
                       <div className="space-y-3 text-sm text-gray-900 leading-relaxed ml-7">
-                        {selectedListing.thingsToKnow
-                          ? selectedListing.thingsToKnow.split('\n\n').map((p, i) => <p key={i}>{translateText(p, locale)}</p>)
+                        {(translatedContent?.thingsToKnow ?? selectedListing.thingsToKnow)
+                          ? (translatedContent?.thingsToKnow ?? selectedListing.thingsToKnow)!.split('\n\n').map((p, i) => <p key={i}>{p}</p>)
                           : <p className="text-gray-400">{t('Nema dostupnih informacija.', locale)}</p>}
                       </div>
                     </div>
@@ -2390,8 +2419,8 @@ export function SearchPage() {
                   </button>
                   {showAccessHours && (
                     <div className="space-y-2 mt-3 ml-7 text-sm text-gray-900 leading-relaxed">
-                      {selectedListing.accessHours
-                        ? selectedListing.accessHours.split('\n').map((line, i) => <p key={i}>{translateText(line, locale)}</p>)
+                      {(translatedContent?.accessHours ?? selectedListing.accessHours)
+                        ? (translatedContent?.accessHours ?? selectedListing.accessHours)!.split('\n').map((line, i) => <p key={i}>{line}</p>)
                         : <p className="text-gray-400">{t('Nema dostupnih informacija o radnom vremenu.', locale)}</p>}
                     </div>
                   )}
@@ -2428,8 +2457,8 @@ export function SearchPage() {
                   </button>
                   {showGettingThere && (
                     <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
-                      {selectedListing.gettingThere
-                        ? <p>{translateText(selectedListing.gettingThere, locale)}</p>
+                      {(translatedContent?.gettingThere ?? selectedListing.gettingThere)
+                        ? <p>{translatedContent?.gettingThere ?? selectedListing.gettingThere}</p>
                         : <p className="text-gray-400">{t('Nema dostupnih uputa za dolazak.', locale)}</p>}
                     </div>
                   )}
@@ -3119,8 +3148,8 @@ export function SearchPage() {
                 </button>
                 {showThingsToKnow && (
                   <div className="space-y-2 text-xs text-gray-900 leading-relaxed mt-2 ml-6">
-                    {selectedListing.thingsToKnow
-                      ? selectedListing.thingsToKnow.split('\n\n').map((p, i) => <p key={i}>{translateText(p, locale)}</p>)
+                    {(translatedContent?.thingsToKnow ?? selectedListing.thingsToKnow)
+                      ? (translatedContent?.thingsToKnow ?? selectedListing.thingsToKnow)!.split('\n\n').map((p, i) => <p key={i}>{p}</p>)
                       : <p className="text-gray-400">{t('Nema dostupnih informacija.', locale)}</p>}
                   </div>
                 )}
@@ -3155,8 +3184,8 @@ export function SearchPage() {
                 </button>
                 {showAccessHours && (
                   <div className="space-y-1 mt-2 ml-6 text-xs text-gray-900 leading-relaxed">
-                    {selectedListing.accessHours
-                      ? selectedListing.accessHours.split('\n').map((line, i) => <p key={i}>{translateText(line, locale)}</p>)
+                    {(translatedContent?.accessHours ?? selectedListing.accessHours)
+                      ? (translatedContent?.accessHours ?? selectedListing.accessHours)!.split('\n').map((line, i) => <p key={i}>{line}</p>)
                       : <p className="text-gray-400">{t('Nema dostupnih informacija o radnom vremenu.', locale)}</p>}
                   </div>
                 )}
@@ -3191,8 +3220,8 @@ export function SearchPage() {
                 </button>
                 {showGettingThere && (
                   <div className="space-y-2 text-xs text-gray-900 leading-relaxed mt-2 ml-6">
-                    {selectedListing.gettingThere
-                      ? <p>{translateText(selectedListing.gettingThere, locale)}</p>
+                    {(translatedContent?.gettingThere ?? selectedListing.gettingThere)
+                      ? <p>{translatedContent?.gettingThere ?? selectedListing.gettingThere}</p>
                       : <p className="text-gray-400">{t('Nema dostupnih uputa za dolazak.', locale)}</p>}
                   </div>
                 )}
