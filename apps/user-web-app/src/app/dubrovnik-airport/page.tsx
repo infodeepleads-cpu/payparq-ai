@@ -28,10 +28,10 @@ export default function DubrovnikAirportPage() {
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-4 break-words">
-                  Parkiraj kod Aerodroma Dubrovnik
+                  Park at Dubrovnik Airport
                 </h1>
                 <p className="text-base text-black/70 mb-8 leading-relaxed">
-                  Pronađite parking blizu Aerodroma Dubrovnik sa 100+ dostupnih mjesta za rezervaciju. Pomoći ćemo vam osigurati mjesto na najboljim cijenama. Rezervirajte u 2 minute sa trenutnom potvrdom.
+                  Find parking near Dubrovnik Airport with 80+ reservable spaces. Guaranteed spot at the best price. Book in 2 minutes with instant confirmation.
                 </p>
                 <div className="bg-white border border-black/10 rounded-xl p-6 shadow-sm">
                   <AirportBookingFlow defaultLat={42.5614} defaultLng={18.2682} defaultName="Dubrovnik Airport" />

@@ -40,11 +40,11 @@ export default function VenuePage() {
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-4 break-words">
-                  Parking kod {venue.name}
+                  Parking near {venue.name}
                 </h1>
 
                 <p className="text-base text-black/70 mb-8 leading-relaxed">
-                  Pronađite sigurno parking blizu {venue.name} sa {venue.capacity.toLocaleString()} mjesta kapaciteta. Rezervirajte unaprijed za sve utakmice i dogodnje. Instant potvrda i najbolje cijene.
+                  Find secure parking near {venue.name} with {venue.capacity.toLocaleString()} capacity spaces. Book in advance for all matches and events. Instant confirmation and best prices guaranteed.
                 </p>
 
                 <div className="bg-white border border-black/10 rounded-xl p-6 shadow-sm">
