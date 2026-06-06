@@ -88,6 +88,7 @@ const TRANSLATIONS = {
   'Free Cancellation Policy': { en: 'Free Cancellation Policy', hr: 'Politika besplatnog otkazivanja' },
   'Nema dostupnih informacija.': { en: 'No information available.', hr: 'Nema dostupnih informacija.' },
   'Nema dostupnih informacija o radnom vremenu.': { en: 'No schedule information available.', hr: 'Nema dostupnih informacija o radnom vremenu.' },
+  'Nema dostupnih uputa za dolazak.': { en: 'No getting there instructions available.', hr: 'Nema dostupnih uputa za dolazak.' },
   'Nema dostupnih uputa za dolazak.': { en: 'No directions available.', hr: 'Nema dostupnih uputa za dolazak.' },
   'Popis': { en: 'List', hr: 'Popis' },
   'Karta': { en: 'Map', hr: 'Karta' },
@@ -2491,52 +2492,6 @@ export function SearchPage() {
           </div>
         )}
 
-        {/* Price Breakdown Modal */}
-        {showPriceBreakdown && selectedListing && (
-          <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center">
-            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4 z-[10000]">
-              <div className="space-y-4">
-                <p className="text-lg font-bold text-gray-900">{t('Pregled cijene', locale)}</p>
-
-                <div className="space-y-2 border-b border-gray-200 pb-4">
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">
-                      {reservationType === 'Mjesečna'
-                        ? t('Mjesečna tarifa', locale)
-                        : `${t('Cijena parkinga', locale)}: €${subtotal.toFixed(2)}`
-                      }
-                    </p>
-                    <p className="text-sm font-semibold text-gray-900">€{subtotal.toFixed(2)}</p>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">{t('Naknada za uslugu', locale)}</p>
-                    <p className="text-sm font-semibold text-gray-900">€{serviceFee.toFixed(2)}</p>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">{t('Naknada za uslugu uključuje: Jamstvo rezerviranog mjesta, prioritetnu podršku, rješavanje sporova i ostalo.', locale)}</p>
-                </div>
-
-                <div className="flex justify-between items-center pt-2">
-                  <p className="text-lg font-bold text-gray-900">{t('Ukupno', locale)}</p>
-                  <p className="text-lg font-bold text-gray-900">€{totalPrice.toFixed(2)}</p>
-                </div>
-
-                <a
-                  href={buildCheckoutUrl(selectedListing)}
-                  className="block w-full mt-2 px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
-                >
-                  {t('Rezervirajte sada', locale)} — €{totalPrice.toFixed(2)}
-                </a>
-                <button
-                  onClick={() => setShowPriceBreakdown(false)}
-                  className="w-full px-4 py-2 bg-gray-200 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  {t('Zatvori', locale)}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Vehicle Modal - Centered Overlay */}
         {/* Map 65% RIGHT (normal) or flex-1 RIGHT (details) */}
         <div className={`bg-gray-100 ${showDetailsView ? 'flex-1' : 'w-[65%]'}`}>
@@ -3231,7 +3186,7 @@ export function SearchPage() {
                   <div className="space-y-2 text-xs text-gray-900 leading-relaxed mt-2 ml-6">
                     {selectedListing.gettingThere
                       ? <p>{translateText(selectedListing.gettingThere, locale)}</p>
-                      : <p className="text-gray-400">{translateText('Nema dostupnih uputa za dolazak.', locale)}</p>}
+                      : <p className="text-gray-400">{t('Nema dostupnih uputa za dolazak.', locale)}</p>}
                   </div>
                 )}
               </div>
@@ -3450,6 +3405,52 @@ export function SearchPage() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Price Breakdown Modal - Root level for mobile */}
+      {showPriceBreakdown && selectedListing && (
+        <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4 z-[10000]">
+            <div className="space-y-4">
+              <p className="text-lg font-bold text-gray-900">{t('Pregled cijene', locale)}</p>
+
+              <div className="space-y-2 border-b border-gray-200 pb-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-gray-600">
+                    {reservationType === 'Mjesečna'
+                      ? t('Mjesečna tarifa', locale)
+                      : `${t('Cijena parkinga', locale)}: €${subtotal.toFixed(2)}`
+                    }
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900">€{subtotal.toFixed(2)}</p>
+                </div>
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-gray-600">{t('Naknada za uslugu', locale)}</p>
+                  <p className="text-sm font-semibold text-gray-900">€{serviceFee.toFixed(2)}</p>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">{t('Naknada za uslugu uključuje: Jamstvo rezerviranog mjesta, prioritetnu podršku, rješavanje sporova i ostalo.', locale)}</p>
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <p className="text-lg font-bold text-gray-900">{t('Ukupno', locale)}</p>
+                <p className="text-lg font-bold text-gray-900">€{totalPrice.toFixed(2)}</p>
+              </div>
+
+              <a
+                href={buildCheckoutUrl(selectedListing)}
+                className="block w-full mt-2 px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
+              >
+                {t('Rezervirajte sada', locale)} — €{totalPrice.toFixed(2)}
+              </a>
+              <button
+                onClick={() => setShowPriceBreakdown(false)}
+                className="w-full px-4 py-2 bg-gray-200 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                {t('Zatvori', locale)}
+              </button>
             </div>
           </div>
         </div>
