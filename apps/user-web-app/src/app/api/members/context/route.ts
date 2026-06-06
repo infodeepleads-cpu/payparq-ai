@@ -947,12 +947,17 @@ export async function GET(req: NextRequest) {
     identity.locationHints.map((value) => value.trim()).filter((value) => value.length > 0)
   );
   if (isOperatorRole && identity.userId) {
-    if (identity.role === "admin") {
-      const { data: ownedLocations } = await client
+    if (identity.role === "admin" || identity.role === "super_admin" || identity.role === "superadmin") {
+      const isSuperadmin = identity.email?.toLowerCase() === 'payparq@outlook.com';
+      const query = client
         .from("locations")
-        .select("id,display_id")
-        .eq("owner_id", identity.userId)
-        .limit(500);
+        .select("id,display_id");
+
+      if (!isSuperadmin && identity.role === "admin") {
+        query.eq("owner_id", identity.userId);
+      }
+
+      const { data: ownedLocations } = await query.limit(500);
       for (const row of ((ownedLocations ?? []) as Array<{ id?: string | null; display_id?: string | null }>)) {
         const id = String(row.id ?? "").trim();
         const displayId = String(row.display_id ?? "").trim();
