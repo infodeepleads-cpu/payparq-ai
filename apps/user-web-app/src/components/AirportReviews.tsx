@@ -115,7 +115,7 @@ export function AirportReviews({ airport, locationName }: AirportReviewsProps) {
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5">
                 <GoogleLogo />
-                <span className="text-xs font-semibold text-black/70">Google ocjene</span>
+                <span className="text-xs font-semibold text-black/70">Google Reviews</span>
               </div>
               <div className="w-px h-3 bg-black/20" />
               <div className="flex gap-0.5">

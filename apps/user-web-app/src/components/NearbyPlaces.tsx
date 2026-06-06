@@ -61,10 +61,10 @@ export function NearbyPlaces({ locationName, locationKey, nearbyPlaces }: Nearby
           {/* Header */}
           <div className="mb-10">
             <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-3">
-              Što je blizu
+              What's Nearby
             </h2>
             <p className="text-lg text-black/70">
-              Otkrijte što je blizu <strong>{locationName}</strong>.
+              Discover attractions near <strong>{locationName}</strong>.
             </p>
           </div>
 

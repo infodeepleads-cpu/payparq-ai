@@ -144,34 +144,34 @@ const SEO_CONTENT: Record<string, any> = {
 
 function generateContent(locationName: string, city: string, region: string) {
   return {
-    title: `Sve što trebate znati o parkiranju u ${locationName}`,
-    intro: `Pronađite pouzdano parking u <strong>${locationName}</strong> uz PayParq. Naša <strong>mreža rezervabilnih parkirnih mjesta</strong> — uključujući privatna parkirališta i osigurane objekte — osigurava vam lak pristup. <strong>Rezervirajte unaprijed</strong> i zaključajte konkurentne cijene.`,
+    title: `Everything you need to know about parking near ${locationName}`,
+    intro: `Secure your parking spot at ${locationName} with PayParq. Our <strong>reservable parking network</strong> - including private car parks and secure facilities - ensures convenient access. <strong>Book in advance</strong> to lock in competitive prices and guarantee your space.`,
     paragraphs: [
-      `PayParq je <strong>vodeća hrvatska platforma za parkiranje</strong>, kojoj vjeruje više od <strong>100.000+ vozača</strong> u pronalaženju, rezervaciji i plaćanju parkinga. Naša mreža uključuje <strong>privatna parkirališta, dvorišta i osigurane objekte</strong> širom ${region} regije, uključujući ${locationName}.`,
-      `Naš <strong>napredni sustav pretrage</strong> omogućuje vam lako pronalaženje najboljeg parkinga u ${locationName} — filtrirajte po <strong>cijeni, blizini, sigurnosnim značajkama</strong> ili pogodnostima poput <strong>CCTV nadzora, punjenja EV vozila ili natkrivenog parkinga</strong>.`,
-      `Rezervirajte parking u ${locationName} unaprijed putem naše web stranice ili aplikacije — i imat ćete <strong>zajamčeno slobodno mjesto kada stignete</strong>. Naša parkirna mjesta dostupna su za <strong>kratke i dugoročne boravke</strong>, uključujući noćno parkiranje.`,
-      `PayParq nudi više od tradicionalnih parkirališta. Pristupite <strong>pristupačnim alternativama poput osiguranih privatnih dvorišta</strong>, često bliže lokaciji i po boljim cijenama od uobičajenih parkirnih objekata u ${city}.`,
+      `PayParq is Croatia's trusted parking platform, helping <strong>100,000+ drivers</strong> find, book and pay for parking. Our extensive network serves over <strong>100,000+ customers with reliable, secure, and affordable parking options</strong>. From short airport drop-offs to week-long vacation parking, PayParq simplifies your journey near ${locationName}.`,
+      `Our <strong>advanced search system</strong> lets you find ${locationName} parking tailored to your preferences - whether you prioritize <strong>affordability, proximity, security features</strong>, or convenient amenities like <strong>CCTV monitoring, EV charging and 24/7 access</strong>.`,
+      `Reserve your ${locationName} parking in minutes through our platform. Our <strong>guaranteed spaces ensure you arrive without worry</strong>, with flexible options for <strong>short-term visits or extended parking during vacations</strong>. Whether you're catching an early flight or returning late, find the space that suits you best.`,
+      `Beyond traditional airport facilities, PayParq connects you with <strong>secure private parking alternatives near ${locationName}</strong>. These options often offer <strong>better value and sometimes even closer proximity</strong> than conventional car parks.`,
     ],
     faqs: [
       {
-        question: `Zašto rezervirati parking unaprijed u ${locationName}?`,
-        answer: `<strong>Rezervacija unaprijed jamči vaše mjesto</strong>, osigurava najniže cijene i eliminiira stres pronalaska parkinga. PayParqov <strong>proces rezervacije traje samo 2 minute</strong> — rezervirajte još od kuće.`,
+        question: `Why book parking in advance near ${locationName}?`,
+        answer: `<strong>Booking in advance guarantees your space</strong>, ensures you get the best rates, and eliminates the stress of finding parking on arrival. PayParq's <strong>2-minute booking process</strong> means you can reserve your spot before you even leave home.`,
       },
       {
-        question: `Nudi li PayParq sigurno parkiranje u ${locationName}?`,
-        answer: `Apsolutno! PayParq pruža <strong>provjerene sigurnosne opcije parkinga</strong>, uključujući mjesta s <strong>CCTV-om, ograđenim prostorima i privatnim dvorištima</strong>. Svi naši domaćini su provjereni kako bi osigurali sigurnost vašeg vozila.`,
+        question: `Does PayParq offer secure parking near ${locationName}?`,
+        answer: `Absolutely! PayParq provides <strong>verified secure parking options</strong>, including spaces with <strong>CCTV, gated facilities, and private driveways</strong>. All our hosts are vetted to ensure your vehicle's safety throughout your stay.`,
       },
       {
-        question: `Koliko košta parkiranje u ${locationName}?`,
-        answer: `PayParq nudi <strong>konkurentne cijene</strong> za parkiranje u ${locationName}, s opcijama od samo <strong>€2-5 dnevno</strong>. Cijene variraju ovisno o lokaciji, sadržajima i trajanju rezervacije.`,
+        question: `How much is parking near ${locationName}?`,
+        answer: `PayParq offers <strong>competitive pricing</strong> for ${locationName} parking, with options starting from as low as <strong>€2-5 per day</strong>. Prices vary based on location, facilities, and booking duration. Use our search to find prices that fit your budget.`,
       },
       {
-        question: `Koje opcije parkinga PayParq nudi u ${locationName}?`,
-        answer: `Nudimo <strong>širok raspon opcija</strong> uključujući <strong>natkriveno parkiranje, otvorene prostore, objekte s 24/7 nadzorom, EV punjače</strong> i pristupačno parkiranje za goste s posebnim potrebama.`,
+        question: `What parking options does PayParq offer near ${locationName}?`,
+        answer: `We offer a <strong>wide range of options</strong> including <strong>covered parking, open-air spaces, 24/7 monitored facilities, EV charging stations</strong>, and accessible parking for guests with mobility needs.`,
       },
       {
-        question: `Ima li pristupačnog parkinga u ${locationName}?`,
-        answer: `Da! PayParq se specijalizira za <strong>pristupačne alternative parkinga</strong>. Naša mreža uključuje <strong>privatna dvorišta i stambena parkirna mjesta koja su često 50-70% jeftinija</strong> od tradicionalnih parkirnih objekata, bez kompromisa po pitanju sigurnosti.`,
+        question: `Can I find affordable long-term parking near ${locationName}?`,
+        answer: `Yes! PayParq specializes in finding <strong>affordable parking alternatives</strong>. Our network includes <strong>private driveways and residential parking that are often 50-70% cheaper</strong> than traditional airport parking, without compromising on security.`,
       },
     ],
   };

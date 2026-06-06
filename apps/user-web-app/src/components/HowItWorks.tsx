@@ -9,36 +9,36 @@ interface HowItWorksProps {
 const STEPS = [
   {
     num: 1,
-    title: 'Pronađi',
-    desc: 'Pregledajte proverene parking prostore blizu aerodroma sa dostupnošću u realnom vremenu i cijenama.',
+    title: 'Find',
+    desc: 'Browse verified parking spaces near airports with real-time availability and pricing.',
     image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=500&h=400&fit=crop&auto=format&q=80',
   },
   {
     num: 2,
-    title: 'Odabir',
-    desc: 'Odaberite parking spot i potvrdite rezervaciju. Instant potvrda će stići na vašu e-poštu.',
+    title: 'Select',
+    desc: 'Choose your parking spot and confirm your reservation. Instant confirmation delivered to your email.',
     image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=500&h=400&fit=crop&auto=format&q=80',
   },
   {
     num: 3,
-    title: 'Parking dozvola',
-    desc: 'Primite digitalnu parking dozvolu odmah. Pokažite je pri dolasku — nije potrebno štampanje.',
+    title: 'Parking Pass',
+    desc: 'Receive your digital parking pass instantly. Show it on arrival — no printing needed.',
     image: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=500&h=400&fit=crop&auto=format&q=80',
   },
 ];
 
 const BENEFITS = [
   {
-    title: 'Garantirano parking mjesto',
-    description: 'Vaše mjesto je rezervirano i čeka vas. Bez pretraživanja, bez razočaranja.',
+    title: 'Guaranteed Parking Space',
+    description: 'Your spot is reserved and waiting for you. No searching, no disappointments.',
   },
   {
-    title: 'Rezervirajte u 2 minute',
-    description: 'Brz i jednostavan proces rezervacije sa trenutnom potvrdom.',
+    title: 'Reserve in 2 Minutes',
+    description: 'Fast and simple booking process with instant confirmation.',
   },
   {
-    title: 'Uštedite do 70%',
-    description: 'Znatno jeftinije od aerodromskog parkinga sa zajamčenom kvalitetom.',
+    title: 'Save Up to 70%',
+    description: 'Significantly cheaper than airport parking with guaranteed quality.',
   },
 ];
 
@@ -47,9 +47,9 @@ export function HowItWorks({ airport = 'Airport' }: HowItWorksProps) {
     <section className="w-full px-6 md:px-12 py-16 bg-white border-b border-black/10">
       <div className="max-w-6xl mx-auto">
 
-        {/* How It Works — Same width as Zašto PayParq */}
+        {/* How It Works — Same width as Why PayParq */}
         <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-black mb-12">
-          Kako radi
+          How It Works
         </h2>
 
         <div className="max-w-4xl space-y-16 mb-20">
@@ -78,7 +78,7 @@ export function HowItWorks({ airport = 'Airport' }: HowItWorksProps) {
 
         {/* Why Choose PayParq — Same width as How It Works */}
         <div className="border-t border-black/10 pt-12 max-w-4xl">
-          <h2 className="text-2xl font-semibold tracking-tight text-black mb-8">Zašto PayParq?</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-black mb-8">Why PayParq?</h2>
           <div className="grid md:grid-cols-3 gap-6">
             {BENEFITS.map((b, idx) => (
               <div key={idx} className="flex gap-4">
