@@ -2493,8 +2493,8 @@ export function SearchPage() {
 
         {/* Price Breakdown Modal */}
         {showPriceBreakdown && selectedListing && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4">
+          <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4 z-[10000]">
               <div className="space-y-4">
                 <p className="text-lg font-bold text-gray-900">{t('Pregled cijene', locale)}</p>
 
@@ -3158,8 +3158,8 @@ export function SearchPage() {
                 {showThingsToKnow && (
                   <div className="space-y-2 text-xs text-gray-900 leading-relaxed mt-2 ml-6">
                     {selectedListing.thingsToKnow
-                      ? selectedListing.thingsToKnow.split('\n\n').map((p, i) => <p key={i}>{p}</p>)
-                      : <p className="text-gray-400">Nema dostupnih informacija.</p>}
+                      ? selectedListing.thingsToKnow.split('\n\n').map((p, i) => <p key={i}>{translateText(p, locale)}</p>)
+                      : <p className="text-gray-400">{t('Nema dostupnih informacija.', locale)}</p>}
                   </div>
                 )}
               </div>
@@ -3194,8 +3194,8 @@ export function SearchPage() {
                 {showAccessHours && (
                   <div className="space-y-1 mt-2 ml-6 text-xs text-gray-900 leading-relaxed">
                     {selectedListing.accessHours
-                      ? selectedListing.accessHours.split('\n').map((line, i) => <p key={i}>{line}</p>)
-                      : <p className="text-gray-400">Nema dostupnih informacija o radnom vremenu.</p>}
+                      ? selectedListing.accessHours.split('\n').map((line, i) => <p key={i}>{translateText(line, locale)}</p>)
+                      : <p className="text-gray-400">{t('Nema dostupnih informacija o radnom vremenu.', locale)}</p>}
                   </div>
                 )}
               </div>
