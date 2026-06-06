@@ -303,7 +303,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const reserveUsesDailyPricing = dailyPrice > 0 && reserveSubtotal < allHourly;
   const reserveServiceFee = Math.min(1.99, +(0.99 + reserveSubtotal * 0.10).toFixed(2));
   const reserveTotalAmount = reserveSubtotal + reserveServiceFee;
-  const reserveTotalPriceLabel = `€${reserveTotalAmount.toFixed(2)}`;
+  const reserveTotalPriceLabel = `€${reserveSubtotal.toFixed(2)}`;
   const reserveDurationLabel = reserveUsesDailyPricing
     ? `${totalDays} days (${formatEur(dailyPrice)}/day)`
     : `${totalHours} hours (${formatEur(hourlyPrice)}/hr)`;
