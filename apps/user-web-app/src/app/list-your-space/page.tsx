@@ -270,8 +270,8 @@ export default function ListYourSpace() {
                 </form>
               </div>
 
-              <div className="md:order-1 md:col-span-1 order-2">
-                <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight mb-4">
+              <div className="md:order-1 md:col-span-1 order-2 mt-8 md:mt-0">
+                <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight mb-4">
                   <span className="text-white">Zarađujte rentajući parking mjesta</span> <span className="text-white">s Payparqom.</span>
                 </h1>
                 <p className="text-lg text-white mb-8">
@@ -587,10 +587,10 @@ export default function ListYourSpace() {
             </p>
             <Link
               href="#register-form"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white text-sm font-semibold shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer"
+              className="inline-flex items-center gap-1 md:gap-2 px-3 md:px-6 py-2 md:py-3 rounded-full bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white text-xs md:text-sm font-semibold shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer"
             >
               <span>Oglasite svoje parkirno mjesto</span>
-              <span className="text-lg">→</span>
+              <span className="text-sm md:text-lg">→</span>
             </Link>
           </div>
         </section>
@@ -702,10 +702,10 @@ export default function ListYourSpace() {
                 e.preventDefault();
                 document.documentElement.scrollTop = 0;
               }}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white font-semibold hover:shadow-xl transition-all whitespace-nowrap cursor-pointer"
+              className="inline-flex items-center gap-1 md:gap-2 px-3 md:px-6 py-2 md:py-3 rounded-full bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white text-xs md:text-sm font-semibold hover:shadow-xl transition-all whitespace-nowrap cursor-pointer"
             >
               <span>Oglasite odmah</span>
-              <span>→</span>
+              <span className="text-sm md:text-base">→</span>
             </a>
           </div>
         </div>

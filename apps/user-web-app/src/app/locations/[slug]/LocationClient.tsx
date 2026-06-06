@@ -1267,10 +1267,14 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       </button>
                     </div>
                     <div className="border-t border-gray-100 pt-2 flex justify-center">
-                      <div className="p-2 w-full flex flex-col items-center gap-0">
+                      <button
+                        type="button"
+                        onClick={() => setShowBreakdown(true)}
+                        className="p-2 w-full flex flex-col items-center gap-0 md:cursor-default hover:bg-gray-50 md:hover:bg-transparent transition md:transition-none"
+                      >
                         <span className="font-semibold text-black" style={{ fontSize: '20px' }}>{reserveTotalPriceLabel}</span>
-                        <span className="text-xs text-gray-500 border-b border-gray-400 pb-0.5">{t('Ukupno', locale)}</span>
-                      </div>
+                        <span className="text-xs text-gray-500 border-b border-gray-400 pb-0.5 md:hover:border-gray-400 md:cursor-default">{t('Ukupno', locale)}</span>
+                      </button>
                     </div>
                   </>
                 ) : (
@@ -1458,7 +1462,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     >
                       <span className="inline-flex items-center gap-3">
                         <Car className="w-5 h-5 text-[#5F3DFC] shrink-0" />
-                        <span className="text-sm md:text-base font-semibold">How it works</span>
+                        <span className="text-sm md:text-base font-semibold">{t('How it works', locale)}</span>
                       </span>
                       {openSections.howItWorks ? (
                         <Minus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
@@ -1709,7 +1713,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     >
                       <span className="inline-flex items-center gap-3">
                         <Info className="w-5 h-5 text-[#5F3DFC] shrink-0" />
-                        <span className="text-sm md:text-base font-semibold">About the location</span>
+                        <span className="text-sm md:text-base font-semibold">{t('Things You Should Know', locale)}</span>
                       </span>
                       {openSections.about ? (
                         <Minus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
@@ -1722,18 +1726,18 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         <h2 className="text-xl md:text-2xl font-semibold tracking-tight">{locationName}</h2>
                         <div className="grid md:grid-cols-2 gap-3">
                           {[
-                            { q: "City", a: cityName },
-                            { q: "Coordinates", a: typeof hub.latitude === "number" && typeof hub.longitude === "number" ? `${hub.latitude.toFixed(5)}, ${hub.longitude.toFixed(5)}` : "N/A" },
-                            { q: `Udaljenost do ${referencePoints.airport.name}`, a: distAirportDisplay },
-                            { q: `Udaljenost do ${referencePoints.trogir.name}`, a: distTrogirDisplay },
-                            { q: `Udaljenost do ${referencePoints.marina.name}`, a: distMarinaDisplay },
-                            { q: "Typical transfer time", a: travelTime },
-                            { q: "Parking types", a: "Open‑air and covered bays" },
-                            { q: "Sati", a: "24/7 operacije" },
-                            { q: "Payment", a: "Stripe secure checkout" },
-                            { q: "Security", a: "AI cameras and recorded entry/exit" },
-                            { q: "Access", a: "License plate recognition" },
-                            { q: "Support", a: "WhatsApp 24/7 City Manager" },
+                            { q: locale === 'hr' ? 'Grad' : 'City', a: cityName },
+                            { q: locale === 'hr' ? 'Koordinate' : 'Coordinates', a: typeof hub.latitude === "number" && typeof hub.longitude === "number" ? `${hub.latitude.toFixed(5)}, ${hub.longitude.toFixed(5)}` : "N/A" },
+                            { q: locale === 'hr' ? `Udaljenost do ${referencePoints.airport.name}` : `Distance to ${referencePoints.airport.name}`, a: distAirportDisplay },
+                            { q: locale === 'hr' ? `Udaljenost do ${referencePoints.trogir.name}` : `Distance to ${referencePoints.trogir.name}`, a: distTrogirDisplay },
+                            { q: locale === 'hr' ? `Udaljenost do ${referencePoints.marina.name}` : `Distance to ${referencePoints.marina.name}`, a: distMarinaDisplay },
+                            { q: locale === 'hr' ? 'Vrijeme putovanja' : 'Typical transfer time', a: travelTime },
+                            { q: locale === 'hr' ? 'Vrste parkinga' : 'Parking types', a: locale === 'hr' ? 'Otvorena i pokrivena mjesta' : 'Open‑air and covered bays' },
+                            { q: locale === 'hr' ? 'Sati' : 'Hours', a: locale === 'hr' ? '24/7 operacije' : '24/7 operations' },
+                            { q: locale === 'hr' ? 'Plaćanje' : 'Payment', a: locale === 'hr' ? 'Sigurna Stripe blagajna' : 'Stripe secure checkout' },
+                            { q: locale === 'hr' ? 'Sigurnost' : 'Security', a: locale === 'hr' ? 'AI kamere i snimljena ulaza/izlaza' : 'AI cameras and recorded entry/exit' },
+                            { q: locale === 'hr' ? 'Pristup' : 'Access', a: locale === 'hr' ? 'Prepoznavanje registarske tablice' : 'License plate recognition' },
+                            { q: locale === 'hr' ? 'Podrška' : 'Support', a: locale === 'hr' ? 'WhatsApp 24/7 Upravitelj grada' : 'WhatsApp 24/7 City Manager' },
                           ].map((item) => (
                             <div key={item.q} className="px-2 py-2">
                               <p className="text-xs font-semibold">{item.q}</p>
