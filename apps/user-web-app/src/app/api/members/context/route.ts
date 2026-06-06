@@ -949,12 +949,12 @@ export async function GET(req: NextRequest) {
   if (isOperatorRole && identity.userId) {
     if (identity.role === "admin" || identity.role === "super_admin" || identity.role === "superadmin") {
       const isSuperadmin = identity.email?.toLowerCase() === 'payparq@outlook.com';
-      const query = client
+      let query = client
         .from("locations")
         .select("id,display_id");
 
       if (!isSuperadmin && identity.role === "admin") {
-        query.eq("owner_id", identity.userId);
+        query = query.eq("owner_id", identity.userId);
       }
 
       const { data: ownedLocations } = await query.limit(500);

@@ -1443,12 +1443,12 @@ export default function MembersPage() {
     if (!user || !supabase) { setOwnerListingsLoading(false); return; }
     setOwnerListingsLoading(true);
     const isSuperadmin = user.email?.toLowerCase() === 'payparq@outlook.com';
-    const query = supabase
+    let query = supabase
       .from('locations')
       .select('id, name, address, verification_status, capacity, display_id, verification_metadata');
 
     if (!isSuperadmin) {
-      query.eq('owner_id', user.id);
+      query = query.eq('owner_id', user.id);
     }
 
     query
