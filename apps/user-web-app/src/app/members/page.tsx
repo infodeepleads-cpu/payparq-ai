@@ -620,10 +620,22 @@ export default function MembersPage() {
   // Localhost bypass - force signed in state
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
   // Check if we're in Google OAuth flow — only used to show spinner, NOT to fake isSignedIn
-  const isInAuthFlow = typeof window !== 'undefined' && (
+  const hasOAuthParams = typeof window !== 'undefined' && (
     window.location.hash.includes('access_token') ||
+    new URLSearchParams(window.location.search).has('code')
+  );
+  const isInAuthFlow = typeof window !== 'undefined' && (
+    hasOAuthParams ||
     sessionStorage.getItem('auth_in_progress') === 'true'
   );
+
+  // Clear auth_in_progress on load if no OAuth params — prevents stuck spinner when
+  // OAuth resolves in external browser (iframe context) and never returns to this page
+  useEffect(() => {
+    if (!hasOAuthParams) {
+      sessionStorage.removeItem('auth_in_progress');
+    }
+  }, []);
 
   // Clear auth_in_progress once user is confirmed
   useEffect(() => {
@@ -631,6 +643,15 @@ export default function MembersPage() {
       sessionStorage.removeItem('auth_in_progress');
     }
   }, [user]);
+
+  // Safety timeout — if spinner shows but no user after 5s, clear it
+  useEffect(() => {
+    if (!isInAuthFlow) return;
+    const t = setTimeout(() => {
+      sessionStorage.removeItem('auth_in_progress');
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [isInAuthFlow]);
 
   // Lock scroll when sidebar open
   useEffect(() => {
