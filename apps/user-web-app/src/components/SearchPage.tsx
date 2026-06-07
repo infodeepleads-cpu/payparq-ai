@@ -249,7 +249,7 @@ export function SearchPage() {
 
   const [listings, setListings] = useState<Parking[]>([]);
   const [filteredListings, setFilteredListings] = useState<Parking[]>([]);
-  const [mapCenter, setMapCenter] = useState({ lat: 43.2919, lng: 16.3981 }); // Split Airport
+  const [mapCenter, setMapCenter] = useState({ lat: 43.5388, lng: 16.2978 }); // Split Airport (SPU Kaštela)
   const [selectedListing, setSelectedListing] = useState<Parking | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const isAppRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/app');
@@ -619,7 +619,7 @@ export function SearchPage() {
     if (paramLat || paramLng || paramName) return; // partial params, don't fall through
 
     // No automatic geolocation — default to Split Airport
-    setMapCenter({ lat: 43.2919, lng: 16.3981 });
+    setMapCenter({ lat: 43.5388, lng: 16.2978 });
     setLocationReady(true);
   }, [searchParams, isLoaded]);
 

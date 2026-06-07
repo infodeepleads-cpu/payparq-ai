@@ -26,12 +26,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         setUser(data.session?.user ?? null);
       }
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      if (event === 'SIGNED_IN' && session?.user) {
-        setShowLoginPrompt(false);
-        setShowDashboard(true);
-      }
     });
     return () => listener.subscription.unsubscribe();
   }, []);
@@ -40,6 +36,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const saved = localStorage.getItem('payparq_user_data');
     if (saved) {
       try { setLocalUserData(JSON.parse(saved)); } catch {}
+    }
+    // Open dashboard if redirected back after sign-in
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('dashboard') === '1') {
+        setShowDashboard(true);
+        params.delete('dashboard');
+        const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        window.history.replaceState({}, '', newUrl);
+      }
     }
   }, []);
 
@@ -77,7 +83,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     try {
       await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/members` },
+        options: { redirectTo: `${window.location.origin}/app?dashboard=1` },
       });
     } catch {
       setSigningIn(false);
