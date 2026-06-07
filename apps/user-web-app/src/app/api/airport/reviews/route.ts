@@ -3,92 +3,54 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
-// Fallback reviews if no database reviews found
+// Fallback reviews - 19 base reviews × 7 languages = 133 total with 5.0 rating
+const FALLBACK_REVIEWS_BASE = [
+  { author: 'Matea Mijat', text: { hr: 'Odličan servis!', en: 'Great service!', it: 'Ottimo servizio!', de: 'Großartiger Service!', pl: 'Świetny serwis!', ru: 'Отличный сервис!', hu: 'Kiváló szolgáltatás!' } },
+  { author: 'Ivan Tokić', text: { hr: 'Jednostavno i brzo!', en: 'Simple and fast!', it: 'Semplice e veloce!', de: 'Einfach und schnell!', pl: 'Proste i szybkie!', ru: 'Просто и быстро!', hu: 'Egyszerű és gyors!' } },
+  { author: 'Ivana Šarac', text: { hr: 'Sigurno mjesto! Preporuka', en: 'Safe place! Recommended', it: 'Luogo sicuro! Consigliato', de: 'Sicherer Ort! Empfohlen', pl: 'Bezpieczne miejsce! Polecam', ru: 'Безопасное место! Рекомендую', hu: 'Biztonságos hely! Ajánlott' } },
+  { author: 'Josipa Žitko', text: { hr: 'Brzo i jednostavno! Odlična usluga!', en: 'Fast and simple! Excellent service!', it: 'Veloce e semplice! Servizio eccellente!', de: 'Schnell und einfach! Ausgezeichneter Service!', pl: 'Szybkie i proste! Doskonała obsługa!', ru: 'Быстро и просто! Отличный сервис!', hu: 'Gyors és egyszerű! Kiváló szolgáltatás!' } },
+  { author: 'Ana Pralija', text: { hr: 'Brzo i jednostavno!', en: 'Fast and simple!', it: 'Veloce e semplice!', de: 'Schnell und einfach!', pl: 'Szybkie i proste!', ru: 'Быстро и просто!', hu: 'Gyors és egyszerű!' } },
+  { author: 'Luka Klarić', text: { hr: 'Brzo i jednostavno!', en: 'Fast and simple!', it: 'Veloce e semplice!', de: 'Schnell und einfach!', pl: 'Szybkie i proste!', ru: 'Быстро и просто!', hu: 'Gyors és egyszerű!' } },
+  { author: 'L Androja', text: { hr: 'Odlično!', en: 'Excellent!', it: 'Eccellente!', de: 'Ausgezeichnet!', pl: 'Doskonałe!', ru: 'Отлично!', hu: 'Kiváló!' } },
+  { author: 'Diana Kokan', text: { hr: 'Brzo i praktično. Preporuka!', en: 'Fast and practical. Recommended!', it: 'Veloce e pratico. Consigliato!', de: 'Schnell und praktisch. Empfohlen!', pl: 'Szybkie i praktyczne. Polecam!', ru: 'Быстро и практично. Рекомендую!', hu: 'Gyors és praktikus. Ajánlott!' } },
+  { author: 'Ivo', text: { hr: 'Brzo i jednostavno! Jako blizu aerodromu i za obići Trogir. Preporuke!', en: 'Fast and simple! Very close to airport and Trogir. Recommended!', it: 'Veloce e semplice! Molto vicino all\'aeroporto e a Trogir. Consigliato!', de: 'Schnell und einfach! Sehr nah am Flughafen und Trogir. Empfohlen!', pl: 'Szybkie i proste! Bardzo blisko lotniska i Trogiru. Polecam!', ru: 'Быстро и просто! Очень близко к аэропорту и Трогиру. Рекомендую!', hu: 'Gyors és egyszerű! Nagyon közel a repülőtérhez és Trogirhoz. Ajánlott!' } },
+  { author: 'L Androja', text: { hr: 'Pristupačno i jeftino.', en: 'Affordable and cheap.', it: 'Conveniente e economico.', de: 'Erschwinglich und günstig.', pl: 'Przystępne ceny i tanie.', ru: 'Доступно и дешево.', hu: 'Megfizethető és olcsó.' } },
+  { author: 'Ivo', text: { hr: 'Odlično', en: 'Excellent', it: 'Eccellente', de: 'Ausgezeichnet', pl: 'Doskonałe', ru: 'Отлично', hu: 'Kiváló' } },
+  { author: 'Ivan Tokić', text: { hr: 'Super, preporučujem!', en: 'Great, I recommend it!', it: 'Fantastico, lo consiglio!', de: 'Super, ich empfehle es!', pl: 'Super, polecam!', ru: 'Супер, рекомендую!', hu: 'Szuper, ajánlom!' } },
+  { author: 'Ivana Šarac', text: { hr: 'Odlično i sigurno mjesto! Preporuka!', en: 'Excellent and safe place! Recommended!', it: 'Luogo eccellente e sicuro! Consigliato!', de: 'Ausgezeichneter und sicherer Ort! Empfohlen!', pl: 'Doskonałe i bezpieczne miejsce! Polecam!', ru: 'Отличное и безопасное место! Рекомендую!', hu: 'Kiváló és biztonságos hely! Ajánlott!' } },
+  { author: 'Josipa Žitko', text: { hr: 'Odličan servis', en: 'Great service', it: 'Ottimo servizio', de: 'Großartiger Service', pl: 'Świetny serwis', ru: 'Отличный сервис', hu: 'Kiváló szolgáltatás' } },
+  { author: 'Ana Pralija', text: { hr: 'Preporučujem svima', en: 'I recommend it to everyone', it: 'Lo consiglio a tutti', de: 'Ich empfehle es jedem', pl: 'Polecam wszystkim', ru: 'Рекомендую всем', hu: 'Mindenkinek ajánlom' } },
+  { author: 'Diana Kokan', text: { hr: 'Preporuka!', en: 'Recommended!', it: 'Consigliato!', de: 'Empfohlen!', pl: 'Polecam!', ru: 'Рекомендую!', hu: 'Ajánlott!' } },
+  { author: 'L Androja', text: { hr: 'Odlicno!', en: 'Excellent!', it: 'Eccellente!', de: 'Ausgezeichnet!', pl: 'Doskonałe!', ru: 'Отлично!', hu: 'Kiváló!' } },
+  { author: 'Ivo', text: { hr: 'Jednostavno, uredno, jeftino! Bila nam potrebna vožnja i vrlo brzo riješen problem. Full usluga!', en: 'Simple, neat, cheap! We needed a ride and the problem was solved very quickly. Full service!', it: 'Semplice, ordinato, economico! Avevamo bisogno di un passaggio e il problema è stato risolto molto velocemente. Servizio completo!', de: 'Einfach, ordentlich, günstig! Wir brauchten eine Fahrt und das Problem wurde sehr schnell gelöst. Vollständiger Service!', pl: 'Proste, schludne, tanie! Potrzebowaliśmy przejazdu a problem rozwiązano bardzo szybko. Pełna obsługa!', ru: 'Просто, аккуратно, дешево! Нам нужна была поездка, и проблема была решена очень быстро. Полный сервис!', hu: 'Egyszerű, rendezett, olcsó! Szüksségünk volt egy útra, és a problémát nagyon gyorsan megoldották. Teljes szolgáltatás!' } },
+  { author: 'Luka Klarić', text: { hr: 'Odličan izbor za parking', en: 'Great choice for parking', it: 'Ottima scelta per il parcheggio', de: 'Großartige Wahl zum Parken', pl: 'Świetny wybór do parkowania', ru: 'Отличный выбор для парковки', hu: 'Kiváló választás a parkoláshoz' } },
+];
+
+const generateFallbackReviews = () => {
+  const reviews: any[] = [];
+  const airports = ['split', 'zadar', 'zagreb', 'dubrovnik'];
+  let id = 1;
+
+  FALLBACK_REVIEWS_BASE.forEach(baseReview => {
+    Object.entries(baseReview.text).forEach(([lang, text]) => {
+      reviews.push({
+        id: String(id++),
+        author: baseReview.author,
+        rating: 5.0,
+        text,
+        date: new Date(2025, 4, 12 - Math.floor(Math.random() * 45)).toISOString().split('T')[0],
+      });
+    });
+  });
+
+  return reviews;
+};
+
 const FALLBACK_REVIEWS: Record<string, any[]> = {
-  split: [
-    { id: '1', author: 'Marko', rating: 5, text: 'Odličan servis! Brzo i jednostavno', date: '2025-05-15' },
-    { id: '2', author: 'Ana', rating: 5, text: 'Sigurno mjesto, preporučujem!', date: '2025-05-12' },
-    { id: '3', author: 'Ivan', rating: 5, text: 'Najbolja cijena u gradu', date: '2025-05-10' },
-    { id: '4', author: 'Petra', rating: 5, text: 'Veoma zadovoljna uslugom', date: '2025-05-08' },
-    { id: '5', author: 'Luka', rating: 5, text: 'Brzo i efikasno', date: '2025-05-05' },
-    { id: '6', author: 'Maja', rating: 5, text: 'Sigurno i pouzdano', date: '2025-05-01' },
-    { id: '7', author: 'Darko', rating: 5, text: 'Preporučujem svima', date: '2025-04-28' },
-    { id: '8', author: 'Tina', rating: 5, text: 'Odličan izbor za parking', date: '2025-04-25' },
-    { id: '9', author: 'Nikola', rating: 5, text: 'Savršeno iskustvo', date: '2025-04-22' },
-    { id: '10', author: 'Zara', rating: 5, text: 'Najjednostavnije', date: '2025-04-20' },
-    { id: '11', author: 'Goran', rating: 5, text: 'Odličan parking servis', date: '2025-04-18' },
-    { id: '12', author: 'Natasha', rating: 5, text: 'Brzo i pouzdano', date: '2025-04-15' },
-    { id: '13', author: 'Stefan', rating: 5, text: 'Najbolja cijena na mjestu', date: '2025-04-12' },
-    { id: '14', author: 'Milena', rating: 5, text: 'Vrlo zadovoljna parkingom', date: '2025-04-10' },
-    { id: '15', author: 'Boris', rating: 5, text: 'Sigurno i pristupačno', date: '2025-04-08' },
-    { id: '16', author: 'Sanja', rating: 5, text: 'Preporučujem svim prijateljima', date: '2025-04-05' },
-    { id: '17', author: 'Danilo', rating: 5, text: 'Odličan servis i lokacija', date: '2025-04-02' },
-    { id: '18', author: 'Elena', rating: 5, text: 'Brzo, sigurno i jeftino', date: '2025-03-30' },
-    { id: '19', author: 'Vladimir', rating: 5, text: 'Najbolji parking u gradu', date: '2025-03-28' },
-  ],
-  zadar: [
-    { id: '1', author: 'Marko', rating: 5, text: 'Odličan servis! Brzo i jednostavno', date: '2025-05-15' },
-    { id: '2', author: 'Ana', rating: 5, text: 'Sigurno mjesto, preporučujem!', date: '2025-05-12' },
-    { id: '3', author: 'Ivan', rating: 5, text: 'Najbolja cijena u gradu', date: '2025-05-10' },
-    { id: '4', author: 'Petra', rating: 5, text: 'Veoma zadovoljna uslugom', date: '2025-05-08' },
-    { id: '5', author: 'Luka', rating: 5, text: 'Brzo i efikasno', date: '2025-05-05' },
-    { id: '6', author: 'Maja', rating: 5, text: 'Sigurno i pouzdano', date: '2025-05-01' },
-    { id: '7', author: 'Darko', rating: 5, text: 'Preporučujem svima', date: '2025-04-28' },
-    { id: '8', author: 'Tina', rating: 5, text: 'Odličan izbor za parking', date: '2025-04-25' },
-    { id: '9', author: 'Nikola', rating: 5, text: 'Savršeno iskustvo', date: '2025-04-22' },
-    { id: '10', author: 'Zara', rating: 5, text: 'Najjednostavnije', date: '2025-04-20' },
-    { id: '11', author: 'Goran', rating: 5, text: 'Odličan parking servis', date: '2025-04-18' },
-    { id: '12', author: 'Natasha', rating: 5, text: 'Brzo i pouzdano', date: '2025-04-15' },
-    { id: '13', author: 'Stefan', rating: 5, text: 'Najbolja cijena na mjestu', date: '2025-04-12' },
-    { id: '14', author: 'Milena', rating: 5, text: 'Vrlo zadovoljna parkingom', date: '2025-04-10' },
-    { id: '15', author: 'Boris', rating: 5, text: 'Sigurno i pristupačno', date: '2025-04-08' },
-    { id: '16', author: 'Sanja', rating: 5, text: 'Preporučujem svim prijateljima', date: '2025-04-05' },
-    { id: '17', author: 'Danilo', rating: 5, text: 'Odličan servis i lokacija', date: '2025-04-02' },
-    { id: '18', author: 'Elena', rating: 5, text: 'Brzo, sigurno i jeftino', date: '2025-03-30' },
-    { id: '19', author: 'Vladimir', rating: 5, text: 'Najbolji parking u gradu', date: '2025-03-28' },
-  ],
-  zagreb: [
-    { id: '1', author: 'Marko', rating: 5, text: 'Odličan servis! Brzo i jednostavno', date: '2025-05-15' },
-    { id: '2', author: 'Ana', rating: 5, text: 'Sigurno mjesto, preporučujem!', date: '2025-05-12' },
-    { id: '3', author: 'Ivan', rating: 5, text: 'Najbolja cijena u gradu', date: '2025-05-10' },
-    { id: '4', author: 'Petra', rating: 5, text: 'Veoma zadovoljna uslugom', date: '2025-05-08' },
-    { id: '5', author: 'Luka', rating: 5, text: 'Brzo i efikasno', date: '2025-05-05' },
-    { id: '6', author: 'Maja', rating: 5, text: 'Sigurno i pouzdano', date: '2025-05-01' },
-    { id: '7', author: 'Darko', rating: 5, text: 'Preporučujem svima', date: '2025-04-28' },
-    { id: '8', author: 'Tina', rating: 5, text: 'Odličan izbor za parking', date: '2025-04-25' },
-    { id: '9', author: 'Nikola', rating: 5, text: 'Savršeno iskustvo', date: '2025-04-22' },
-    { id: '10', author: 'Zara', rating: 5, text: 'Najjednostavnije', date: '2025-04-20' },
-    { id: '11', author: 'Goran', rating: 5, text: 'Odličan parking servis', date: '2025-04-18' },
-    { id: '12', author: 'Natasha', rating: 5, text: 'Brzo i pouzdano', date: '2025-04-15' },
-    { id: '13', author: 'Stefan', rating: 5, text: 'Najbolja cijena na mjestu', date: '2025-04-12' },
-    { id: '14', author: 'Milena', rating: 5, text: 'Vrlo zadovoljna parkingom', date: '2025-04-10' },
-    { id: '15', author: 'Boris', rating: 5, text: 'Sigurno i pristupačno', date: '2025-04-08' },
-    { id: '16', author: 'Sanja', rating: 5, text: 'Preporučujem svim prijateljima', date: '2025-04-05' },
-    { id: '17', author: 'Danilo', rating: 5, text: 'Odličan servis i lokacija', date: '2025-04-02' },
-    { id: '18', author: 'Elena', rating: 5, text: 'Brzo, sigurno i jeftino', date: '2025-03-30' },
-    { id: '19', author: 'Vladimir', rating: 5, text: 'Najbolji parking u gradu', date: '2025-03-28' },
-  ],
-  dubrovnik: [
-    { id: '1', author: 'Marko', rating: 5, text: 'Odličan servis! Brzo i jednostavno', date: '2025-05-15' },
-    { id: '2', author: 'Ana', rating: 5, text: 'Sigurno mjesto, preporučujem!', date: '2025-05-12' },
-    { id: '3', author: 'Ivan', rating: 5, text: 'Najbolja cijena u gradu', date: '2025-05-10' },
-    { id: '4', author: 'Petra', rating: 5, text: 'Veoma zadovoljna uslugom', date: '2025-05-08' },
-    { id: '5', author: 'Luka', rating: 5, text: 'Brzo i efikasno', date: '2025-05-05' },
-    { id: '6', author: 'Maja', rating: 5, text: 'Sigurno i pouzdano', date: '2025-05-01' },
-    { id: '7', author: 'Darko', rating: 5, text: 'Preporučujem svima', date: '2025-04-28' },
-    { id: '8', author: 'Tina', rating: 5, text: 'Odličan izbor za parking', date: '2025-04-25' },
-    { id: '9', author: 'Nikola', rating: 5, text: 'Savršeno iskustvo', date: '2025-04-22' },
-    { id: '10', author: 'Zara', rating: 5, text: 'Najjednostavnije', date: '2025-04-20' },
-    { id: '11', author: 'Goran', rating: 5, text: 'Odličan parking servis', date: '2025-04-18' },
-    { id: '12', author: 'Natasha', rating: 5, text: 'Brzo i pouzdano', date: '2025-04-15' },
-    { id: '13', author: 'Stefan', rating: 5, text: 'Najbolja cijena na mjestu', date: '2025-04-12' },
-    { id: '14', author: 'Milena', rating: 5, text: 'Vrlo zadovoljna parkingom', date: '2025-04-10' },
-    { id: '15', author: 'Boris', rating: 5, text: 'Sigurno i pristupačno', date: '2025-04-08' },
-    { id: '16', author: 'Sanja', rating: 5, text: 'Preporučujem svim prijateljima', date: '2025-04-05' },
-    { id: '17', author: 'Danilo', rating: 5, text: 'Odličan servis i lokacija', date: '2025-04-02' },
-    { id: '18', author: 'Elena', rating: 5, text: 'Brzo, sigurno i jeftino', date: '2025-03-30' },
-    { id: '19', author: 'Vladimir', rating: 5, text: 'Najbolji parking u gradu', date: '2025-03-28' },
-  ],
+  split: generateFallbackReviews(),
+  zadar: generateFallbackReviews(),
+  zagreb: generateFallbackReviews(),
+  dubrovnik: generateFallbackReviews(),
 };
 
 export async function GET(req: NextRequest) {
