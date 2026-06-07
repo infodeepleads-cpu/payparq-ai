@@ -2702,7 +2702,7 @@ export function SearchPage() {
         {/* Mobile List/Map - Hidden when details open */}
         {!showMobileDetails && (showMobileMap ? (
           <div className="flex-1 overflow-hidden w-full relative">
-            {filteredListings.length === 0 && (
+            {filteredListings.length === 0 && searchLocationPin && (
               <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center flex-col gap-4">
                 <div className="bg-white rounded-lg p-6 text-center max-w-sm shadow-lg">
                   <p className="text-gray-900 font-semibold mb-2">{t('Nema dostupnih mjesta blizu tog područja', locale)}</p>
@@ -2799,7 +2799,7 @@ export function SearchPage() {
                   mapRef.current?.panTo(loc);
                 });
               }}
-              className="absolute bottom-28 right-4 w-10 h-10 rounded-full bg-white shadow-lg border border-black/10 flex items-center justify-center hover:bg-gray-50 transition z-10"
+              className="fixed bottom-28 right-4 w-10 h-10 rounded-full bg-white shadow-lg border border-black/10 flex items-center justify-center hover:bg-gray-50 transition z-[1050]"
               aria-label="My location"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
