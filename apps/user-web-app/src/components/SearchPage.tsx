@@ -2563,7 +2563,6 @@ export function SearchPage() {
               rotateControl: false,
               scaleControl: false,
               panControl: false,
-              padding: { bottom: 24 },
               styles: [
                 {
                   featureType: 'poi',
@@ -2722,7 +2721,6 @@ export function SearchPage() {
                   rotateControl: false,
                   scaleControl: false,
                   panControl: false,
-                  padding: { bottom: 24 },
                 }}
                 onLoad={(map) => {
                   mapRef.current = map;
