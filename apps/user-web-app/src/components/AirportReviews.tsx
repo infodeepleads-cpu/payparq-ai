@@ -69,6 +69,14 @@ export function AirportReviews({ airport, locationName }: AirportReviewsProps) {
 
   if (!reviews.length) return null;
 
+  // Filter to show only Croatian reviews in carousel, but keep total count
+  const croatianReviews = reviews.filter(r => {
+    // Detect Croatian by presence of Croatian characters (č, ć, š, ž, đ)
+    return /[čćšžđČĆŠŽĐ]/.test(r.text);
+  });
+
+  const displayReviews = croatianReviews.length > 0 ? croatianReviews : reviews;
+  const totalReviewCount = reviews.length;
   const averageRating = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -124,14 +132,14 @@ export function AirportReviews({ airport, locationName }: AirportReviewsProps) {
                 ))}
               </div>
               <span className="text-xs font-bold text-black">{averageRating}</span>
-              <span className="text-xs text-black/50">({reviews.length})</span>
+              <span className="text-xs text-black/50">({totalReviewCount})</span>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <button onClick={() => scroll('left')} className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center hover:bg-black/80 transition text-xs flex-shrink-0">←</button>
             <div ref={scrollContainerRef} className="flex gap-3 overflow-x-auto pb-2 scroll-smooth scrollbar-hide flex-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {reviews.map((review, idx) => (
+              {displayReviews.map((review, idx) => (
                 <div key={idx} className="flex-shrink-0 w-40 h-52 bg-white rounded-lg border border-black/10 p-4 shadow-sm flex flex-col">
                   <div className="flex items-center justify-between mb-2">
                     <div className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">
