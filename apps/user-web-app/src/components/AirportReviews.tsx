@@ -119,8 +119,8 @@ export function AirportReviews({ airport, locationName }: AirportReviewsProps) {
 
       <section className="w-full px-6 md:px-12 py-10 border-b border-black/10 bg-white">
         <div className="max-w-6xl mx-auto">
-          <div className="mb-5 flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="mb-5">
+            <div className="flex items-center gap-2 mb-2">
               <div className="flex items-center gap-1.5">
                 <GoogleLogo />
                 <span className="text-xs font-semibold text-black/70">Google Reviews</span>
@@ -134,14 +134,7 @@ export function AirportReviews({ airport, locationName }: AirportReviewsProps) {
               <span className="text-xs font-bold text-black">{averageRating}</span>
               <span className="text-xs text-black/50">({totalReviewCount})</span>
             </div>
-            <div className="flex gap-3">
-              <a href="https://www.google.com/search?q=payparq" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-800 underline">
-                Read some of our reviews
-              </a>
-              <a href="https://www.google.com/search?q=payparq" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-800 underline">
-                Propose a review
-              </a>
-            </div>
+            <span className="text-xs text-black/60">Read some of our reviews</span>
           </div>
 
           <div className="flex items-center gap-3">
