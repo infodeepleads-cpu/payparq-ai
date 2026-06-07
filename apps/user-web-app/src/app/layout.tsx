@@ -95,6 +95,13 @@ export default async function RootLayout({
               logo: "https://www.payparq.com/logo.png",
               description:
                 "Payparq is the software-only platform for frictionless parking, access, and urban mobility for drivers, operators, and modern cities.",
+              aggregateRating: {
+                "@type": "AggregateRating",
+                ratingValue: "5.0",
+                reviewCount: "133",
+                bestRating: "5",
+                worstRating: "1"
+              }
             }),
           }}
         />

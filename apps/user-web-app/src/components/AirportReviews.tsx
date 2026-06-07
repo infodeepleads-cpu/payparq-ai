@@ -131,7 +131,7 @@ export function AirportReviews({ airport, locationName }: AirportReviewsProps) {
           <div className="flex items-center gap-3">
             <button onClick={() => scroll('left')} className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center hover:bg-black/80 transition text-xs flex-shrink-0">←</button>
             <div ref={scrollContainerRef} className="flex gap-3 overflow-x-auto pb-2 scroll-smooth scrollbar-hide flex-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {reviews.slice(0, 19).map((review, idx) => (
+              {reviews.map((review, idx) => (
                 <div key={idx} className="flex-shrink-0 w-40 h-52 bg-white rounded-lg border border-black/10 p-4 shadow-sm flex flex-col">
                   <div className="flex items-center justify-between mb-2">
                     <div className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">
