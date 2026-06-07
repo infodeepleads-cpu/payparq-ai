@@ -2560,6 +2560,10 @@ export function SearchPage() {
               zoomControl: false,
               fullscreenControl: false,
               streetViewControl: false,
+              rotateControl: false,
+              scaleControl: false,
+              panControl: false,
+              padding: { bottom: 24 },
               styles: [
                 {
                   featureType: 'poi',
@@ -2714,6 +2718,11 @@ export function SearchPage() {
                   mapTypeControl: false,
                   streetViewControl: false,
                   fullscreenControl: false,
+                  zoomControl: false,
+                  rotateControl: false,
+                  scaleControl: false,
+                  panControl: false,
+                  padding: { bottom: 24 },
                 }}
                 onLoad={(map) => {
                   mapRef.current = map;

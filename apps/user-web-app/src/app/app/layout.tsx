@@ -158,9 +158,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           ) : (
             <button
               onClick={handleGoogleSignIn}
-              className="px-4 py-3 rounded-xl text-sm font-medium text-center w-full bg-blue-500 hover:bg-blue-600 text-white"
+              className="px-4 py-3 rounded-xl text-sm font-medium text-center w-full hover:bg-black/5 text-black"
             >
-              {locale === 'en' ? 'Sign in with Google' : 'Prijava s Googleom'}
+              {locale === 'en' ? 'Dashboard' : 'Upravljačka Ploča'}
             </button>
           )}
 
