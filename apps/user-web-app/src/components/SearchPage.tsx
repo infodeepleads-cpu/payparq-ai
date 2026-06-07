@@ -2537,7 +2537,7 @@ export function SearchPage() {
 
         {/* Vehicle Modal - Centered Overlay */}
         {/* Map 65% RIGHT (normal) or flex-1 RIGHT (details) */}
-        <div className={`bg-gray-100 ${showDetailsView ? 'flex-1' : 'w-[65%]'}`}>
+        <div className={`bg-gray-100 ${showDetailsView ? 'flex-1' : 'w-[65%]'} pb-16 pr-2`}>
           {!isLoaded ? (
             <div className="w-full h-full flex items-center justify-center">
               <div className="relative flex items-center justify-center w-14 h-14">
@@ -2557,6 +2557,9 @@ export function SearchPage() {
             }}
             options={{
               mapTypeControl: false,
+              zoomControl: false,
+              fullscreenControl: false,
+              streetViewControl: false,
               styles: [
                 {
                   featureType: 'poi',
@@ -2792,7 +2795,7 @@ export function SearchPage() {
                   mapRef.current?.panTo(loc);
                 });
               }}
-              className="fixed bottom-[108px] right-4 w-10 h-10 rounded-full bg-white shadow-lg border border-black/10 flex items-center justify-center hover:bg-gray-50 transition z-[1050]"
+              className="fixed bottom-[108px] right-6 w-10 h-10 rounded-full bg-white shadow-lg border border-black/10 flex items-center justify-center hover:bg-gray-50 transition z-[1050]"
               aria-label="My location"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
@@ -3312,7 +3315,7 @@ export function SearchPage() {
             </div>
 
             {/* Sticky Footer - Book Now Button */}
-            <div className="sticky bottom-0 px-4 py-6 border-t border-gray-200 bg-white flex items-center justify-center">
+            <div className="sticky bottom-0 px-6 py-6 border-t border-gray-200 bg-white flex items-center justify-center">
               <a
                 href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
                 className="block w-full px-5 py-5 bg-blue-500 text-white text-base font-bold rounded-lg hover:bg-blue-700 transition-colors text-center"
