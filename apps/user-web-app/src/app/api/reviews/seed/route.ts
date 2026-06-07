@@ -29,13 +29,16 @@ const reviewsBase = [
   { author: 'Luka Klarić', text: { hr: 'Odličan izbor za parking', en: 'Great choice for parking', it: 'Ottima scelta per il parcheggio', de: 'Großartige Wahl zum Parken', pl: 'Świetny wybór do parkowania', ru: 'Отличный выбор для парковки', hu: 'Kiváló választás a parkoláshoz' } },
 ];
 
-const reviews = reviewsBase.flatMap((review) =>
-  Object.entries(review.text).map(([lang, text], idx) => ({
+const languageOrder = ['hr', 'en', 'it', 'de', 'pl', 'ru', 'hu'];
+const airports = ['split', 'zadar', 'zagreb', 'dubrovnik'];
+
+const reviews = languageOrder.flatMap((lang, langIdx) =>
+  reviewsBase.map((review, reviewIdx) => ({
     author: review.author,
     rating: 5.0,
-    text,
+    text: (review.text as any)[lang],
     lang,
-    airport: ['split', 'zadar', 'zagreb', 'dubrovnik'][idx % 4],
+    airport: airports[reviewIdx % 4],
     date: '2025-05-12'
   }))
 );

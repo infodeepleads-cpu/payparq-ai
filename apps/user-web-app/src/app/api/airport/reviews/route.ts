@@ -28,18 +28,22 @@ const FALLBACK_REVIEWS_BASE = [
 
 const generateFallbackReviews = () => {
   const reviews: any[] = [];
-  const airports = ['split', 'zadar', 'zagreb', 'dubrovnik'];
+  const languageOrder = ['hr', 'en', 'it', 'de', 'pl', 'ru', 'hu'];
   let id = 1;
 
-  FALLBACK_REVIEWS_BASE.forEach(baseReview => {
-    Object.entries(baseReview.text).forEach(([lang, text]) => {
-      reviews.push({
-        id: String(id++),
-        author: baseReview.author,
-        rating: 5.0,
-        text,
-        date: new Date(2025, 4, 12 - Math.floor(Math.random() * 45)).toISOString().split('T')[0],
-      });
+  // Group by language first, then by author
+  languageOrder.forEach(lang => {
+    FALLBACK_REVIEWS_BASE.forEach(baseReview => {
+      const text = (baseReview.text as any)[lang];
+      if (text) {
+        reviews.push({
+          id: String(id++),
+          author: baseReview.author,
+          rating: 5.0,
+          text,
+          date: new Date(2025, 4, 12 - Math.floor(Math.random() * 45)).toISOString().split('T')[0],
+        });
+      }
     });
   });
 
