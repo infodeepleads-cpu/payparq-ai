@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useLocale } from '@/components/LocaleProvider';
 import type { User } from '@supabase/supabase-js';
-import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -15,20 +14,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
-    // Initialize Google Auth on native platforms
-    if (typeof window !== 'undefined') {
-      GoogleAuth.initialize({
-        clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
-        scopes: ['email', 'profile'],
-        forceCodeForRefreshToken: true
-      }).catch(err => console.log('GoogleAuth init (web fallback):', err));
-    }
-    // Try refreshing session first to avoid false "not logged in" on first load
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user);
       } else {
-        // Attempt token refresh before giving up
         const { data } = await supabase!.auth.refreshSession();
         setUser(data.session?.user ?? null);
       }
@@ -44,7 +33,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (saved) {
       try { setLocalUserData(JSON.parse(saved)); } catch {}
     }
-    // Open dashboard if redirected back after sign-in
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       if (params.get('dashboard') === '1') {
@@ -83,30 +71,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const handleGoogleSignIn = async () => {
     if (!supabase) return;
     try {
-      const result = await GoogleAuth.signIn();
-      if (result?.idToken) {
-        const { data, error } = await supabase.auth.signInWithIdToken({
-          provider: 'google',
-          token: result.idToken
-        });
-        if (error) {
-          console.error('Supabase sign-in error:', error);
-        } else {
-          setShowDashboard(true);
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/app?dashboard=1`,
+          skipBrowserRedirect: false
         }
-      }
+      });
     } catch (err) {
-      console.error('Google sign-in error:', err);
+      console.error('Sign in error:', err);
     }
   };
 
   return (
     <div className="min-h-screen">
-      {/* White status bar for Android */}
       <meta name="theme-color" content="#ffffff" />
       {children}
 
-      {/* Floating hamburger button — top right, fixed */}
+      {/* Floating hamburger button */}
       <button
         onClick={() => setMenuOpen(true)}
         className="fixed top-4 right-4 z-[1100] flex flex-col gap-[5px] p-2 md:top-[22px] md:py-[13px] bg-white rounded-lg shadow-md border border-black/10"
