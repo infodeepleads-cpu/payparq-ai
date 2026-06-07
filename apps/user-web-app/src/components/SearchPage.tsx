@@ -2778,6 +2778,7 @@ export function SearchPage() {
               </div>
             )}
             {/* My Location FAB */}
+            {!showMobileSearchEdit && (
             <button
               onClick={() => {
                 if (!navigator.geolocation) return;
@@ -2791,13 +2792,14 @@ export function SearchPage() {
                   mapRef.current?.panTo(loc);
                 });
               }}
-              className="fixed bottom-52 right-4 w-10 h-10 rounded-full bg-white shadow-lg border border-black/10 flex items-center justify-center hover:bg-gray-50 transition z-[1050]"
+              className="fixed bottom-[108px] right-4 w-10 h-10 rounded-full bg-white shadow-lg border border-black/10 flex items-center justify-center hover:bg-gray-50 transition z-[1050]"
               aria-label="My location"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19a7 7 0 1 1 0-14 7 7 0 0 1 0 14z"/>
               </svg>
             </button>
+            )}
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto w-full h-full">
