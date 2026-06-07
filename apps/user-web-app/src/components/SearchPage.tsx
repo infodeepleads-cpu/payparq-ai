@@ -249,7 +249,7 @@ export function SearchPage() {
 
   const [listings, setListings] = useState<Parking[]>([]);
   const [filteredListings, setFilteredListings] = useState<Parking[]>([]);
-  const [mapCenter, setMapCenter] = useState({ lat: 45.815, lng: 15.982 }); // Zagreb center
+  const [mapCenter, setMapCenter] = useState({ lat: 43.2919, lng: 16.3981 }); // Split Airport
   const [selectedListing, setSelectedListing] = useState<Parking | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const isAppRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/app');
@@ -315,6 +315,22 @@ export function SearchPage() {
         setUserData(JSON.parse(saved));
       } catch {}
     }
+  }, []);
+
+  // Get user's current location on mount
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setMapCenter(loc);
+        userGpsRef.current = loc;
+      },
+      () => {
+        // Fallback to Split Airport if geolocation fails
+        setMapCenter({ lat: 43.2919, lng: 16.3981 });
+      }
+    );
   }, []);
 
   // Debug: log sortBy changes
@@ -2776,30 +2792,6 @@ export function SearchPage() {
                   );
                 })}
 
-                {/* My Location FAB */}
-                <OverlayView position={mapCenter} mapPaneName="floatPane">
-                  <button
-                    onClick={() => {
-                      if (!navigator.geolocation) return;
-                      navigator.geolocation.getCurrentPosition((pos) => {
-                        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                        userGpsRef.current = loc;
-                        setMapCenter(loc);
-                        setSearchLocationPin(loc);
-                        setSearchLocationState(t('Trenutna lokacija', locale));
-                        setUsingCurrentLocation(true);
-                        mapRef.current?.panTo(loc);
-                      });
-                    }}
-                    style={{ position: 'fixed', bottom: '100px', right: '16px', zIndex: 1000 }}
-                    className="w-10 h-10 rounded-full bg-white shadow-lg border border-black/10 flex items-center justify-center hover:bg-gray-50 transition"
-                    aria-label="My location"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19a7 7 0 1 1 0-14 7 7 0 0 1 0 14z"/>
-                    </svg>
-                  </button>
-                </OverlayView>
 
                 {/* Search location marker - Blue pin */}
                 {searchLocationPin && (() => {
@@ -2826,6 +2818,27 @@ export function SearchPage() {
                 <p className="text-gray-600">Loading map...</p>
               </div>
             )}
+            {/* My Location FAB */}
+            <button
+              onClick={() => {
+                if (!navigator.geolocation) return;
+                navigator.geolocation.getCurrentPosition((pos) => {
+                  const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                  userGpsRef.current = loc;
+                  setMapCenter(loc);
+                  setSearchLocationPin(loc);
+                  setSearchLocationState(t('Trenutna lokacija', locale));
+                  setUsingCurrentLocation(true);
+                  mapRef.current?.panTo(loc);
+                });
+              }}
+              className="absolute bottom-28 right-4 w-10 h-10 rounded-full bg-white shadow-lg border border-black/10 flex items-center justify-center hover:bg-gray-50 transition z-10"
+              aria-label="My location"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19a7 7 0 1 1 0-14 7 7 0 0 1 0 14z"/>
+              </svg>
+            </button>
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto w-full h-full">
