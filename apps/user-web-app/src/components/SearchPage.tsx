@@ -317,21 +317,6 @@ export function SearchPage() {
     }
   }, []);
 
-  // Get user's current location on mount
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setMapCenter(loc);
-        userGpsRef.current = loc;
-      },
-      () => {
-        // Fallback to Split Airport if geolocation fails
-        setMapCenter({ lat: 43.2919, lng: 16.3981 });
-      }
-    );
-  }, []);
 
   // Debug: log sortBy changes
   useEffect(() => {
@@ -634,6 +619,8 @@ export function SearchPage() {
     if (paramLat || paramLng || paramName) return; // partial params, don't fall through to geolocation
 
     if (!navigator.geolocation) {
+      // Fallback to Split Airport if geolocation not available
+      setMapCenter({ lat: 43.2919, lng: 16.3981 });
       setLocationReady(true);
       return;
     }
@@ -643,13 +630,11 @@ export function SearchPage() {
         const lng = position.coords.longitude;
         userGpsRef.current = { lat, lng };
         setMapCenter({ lat, lng });
-        setSearchLocationPin({ lat, lng });
-        setSearchLocationState(t('Trenutna lokacija', locale));
-        setUsingCurrentLocation(true);
         setLocationReady(true);
       },
       () => {
-        // GPS denied or failed — still ready, just use default center
+        // GPS denied or failed — fallback to Split Airport
+        setMapCenter({ lat: 43.2919, lng: 16.3981 });
         setLocationReady(true);
       },
       { timeout: 5000 }

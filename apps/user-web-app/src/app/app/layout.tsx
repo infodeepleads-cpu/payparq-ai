@@ -26,9 +26,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         setUser(data.session?.user ?? null);
       }
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) {
+      if (event === 'SIGNED_IN' && session?.user) {
         setShowLoginPrompt(false);
         setShowDashboard(true);
       }
