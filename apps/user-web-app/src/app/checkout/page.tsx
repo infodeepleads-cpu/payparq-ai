@@ -601,6 +601,19 @@ function PaidCheckoutForm({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [plate, setPlate] = useState('');
+
+  // Prefill from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('payparq_user_data');
+    if (saved) {
+      try {
+        const { email: savedEmail, phone: savedPhone, plate: savedPlate } = JSON.parse(saved);
+        if (savedEmail) setEmail(savedEmail);
+        if (savedPhone) setPhone(savedPhone);
+        if (savedPlate) setPlate(savedPlate);
+      } catch {}
+    }
+  }, []);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [checkIn, setCheckIn] = useState(initialCheckIn);
@@ -790,6 +803,8 @@ function PaidCheckoutForm({
       } catch (err) {
         console.error('Free session creation failed:', err);
       }
+      // Save user data for sidebar prefill
+      localStorage.setItem('payparq_user_data', JSON.stringify({ email, phone, plate }));
       router.push('/success');
       return;
     }
@@ -844,9 +859,11 @@ function PaidCheckoutForm({
       setSubmitting(false);
     } else if (paymentIntent) {
       // Any status (succeeded, processing) — redirect to success with PI ID
+      localStorage.setItem('payparq_user_data', JSON.stringify({ email, phone, plate }));
       window.location.href = `${window.location.origin}/success?payment_intent=${paymentIntent.id || piId}`;
     } else if (piId) {
       // Fallback: no paymentIntent object but we have the ID from clientSecret
+      localStorage.setItem('payparq_user_data', JSON.stringify({ email, phone, plate }));
       window.location.href = `${window.location.origin}/success?payment_intent=${piId}`;
     }
   };

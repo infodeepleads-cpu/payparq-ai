@@ -252,7 +252,8 @@ export function SearchPage() {
   const [mapCenter, setMapCenter] = useState({ lat: 45.815, lng: 15.982 }); // Zagreb center
   const [selectedListing, setSelectedListing] = useState<Parking | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [showMobileMap, setShowMobileMap] = useState(false);
+  const isAppRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/app');
+  const [showMobileMap, setShowMobileMap] = useState(isAppRoute);
   const [loading, setLoading] = useState(true);
   const [locationReady, setLocationReady] = useState(false);
   const [reservationType, setReservationType] = useState('Satna/dnevna');
@@ -304,6 +305,17 @@ export function SearchPage() {
   const [error, setError] = useState<string>('');
   const filterModalRef = useRef<HTMLDivElement>(null);
   const [sortBy, setSortBy] = useState<'relevance' | 'distance' | 'price' | 'price-low' | 'price-high' | 'rating' | 'walk' | 'value'>('distance');
+  const [userData, setUserData] = useState<{ email: string; phone: string; plate: string } | null>(null);
+
+  // Load user data from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('payparq_user_data');
+    if (saved) {
+      try {
+        setUserData(JSON.parse(saved));
+      } catch {}
+    }
+  }, []);
 
   // Debug: log sortBy changes
   useEffect(() => {
@@ -1562,7 +1574,16 @@ export function SearchPage() {
                 </div>
               </button>
               <div className="absolute top-full mt-1 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[160px] sm:min-w-[180px]" style={{ display: mobileMenuOpen ? 'block' : 'none' }}>
-                <a href="/main" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 rounded-t-lg" onClick={() => setMobileMenuOpen(false)}>
+                {userData && (
+                  <>
+                    <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-200">
+                      {userData.plate && <div className="font-semibold text-gray-700">{userData.plate}</div>}
+                      {userData.email && <div className="truncate">{userData.email}</div>}
+                      {userData.phone && <div>{userData.phone}</div>}
+                    </div>
+                  </>
+                )}
+                <a href="/main" className={`block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 ${userData ? 'border-t border-gray-200' : 'rounded-t-lg'}`} onClick={() => setMobileMenuOpen(false)}>
                   {locale === 'en' ? 'Home' : 'Početna'}
                 </a>
                 <a href="/members" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200">
@@ -2713,6 +2734,8 @@ export function SearchPage() {
                 mapContainerStyle={{ width: '100%', height: '100%', minHeight: 'calc(100vh - 200px)' }}
                 options={{
                   mapTypeControl: false,
+                  streetViewControl: false,
+                  fullscreenControl: false,
                 }}
                 onLoad={(map) => {
                   mapRef.current = map;
@@ -2752,6 +2775,31 @@ export function SearchPage() {
                     />
                   );
                 })}
+
+                {/* My Location FAB */}
+                <OverlayView position={mapCenter} mapPaneName="floatPane">
+                  <button
+                    onClick={() => {
+                      if (!navigator.geolocation) return;
+                      navigator.geolocation.getCurrentPosition((pos) => {
+                        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        userGpsRef.current = loc;
+                        setMapCenter(loc);
+                        setSearchLocationPin(loc);
+                        setSearchLocationState(t('Trenutna lokacija', locale));
+                        setUsingCurrentLocation(true);
+                        mapRef.current?.panTo(loc);
+                      });
+                    }}
+                    style={{ position: 'fixed', bottom: '100px', right: '16px', zIndex: 1000 }}
+                    className="w-10 h-10 rounded-full bg-white shadow-lg border border-black/10 flex items-center justify-center hover:bg-gray-50 transition"
+                    aria-label="My location"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19a7 7 0 1 1 0-14 7 7 0 0 1 0 14z"/>
+                    </svg>
+                  </button>
+                </OverlayView>
 
                 {/* Search location marker - Blue pin */}
                 {searchLocationPin && (() => {
