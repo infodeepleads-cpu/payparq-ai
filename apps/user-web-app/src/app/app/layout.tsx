@@ -91,8 +91,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Dashboard iframe sheet */}
       {showDashboard && (
         <div className="fixed inset-0 z-[9500] flex flex-col bg-white">
-          <div className="flex items-center justify-between px-4 h-12 bg-black border-b border-black/10 shrink-0">
-            <span className="text-sm font-bold text-white">Dashboard</span>
+          <div className="flex items-center justify-end px-4 h-12 bg-black border-b border-black/10 shrink-0">
             <button
               onClick={() => setShowDashboard(false)}
               className="text-white/60 hover:text-white text-xl leading-none"
