@@ -2712,7 +2712,7 @@ export function SearchPage() {
             )}
             {isLoaded ? (
               <GoogleMap
-                zoom={15}
+                zoom={12}
                 center={searchLocationPin || mapCenter}
                 mapContainerStyle={{ width: '100%', height: '100%', minHeight: 'calc(100vh - 200px)' }}
                 options={{
