@@ -2537,7 +2537,7 @@ export function SearchPage() {
 
         {/* Vehicle Modal - Centered Overlay */}
         {/* Map 65% RIGHT (normal) or flex-1 RIGHT (details) */}
-        <div className={`bg-gray-100 ${showDetailsView ? 'flex-1' : 'w-[65%]'} pb-16 pr-2`}>
+        <div className={`bg-gray-100 ${showDetailsView ? 'flex-1' : 'w-[65%]'} pb-40 pr-2`}>
           {!isLoaded ? (
             <div className="w-full h-full flex items-center justify-center">
               <div className="relative flex items-center justify-center w-14 h-14">
@@ -2802,7 +2802,7 @@ export function SearchPage() {
                   mapRef.current?.panTo(loc);
                 });
               }}
-              className="fixed bottom-[108px] right-6 w-10 h-10 rounded-full bg-white shadow-lg border border-black/10 flex items-center justify-center hover:bg-gray-50 transition z-[1050]"
+              className="fixed bottom-[88px] right-3 w-10 h-10 rounded-full bg-white shadow-lg border border-black/10 flex items-center justify-center hover:bg-gray-50 transition z-[1050]"
               aria-label="My location"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
