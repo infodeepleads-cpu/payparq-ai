@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useLocale } from '@/components/LocaleProvider';
 import type { User } from '@supabase/supabase-js';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -14,6 +15,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
+    // Initialize Google Auth on native platforms
+    if (typeof window !== 'undefined') {
+      GoogleAuth.initialize({
+        clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
+        scopes: ['email', 'profile'],
+        forceCodeForRefreshToken: true
+      }).catch(err => console.log('GoogleAuth init (web fallback):', err));
+    }
     // Try refreshing session first to avoid false "not logged in" on first load
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
@@ -69,6 +78,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const handleDashboard = () => {
     close();
     setShowDashboard(true);
+  };
+
+  const handleGoogleSignIn = async () => {
+    if (!supabase) return;
+    try {
+      const result = await GoogleAuth.signIn();
+      if (result?.idToken) {
+        const { data, error } = await supabase.auth.signInWithIdToken({
+          provider: 'google',
+          token: result.idToken
+        });
+        if (error) {
+          console.error('Supabase sign-in error:', error);
+        } else {
+          setShowDashboard(true);
+        }
+      }
+    } catch (err) {
+      console.error('Google sign-in error:', err);
+    }
   };
 
   return (
@@ -137,12 +166,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {locale === 'en' ? 'Find Parking' : 'Pronađi parking'}
           </a>
 
-          <button
-            onClick={handleDashboard}
-            className="px-4 py-3 rounded-xl text-sm font-medium text-center w-full hover:bg-black/5 text-black"
-          >
-            {locale === 'en' ? 'Dashboard' : 'Upravljačka Ploča'}
-          </button>
+          {user ? (
+            <button
+              onClick={handleDashboard}
+              className="px-4 py-3 rounded-xl text-sm font-medium text-center w-full hover:bg-black/5 text-black"
+            >
+              {locale === 'en' ? 'Dashboard' : 'Upravljačka Ploča'}
+            </button>
+          ) : (
+            <button
+              onClick={handleGoogleSignIn}
+              className="px-4 py-3 rounded-xl text-sm font-medium text-center w-full bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              {locale === 'en' ? 'Sign in with Google' : 'Prijava s Googleom'}
+            </button>
+          )}
 
           {user && (
             <button
