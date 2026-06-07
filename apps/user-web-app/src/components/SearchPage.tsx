@@ -616,29 +616,11 @@ export function SearchPage() {
       return;
     }
 
-    if (paramLat || paramLng || paramName) return; // partial params, don't fall through to geolocation
+    if (paramLat || paramLng || paramName) return; // partial params, don't fall through
 
-    if (!navigator.geolocation) {
-      // Fallback to Split Airport if geolocation not available
-      setMapCenter({ lat: 43.2919, lng: 16.3981 });
-      setLocationReady(true);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        userGpsRef.current = { lat, lng };
-        setMapCenter({ lat, lng });
-        setLocationReady(true);
-      },
-      () => {
-        // GPS denied or failed — fallback to Split Airport
-        setMapCenter({ lat: 43.2919, lng: 16.3981 });
-        setLocationReady(true);
-      },
-      { timeout: 5000 }
-    );
+    // No automatic geolocation — default to Split Airport
+    setMapCenter({ lat: 43.2919, lng: 16.3981 });
+    setLocationReady(true);
   }, [searchParams, isLoaded]);
 
 
