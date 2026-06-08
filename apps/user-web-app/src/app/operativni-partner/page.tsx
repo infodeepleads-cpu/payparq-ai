@@ -49,7 +49,7 @@ export default function OperativniPartner() {
     e.preventDefault();
 
     if (!companyName || !companyEmail || !companyPhone || !contactPerson || !experienceLevel) {
-      setSubmitMessage({ type: 'error', text: 'Molimo popunite sva polja' });
+      setSubmitMessage({ type: 'error', text: locale === 'en' ? 'Please fill all fields' : 'Molimo popunite sva polja' });
       return;
     }
 
@@ -74,15 +74,15 @@ export default function OperativniPartner() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Registracija neuspješna');
+        throw new Error(data.error || (locale === 'en' ? 'Registration failed' : 'Registracija neuspješna'));
       }
 
-      setSubmitMessage({ type: 'success', text: 'Hvala! Kontaktirat ćemo vas u sljedećih 72h vezano uz vašu registraciju kao operativni partner.' });
+      setSubmitMessage({ type: 'success', text: locale === 'en' ? 'Thank you! We will contact you within 72 hours regarding your registration as an operative partner.' : 'Hvala! Kontaktirat ćemo vas u sljedećih 72h vezano uz vašu registraciju kao operativni partner.' });
     } catch (error) {
       console.error('Submission error:', error);
       setSubmitMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'Nešto je pošlo naopako. Molimo pokušajte ponovo.'
+        text: error instanceof Error ? error.message : (locale === 'en' ? 'Something went wrong. Please try again.' : 'Nešto je pošlo naopako. Molimo pokušajte ponovo.')
       });
     } finally {
       setIsSubmitting(false);
@@ -91,28 +91,28 @@ export default function OperativniPartner() {
 
   const faqs = [
     {
-      q: 'Što je partner',
-      a: 'Partner je poduzeće ili osoba koja surađuje s PayParqom u upravljanju parkirnih mjesta.',
+      q: locale === 'en' ? 'What is a partner?' : 'Što je partner',
+      a: locale === 'en' ? 'A partner is a company or individual that collaborates with PayParq to manage parking spaces.' : 'Partner je poduzeće ili osoba koja surađuje s PayParqom u upravljanju parkirnih mjesta.',
     },
     {
-      q: 'Što radi Payparq operativni partner?',
-      a: 'Operativni partner upravlja parkirnim mjestima u ime vlasnika - preuzima sve operativne obaveze i odgovore.',
+      q: locale === 'en' ? 'What does a PayParq operative partner do?' : 'Što radi Payparq operativni partner?',
+      a: locale === 'en' ? 'An operative partner manages parking spaces on behalf of owners — taking on all operational responsibilities and duties.' : 'Operativni partner upravlja parkirnim mjestima u ime vlasnika - preuzima sve operativne obaveze i odgovore.',
     },
     {
-      q: 'Koji su zahtjevi za partnerstvo?',
-      a: 'Trebate biti registrirani kao poduzeće s iskustvom u upravljanju parkirnih mjesta ili sličnim uslugama.',
+      q: locale === 'en' ? 'What are the requirements for partnership?' : 'Koji su zahtjevi za partnerstvo?',
+      a: locale === 'en' ? 'You must be registered as a company with experience managing parking spaces or similar services.' : 'Trebate biti registrirani kao poduzeće s iskustvom u upravljanju parkirnih mjesta ili sličnim uslugama.',
     },
     {
-      q: 'Kako se određuje naknada?',
-      a: 'Naknada se određuje na osnovu broja mjesta, lokacije i vremenskog horizonta. Razgovarajmo s našom prodajnom timom za detaljne uvjete.',
+      q: locale === 'en' ? 'How is compensation determined?' : 'Kako se određuje naknada?',
+      a: locale === 'en' ? 'Compensation is determined based on the number of spaces, location, and time horizon. Let's discuss with our sales team for detailed terms.' : 'Naknada se određuje na osnovu broja mjesta, lokacije i vremenskog horizonta. Razgovarajmo s našom prodajnom timom za detaljne uvjete.',
     },
     {
-      q: 'Trebam li vlastite sustave?',
-      a: 'Ne, korištite PayParq platformu i sve naše alate. Osiguravamo sve potrebne tehnologije.',
+      q: locale === 'en' ? 'Do I need my own systems?' : 'Trebam li vlastite sustave?',
+      a: locale === 'en' ? 'No, you use the PayParq platform and all our tools. We provide all necessary technologies.' : 'Ne, korištite PayParq platformu i sve naše alate. Osiguravamo sve potrebne tehnologije.',
     },
     {
-      q: 'Koji su teritorijalni zahtjevi?',
-      a: 'Možete upravljati mjestima na većem teritoriju. Razmotrimo vašu dostupnost i kapacitete.',
+      q: locale === 'en' ? 'What are the territorial requirements?' : 'Koji su teritorijalni zahtjevi?',
+      a: locale === 'en' ? 'You can manage spaces across a larger territory. We\'ll consider your availability and capacity.' : 'Možete upravljati mjestima na većem teritoriju. Razmotrimo vašu dostupnost i kapacitete.',
     },
   ];
 
@@ -131,15 +131,15 @@ export default function OperativniPartner() {
             <div className="flex flex-col md:grid md:grid-cols-2 gap-1 md:gap-12 items-center justify-center px-4 md:px-0">
               <div className="flex justify-center md:justify-end md:order-2 md:col-span-1 order-1 w-full md:w-auto md:mr-[-60px] md:mt-[-90px]">
                 <form id="register-form" onSubmit={handleRegisterSubmit} className="rounded-2xl bg-white px-6 md:px-8 pt-14 md:pt-10 pb-10 md:pb-12 shadow-lg flex flex-col justify-start w-full max-w-sm md:max-w-md">
-                  <h3 className="text-3xl font-bold text-black mb-6">Postani PayParq Operativni Partner</h3>
+                  <h3 className="text-3xl font-bold text-black mb-6">{locale === 'en' ? 'Become a PayParq Operative Partner' : 'Postani PayParq Operativni Partner'}</h3>
 
                   <div className="space-y-4 flex-1 flex flex-col">
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-xs font-semibold text-black/80 mb-0.5 block">Naziv tvrtke</label>
+                        <label className="text-xs font-semibold text-black/80 mb-0.5 block">{locale === 'en' ? 'Company name' : 'Naziv tvrtke'}</label>
                         <input
                           type="text"
-                          placeholder="Vaš naziv tvrtke"
+                          placeholder={locale === 'en' ? 'Your company name' : 'Vaš naziv tvrtke'}
                           value={companyName}
                           onChange={(e) => setCompanyName(e.target.value)}
                           className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/40"
@@ -147,10 +147,10 @@ export default function OperativniPartner() {
                       </div>
 
                       <div>
-                        <label className="text-xs font-semibold text-black/80 mb-0.5 block">Osoba za kontakt</label>
+                        <label className="text-xs font-semibold text-black/80 mb-0.5 block">{locale === 'en' ? 'Contact person' : 'Osoba za kontakt'}</label>
                         <input
                           type="text"
-                          placeholder="Ime i prezime"
+                          placeholder={locale === 'en' ? 'Name and surname' : 'Ime i prezime'}
                           value={contactPerson}
                           onChange={(e) => setContactPerson(e.target.value)}
                           className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/40"
@@ -159,10 +159,10 @@ export default function OperativniPartner() {
                     </div>
 
                     <div>
-                      <label className="text-xs font-semibold text-black/80 mb-0.5 block">E-pošta</label>
+                      <label className="text-xs font-semibold text-black/80 mb-0.5 block">{locale === 'en' ? 'Email' : 'E-pošta'}</label>
                       <input
                         type="email"
-                        placeholder="Upišite vašu email adresu"
+                        placeholder={locale === 'en' ? 'Enter your email' : 'Upišite vašu email adresu'}
                         value={companyEmail}
                         onChange={(e) => setCompanyEmail(e.target.value)}
                         className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/40"
@@ -171,14 +171,14 @@ export default function OperativniPartner() {
 
                     <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <label className="text-xs font-semibold text-black/80 mb-1.5 block">Pozivni broj</label>
+                        <label className="text-xs font-semibold text-black/80 mb-1.5 block">{locale === 'en' ? 'Phone code' : 'Pozivni broj'}</label>
                         <div className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black flex items-center gap-1.5">
                           <span>{COUNTRIES.find(c => c.code === companyCountry)?.flag}</span>
                           <span className="font-semibold">{COUNTRIES.find(c => c.code === companyCountry)?.phone}</span>
                         </div>
                       </div>
                       <div className="col-span-2">
-                        <label className="text-xs font-semibold text-black/80 mb-1.5 block">Broj mobilnog telefona</label>
+                        <label className="text-xs font-semibold text-black/80 mb-1.5 block">{locale === 'en' ? 'Phone number' : 'Broj mobilnog telefona'}</label>
                         <input
                           type="tel"
                           placeholder="1 234 5678"
@@ -190,7 +190,7 @@ export default function OperativniPartner() {
                     </div>
 
                     <div>
-                      <label className="text-xs font-semibold text-black/80 mb-1 block">Država</label>
+                      <label className="text-xs font-semibold text-black/80 mb-1 block">{locale === 'en' ? 'Country' : 'Država'}</label>
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 pointer-events-none" />
                         <select
@@ -205,7 +205,7 @@ export default function OperativniPartner() {
                             paddingRight: '2.5rem',
                           }}
                         >
-                          <option value="" disabled className="text-black/40">Odaberite državu</option>
+                          <option value="" disabled className="text-black/40">{locale === 'en' ? 'Select country' : 'Odaberite državu'}</option>
                           {COUNTRIES.map((country) => (
                             <option key={country.code} value={country.code} className="text-black">
                               {country.name}
@@ -216,7 +216,7 @@ export default function OperativniPartner() {
                     </div>
 
                     <div>
-                      <label className="text-xs font-semibold text-black/80 mb-1 block">Iskustvo</label>
+                      <label className="text-xs font-semibold text-black/80 mb-1 block">{locale === 'en' ? 'Experience level' : 'Iskustvo'}</label>
                       <select
                         value={experienceLevel}
                         onChange={(e) => setExperienceLevel(e.target.value)}
@@ -229,10 +229,10 @@ export default function OperativniPartner() {
                           paddingRight: '2.5rem',
                         }}
                       >
-                        <option value="" disabled className="text-black/40">Odaberite razinu iskustva</option>
-                        <option value="beginner" className="text-black">Početnik</option>
-                        <option value="intermediate" className="text-black">Srednji nivo</option>
-                        <option value="experienced" className="text-black">Iskusan</option>
+                        <option value="" disabled className="text-black/40">{locale === 'en' ? 'Select experience level' : 'Odaberite razinu iskustva'}</option>
+                        <option value="beginner" className="text-black">{locale === 'en' ? 'Beginner' : 'Početnik'}</option>
+                        <option value="intermediate" className="text-black">{locale === 'en' ? 'Intermediate' : 'Srednji nivo'}</option>
+                        <option value="experienced" className="text-black">{locale === 'en' ? 'Experienced' : 'Iskusan'}</option>
                       </select>
                     </div>
 
@@ -243,7 +243,9 @@ export default function OperativniPartner() {
                         className="w-4 h-4 rounded border-black/20 mt-0.5 cursor-pointer accent-black"
                       />
                       <label htmlFor="terms" className="text-xs text-black/70 cursor-pointer leading-tight">
-                        Registracijom se slažete s našim <span className="font-semibold text-black hover:text-black/70 underline">Uvjetima korištenja</span> i <span className="font-semibold text-black hover:text-black/70 underline">Politikom privatnosti</span>
+                        {locale === 'en'
+                          ? 'By registering, you agree to our Terms of Use and Privacy Policy'
+                          : 'Registracijom se slažete s našim Uvjetima korištenja i Politikom privatnosti'}
                       </label>
                     </div>
 
@@ -262,13 +264,13 @@ export default function OperativniPartner() {
                       disabled={isSubmitting}
                       className="w-full mt-3 bg-black text-white font-semibold py-2.5 rounded-lg hover:shadow-lg transition-shadow text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isSubmitting ? 'Registracija...' : 'Registriraj se sada'}
+                      {isSubmitting ? (locale === 'en' ? 'Registering...' : 'Registracija...') : (locale === 'en' ? 'Register now' : 'Registriraj se sada')}
                     </button>
 
                     <div className="text-center pt-2 space-y-1">
-                      <p className="text-xs text-black/70">Već imate račun?</p>
+                      <p className="text-xs text-black/70">{locale === 'en' ? 'Already have an account?' : 'Već imate račun?'}</p>
                       <Link href="/members" className="text-xs font-semibold text-black hover:text-black/70 transition-colors inline-block">
-                        Prijavite se
+                        {locale === 'en' ? 'Sign in' : 'Prijavite se'}
                       </Link>
                     </div>
                   </div>
@@ -277,10 +279,12 @@ export default function OperativniPartner() {
 
               <div className="md:order-1 md:col-span-1 order-2 md:mt-[-2cm]" style={{ marginTop: '0' }}>
                 <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight mb-6 text-white">
-                  Vlasnik si parking tvrtke?
+                  {locale === 'en' ? 'Own a parking business?' : 'Vlasnik si parking tvrtke?'}
                 </h1>
                 <p className="text-lg md:text-xl text-white/80 mb-8" style={{ marginTop: '0.5cm' }}>
-                  Postanite PayParq operativni partner i zarađujte upravljajući parkirnim mjestima u vašoj regiji.
+                  {locale === 'en'
+                    ? 'Become a PayParq operative partner and earn managing parking spaces in your region.'
+                    : 'Postanite PayParq operativni partner i zarađujte upravljajući parkirnim mjestima u vašoj regiji.'}
                 </p>
               </div>
             </div>
@@ -294,7 +298,7 @@ export default function OperativniPartner() {
               FAQ
             </p>
             <h2 className="text-2xl md:text-3xl font-semibold text-black mb-12">
-              Često postavljena pitanja
+              {locale === 'en' ? 'Frequently asked questions' : 'Često postavljena pitanja'}
             </h2>
 
             <div className="space-y-0">
@@ -328,10 +332,12 @@ export default function OperativniPartner() {
           <div className="absolute inset-0 bg-white"></div>
           <div className="relative max-w-4xl mx-auto px-6 md:px-12 text-center">
             <h2 className="text-3xl md:text-4xl font-semibold text-black mb-4">
-              Spremni za partnerstvo?
+              {locale === 'en' ? 'Ready for partnership?' : 'Spremni za partnerstvo?'}
             </h2>
             <p className="text-base text-black/70 mb-8 max-w-2xl mx-auto">
-              Pridružite se PayParq operativnim partnerima i zarađujte upravljajući parkirnim mjestima.
+              {locale === 'en'
+                ? 'Join PayParq operative partners and earn managing parking spaces.'
+                : 'Pridružite se PayParq operativnim partnerima i zarađujte upravljajući parkirnim mjestima.'}
             </p>
             <a
               href="#register-form"
@@ -341,7 +347,7 @@ export default function OperativniPartner() {
               }}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white text-sm font-semibold shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer"
             >
-              <span>Postani partner</span>
+              <span>{locale === 'en' ? 'Become partner' : 'Postani partner'}</span>
               <span className="text-lg">→</span>
             </a>
           </div>
@@ -500,8 +506,8 @@ export default function OperativniPartner() {
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-black/10 p-4 md:p-6 shadow-2xl z-50">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-bold text-black">Spremni za partnerstvo?</h3>
-              <p className="text-sm text-black/70">Registrirajte se kao operativni partner i započnite zaradu</p>
+              <h3 className="text-lg font-bold text-black">{locale === 'en' ? 'Ready for partnership?' : 'Spremni za partnerstvo?'}</h3>
+              <p className="text-sm text-black/70">{locale === 'en' ? 'Register as an operative partner and start earning' : 'Registrirajte se kao operativni partner i započnite zaradu'}</p>
             </div>
             <a
               href="#register-form"
@@ -511,7 +517,7 @@ export default function OperativniPartner() {
               }}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white font-semibold hover:shadow-xl transition-all whitespace-nowrap cursor-pointer"
             >
-              <span>Registriraj se</span>
+              <span>{locale === 'en' ? 'Register' : 'Registriraj se'}</span>
               <span>→</span>
             </a>
           </div>
