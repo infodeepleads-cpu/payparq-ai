@@ -434,6 +434,36 @@ export default function RentACarPartner() {
           </div>
         </section>
 
+        {/* Video Demo Widget */}
+        <section className="bg-white py-16 md:py-20">
+          <div className="max-w-4xl mx-auto px-6 md:px-12">
+            <a
+              href="https://youtube.com/shorts/v4YZUGukrt4?is=QYigCArFSwNEkXOo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group block relative bg-black rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300"
+            >
+              <div className="relative pt-[56.25%] bg-gradient-to-br from-gray-800 to-black">
+                <img
+                  src="https://img.youtube.com/vi/v4YZUGukrt4/maxresdefault.jpg"
+                  alt="PayParq Demo"
+                  className="absolute inset-0 w-full h-full object-cover group-hover:opacity-80 transition-opacity"
+                />
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex flex-col items-center justify-center">
+                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <div className="w-0 h-0 border-l-8 border-l-transparent border-r-0 border-t-5 border-t-transparent border-b-5 border-b-transparent border-l-black ml-1" style={{ borderLeft: '10px solid transparent', borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderRight: 'none', marginLeft: '2px' }}>
+                      ▶
+                    </div>
+                  </div>
+                  <p className="text-white text-lg font-semibold mt-4">
+                    {locale === 'en' ? '1 minute DEMO' : '1 minuta DEMO'}
+                  </p>
+                </div>
+              </div>
+            </a>
+          </div>
+        </section>
+
         {/* Footer */}
         <section className="bg-[#05020A] border-t border-white/10">
           <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">

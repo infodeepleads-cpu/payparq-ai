@@ -463,22 +463,6 @@ export default function ListYourSpace() {
               </div>
             </div>
 
-            {/* CTA Widget */}
-            <div className="mt-16 text-center bg-gradient-to-r from-[#5F3DFC]/10 to-[#4330c4]/10 rounded-2xl p-8 md:p-12">
-              <h3 className="text-lg md:text-xl font-bold text-black mb-4">Spremni za zaradu?</h3>
-              <p className="text-sm text-black/70 mb-8">Pridružite se tisućama domaćina koji zarađuju s PayParqom</p>
-              <a
-                href="#register-form"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.documentElement.scrollTop = 0;
-                }}
-                className="inline-flex items-center gap-3 px-10 py-5 rounded-full bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white font-bold text-xl hover:shadow-xl transition-all cursor-pointer"
-              >
-                <span>Oglasite svojе parkirno mjesto odmah</span>
-                <span>→</span>
-              </a>
-            </div>
           </div>
         </section>
 
@@ -592,6 +576,34 @@ export default function ListYourSpace() {
               <span>Oglasite svoje parkirno mjesto</span>
               <span className="text-sm md:text-lg">→</span>
             </Link>
+          </div>
+        </section>
+
+        {/* Video Demo Widget */}
+        <section className="bg-white py-16 md:py-20">
+          <div className="max-w-4xl mx-auto px-6 md:px-12">
+            <a
+              href="https://youtube.com/shorts/v4YZUGukrt4?is=QYigCArFSwNEkXOo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group block relative bg-black rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300"
+            >
+              <div className="relative pt-[56.25%] bg-gradient-to-br from-gray-800 to-black">
+                <img
+                  src="https://img.youtube.com/vi/v4YZUGukrt4/maxresdefault.jpg"
+                  alt="PayParq Demo"
+                  className="absolute inset-0 w-full h-full object-cover group-hover:opacity-80 transition-opacity"
+                />
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex flex-col items-center justify-center">
+                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <div className="w-0 h-0 border-l-8 border-l-transparent border-r-0 border-t-5 border-t-transparent border-b-5 border-b-transparent border-l-black ml-1" style={{ borderLeft: '10px solid transparent', borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderRight: 'none', marginLeft: '2px' }}>
+                      ▶
+                    </div>
+                  </div>
+                  <p className="text-white text-lg font-semibold mt-4">Vidite kako radi</p>
+                </div>
+              </div>
+            </a>
           </div>
         </section>
 
