@@ -19,14 +19,15 @@ const COUNTRIES = [
   { code: 'SK', name: 'Slovačka', flag: '🇸🇰', phone: '+421' },
 ];
 
-export default function OperativniPartner() {
+export default function HotelPartner() {
   const { locale } = useLocale();
   const [companyName, setCompanyName] = useState('');
   const [companyEmail, setCompanyEmail] = useState('');
   const [companyPhone, setCompanyPhone] = useState('');
   const [companyCountry, setCompanyCountry] = useState('HR');
   const [contactPerson, setContactPerson] = useState('');
-  const [experienceLevel, setExperienceLevel] = useState('');
+  const [numRooms, setNumRooms] = useState('');
+  const [wantParkingListing, setWantParkingListing] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showStickyCta, setShowStickyCta] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,8 +49,11 @@ export default function OperativniPartner() {
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!companyName || !companyEmail || !companyPhone || !contactPerson || !experienceLevel) {
-      setSubmitMessage({ type: 'error', text: 'Molimo popunite sva polja' });
+    if (!companyName || !companyEmail || !companyPhone || !contactPerson || !numRooms) {
+      setSubmitMessage({
+        type: 'error',
+        text: locale === 'en' ? 'Please fill all fields' : 'Molimo popunite sva polja'
+      });
       return;
     }
 
@@ -66,23 +70,29 @@ export default function OperativniPartner() {
           country: companyCountry,
           companyName,
           contactPerson,
-          experienceLevel,
-          type: 'operative_partner',
+          numRooms,
+          wantParkingListing,
+          type: 'hotel_partner',
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Registracija neuspješna');
+        throw new Error(data.error || (locale === 'en' ? 'Registration failed' : 'Registracija neuspješna'));
       }
 
-      setSubmitMessage({ type: 'success', text: 'Hvala! Kontaktirat ćemo vas u sljedećih 72h vezano uz vašu registraciju kao operativni partner.' });
+      setSubmitMessage({
+        type: 'success',
+        text: locale === 'en'
+          ? 'Thank you! We will contact you within 72 hours.'
+          : 'Hvala! Kontaktirat ćemo vas u sljedećih 72h vezano uz vašu registraciju.'
+      });
     } catch (error) {
       console.error('Submission error:', error);
       setSubmitMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'Nešto je pošlo naopako. Molimo pokušajte ponovo.'
+        text: error instanceof Error ? error.message : (locale === 'en' ? 'Something went wrong. Please try again.' : 'Nešto je pošlo naopako. Molimo pokušajte ponovo.')
       });
     } finally {
       setIsSubmitting(false);
@@ -91,28 +101,40 @@ export default function OperativniPartner() {
 
   const faqs = [
     {
-      q: 'Što je partner',
-      a: 'Partner je poduzeće ili osoba koja surađuje s PayParqom u upravljanju parkirnih mjesta.',
+      q: locale === 'en' ? 'How does the referral program work?' : 'Kako funkcionira referralni program?',
+      a: locale === 'en'
+        ? 'Your guests get a 10% discount code for PayParq parking. When they book parking, you earn a 10% referral bonus automatically.'
+        : 'Vaši gosti dobijaju kod za 10% popust na PayParq parking. Kada parkuju, vi automatski zarađujete 10% provizije.',
     },
     {
-      q: 'Što radi Payparq operativni partner?',
-      a: 'Operativni partner upravlja parkirnim mjestima u ime vlasnika - preuzima sve operativne obaveze i odgovore.',
+      q: locale === 'en' ? 'Can we list our own parking spaces?' : 'Možemo li ponuditi vlastite parking prostore?',
+      a: locale === 'en'
+        ? 'Yes! If you have your own parking spaces, you can list them on PayParq for free. Your guests can book them directly, and you earn from each booking.'
+        : 'Da! Ako imate vlastite parking prostore, možete ih ponuditi na PayParq besplatno. Vaši gosti mogu ih direktno rezervirati, a vi zarađujete od svake rezervacije.',
     },
     {
-      q: 'Koji su zahtjevi za partnerstvo?',
-      a: 'Trebate biti registrirani kao poduzeće s iskustvom u upravljanju parkirnih mjesta ili sličnim uslugama.',
+      q: locale === 'en' ? 'How do we share the discount with guests?' : 'Kako podijelimo popust s gostima?',
+      a: locale === 'en'
+        ? 'We provide discount codes and marketing materials. Include them in booking confirmations, check-in information, and welcome emails.'
+        : 'Pružamo vam kodove i marketing materijale. Uključite ih u potvrde rezervacija, informacije pri dolasku i pozdravne email poruke.',
     },
     {
-      q: 'Kako se određuje naknada?',
-      a: 'Naknada se određuje na osnovu broja mjesta, lokacije i vremenskog horizonta. Razgovarajmo s našom prodajnom timom za detaljne uvjete.',
+      q: locale === 'en' ? 'What are the benefits of listing parking?' : 'Koja su prednosti ponude vlastite parking prostore?',
+      a: locale === 'en'
+        ? 'Offer a premium parking experience to your guests, increase occupancy rates, boost customer satisfaction, and earn additional revenue without extra effort.'
+        : 'Ponudite premium parking iskustvo gostima, povećajte zaposlenost, poboljšajte zadovoljstvo kupaca i zarađujte dodatni prihod bez dodatnog truda.',
     },
     {
-      q: 'Trebam li vlastite sustave?',
-      a: 'Ne, korištite PayParq platformu i sve naše alate. Osiguravamo sve potrebne tehnologije.',
+      q: locale === 'en' ? 'When do we receive payouts?' : 'Kada dobivamo isplate?',
+      a: locale === 'en'
+        ? 'Referral bonuses and parking earnings are calculated and paid monthly based on bookings made through your codes and listed spaces.'
+        : 'Provizije i prihodi od parkinga obračunavaju se i isplaćuju mjesečno na osnovu rezervacija napravljenih s vašim kodovima i ponuđenih mjesta.',
     },
     {
-      q: 'Koji su teritorijalni zahtjevi?',
-      a: 'Možete upravljati mjestima na većem teritoriju. Razmotrimo vašu dostupnost i kapacitete.',
+      q: locale === 'en' ? 'Do we need to manage the parking?' : 'Trebamo li upravljati parkirnim mjestima?',
+      a: locale === 'en'
+        ? 'No, PayParq handles all the booking management, guest communication, and payments. You just maintain the spaces and provide access to your guests.'
+        : 'Ne, PayParq upravlja svim rezervacijama, komunikacijom s gostima i isplatama. Vi samo održavate prostore i omogućite pristup gostima.',
     },
   ];
 
@@ -131,15 +153,19 @@ export default function OperativniPartner() {
             <div className="flex flex-col md:grid md:grid-cols-2 gap-1 md:gap-12 items-center justify-center px-4 md:px-0">
               <div className="flex justify-center md:justify-end md:order-2 md:col-span-1 order-1 w-full md:w-auto md:mr-[-60px] md:mt-[-90px]">
                 <form id="register-form" onSubmit={handleRegisterSubmit} className="rounded-2xl bg-white px-6 md:px-8 pt-14 md:pt-10 pb-10 md:pb-12 shadow-lg flex flex-col justify-start w-full max-w-sm md:max-w-md">
-                  <h3 className="text-3xl font-bold text-black mb-6">Postani PayParq Operativni Partner</h3>
+                  <h3 className="text-3xl font-bold text-black mb-6">
+                    {locale === 'en' ? 'Become a PayParq Partner' : 'Postani PayParq Partner'}
+                  </h3>
 
                   <div className="space-y-4 flex-1 flex flex-col">
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-xs font-semibold text-black/80 mb-0.5 block">Naziv tvrtke</label>
+                        <label className="text-xs font-semibold text-black/80 mb-0.5 block">
+                          {locale === 'en' ? 'Company name' : 'Naziv tvrtke'}
+                        </label>
                         <input
                           type="text"
-                          placeholder="Vaš naziv tvrtke"
+                          placeholder={locale === 'en' ? 'Your hotel name' : 'Naziv hotela'}
                           value={companyName}
                           onChange={(e) => setCompanyName(e.target.value)}
                           className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/40"
@@ -147,10 +173,12 @@ export default function OperativniPartner() {
                       </div>
 
                       <div>
-                        <label className="text-xs font-semibold text-black/80 mb-0.5 block">Osoba za kontakt</label>
+                        <label className="text-xs font-semibold text-black/80 mb-0.5 block">
+                          {locale === 'en' ? 'Contact person' : 'Osoba za kontakt'}
+                        </label>
                         <input
                           type="text"
-                          placeholder="Ime i prezime"
+                          placeholder={locale === 'en' ? 'Name and surname' : 'Ime i prezime'}
                           value={contactPerson}
                           onChange={(e) => setContactPerson(e.target.value)}
                           className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/40"
@@ -159,10 +187,12 @@ export default function OperativniPartner() {
                     </div>
 
                     <div>
-                      <label className="text-xs font-semibold text-black/80 mb-0.5 block">E-pošta</label>
+                      <label className="text-xs font-semibold text-black/80 mb-0.5 block">
+                        {locale === 'en' ? 'Email' : 'E-pošta'}
+                      </label>
                       <input
                         type="email"
-                        placeholder="Upišite vašu email adresu"
+                        placeholder={locale === 'en' ? 'Enter your email' : 'Upišite vašu email adresu'}
                         value={companyEmail}
                         onChange={(e) => setCompanyEmail(e.target.value)}
                         className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/40"
@@ -171,14 +201,18 @@ export default function OperativniPartner() {
 
                     <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <label className="text-xs font-semibold text-black/80 mb-1.5 block">Pozivni broj</label>
+                        <label className="text-xs font-semibold text-black/80 mb-1.5 block">
+                          {locale === 'en' ? 'Phone code' : 'Pozivni broj'}
+                        </label>
                         <div className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black flex items-center gap-1.5">
                           <span>{COUNTRIES.find(c => c.code === companyCountry)?.flag}</span>
                           <span className="font-semibold">{COUNTRIES.find(c => c.code === companyCountry)?.phone}</span>
                         </div>
                       </div>
                       <div className="col-span-2">
-                        <label className="text-xs font-semibold text-black/80 mb-1.5 block">Broj mobilnog telefona</label>
+                        <label className="text-xs font-semibold text-black/80 mb-1.5 block">
+                          {locale === 'en' ? 'Phone number' : 'Broj mobilnog telefona'}
+                        </label>
                         <input
                           type="tel"
                           placeholder="1 234 5678"
@@ -190,7 +224,9 @@ export default function OperativniPartner() {
                     </div>
 
                     <div>
-                      <label className="text-xs font-semibold text-black/80 mb-1 block">Država</label>
+                      <label className="text-xs font-semibold text-black/80 mb-1 block">
+                        {locale === 'en' ? 'Country' : 'Država'}
+                      </label>
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 pointer-events-none" />
                         <select
@@ -205,7 +241,9 @@ export default function OperativniPartner() {
                             paddingRight: '2.5rem',
                           }}
                         >
-                          <option value="" disabled className="text-black/40">Odaberite državu</option>
+                          <option value="" disabled className="text-black/40">
+                            {locale === 'en' ? 'Select country' : 'Odaberite državu'}
+                          </option>
                           {COUNTRIES.map((country) => (
                             <option key={country.code} value={country.code} className="text-black">
                               {country.name}
@@ -216,24 +254,34 @@ export default function OperativniPartner() {
                     </div>
 
                     <div>
-                      <label className="text-xs font-semibold text-black/80 mb-1 block">Iskustvo</label>
-                      <select
-                        value={experienceLevel}
-                        onChange={(e) => setExperienceLevel(e.target.value)}
-                        className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-black focus:text-black transition-colors appearance-none cursor-pointer text-black"
-                        style={{
-                          backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'right 0.5rem center',
-                          backgroundSize: '1.5em 1.5em',
-                          paddingRight: '2.5rem',
-                        }}
-                      >
-                        <option value="" disabled className="text-black/40">Odaberite razinu iskustva</option>
-                        <option value="beginner" className="text-black">Početnik</option>
-                        <option value="intermediate" className="text-black">Srednji nivo</option>
-                        <option value="experienced" className="text-black">Iskusan</option>
-                      </select>
+                      <label className="text-xs font-semibold text-black/80 mb-1 block">
+                        {locale === 'en' ? 'Number of rooms' : 'Broj soba'}
+                      </label>
+                      <input
+                        type="number"
+                        placeholder={locale === 'en' ? 'e.g., 25' : 'npr., 25'}
+                        value={numRooms}
+                        onChange={(e) => setNumRooms(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black focus:outline-none focus:border-black transition-colors placeholder:text-black/40"
+                      />
+                    </div>
+
+                    <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <input
+                        type="checkbox"
+                        id="parking"
+                        checked={wantParkingListing}
+                        onChange={(e) => setWantParkingListing(e.target.checked)}
+                        className="w-4 h-4 rounded border-blue-300 mt-0.5 cursor-pointer accent-blue-600"
+                      />
+                      <label htmlFor="parking" className="text-xs text-blue-900 cursor-pointer leading-tight flex-1">
+                        <span className="font-semibold">{locale === 'en' ? 'I want to list my parking' : 'Želim ponuditi vlastite parking prostore'}</span>
+                        <p className="text-blue-800/70 mt-1">
+                          {locale === 'en'
+                            ? 'Offer premium parking experience to your guests for free'
+                            : 'Ponudite premium parkiranje gostima besplatno'}
+                        </p>
+                      </label>
                     </div>
 
                     <div className="flex items-start gap-2 pt-1.5">
@@ -243,7 +291,16 @@ export default function OperativniPartner() {
                         className="w-4 h-4 rounded border-black/20 mt-0.5 cursor-pointer accent-black"
                       />
                       <label htmlFor="terms" className="text-xs text-black/70 cursor-pointer leading-tight">
-                        Registracijom se slažete s našim <span className="font-semibold text-black hover:text-black/70 underline">Uvjetima korištenja</span> i <span className="font-semibold text-black hover:text-black/70 underline">Politikom privatnosti</span>
+                        {locale === 'en'
+                          ? 'By registering, you agree to our '
+                          : 'Registracijom se slažete s našim '}
+                        <span className="font-semibold text-black hover:text-black/70 underline">
+                          {locale === 'en' ? 'Terms of Use' : 'Uvjetima korištenja'}
+                        </span>
+                        {locale === 'en' ? ' and ' : ' i '}
+                        <span className="font-semibold text-black hover:text-black/70 underline">
+                          {locale === 'en' ? 'Privacy Policy' : 'Politikom privatnosti'}
+                        </span>
                       </label>
                     </div>
 
@@ -262,13 +319,17 @@ export default function OperativniPartner() {
                       disabled={isSubmitting}
                       className="w-full mt-3 bg-black text-white font-semibold py-2.5 rounded-lg hover:shadow-lg transition-shadow text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isSubmitting ? 'Registracija...' : 'Registriraj se sada'}
+                      {isSubmitting
+                        ? (locale === 'en' ? 'Registering...' : 'Registracija...')
+                        : (locale === 'en' ? 'Register now' : 'Registriraj se sada')}
                     </button>
 
                     <div className="text-center pt-2 space-y-1">
-                      <p className="text-xs text-black/70">Već imate račun?</p>
+                      <p className="text-xs text-black/70">
+                        {locale === 'en' ? 'Already have an account?' : 'Već imate račun?'}
+                      </p>
                       <Link href="/members" className="text-xs font-semibold text-black hover:text-black/70 transition-colors inline-block">
-                        Prijavite se
+                        {locale === 'en' ? 'Sign in' : 'Prijavite se'}
                       </Link>
                     </div>
                   </div>
@@ -277,10 +338,12 @@ export default function OperativniPartner() {
 
               <div className="md:order-1 md:col-span-1 order-2 md:mt-[-2cm]" style={{ marginTop: '0' }}>
                 <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight mb-6 text-white">
-                  Vlasnik si parking tvrtke?
+                  {locale === 'en' ? 'Run a hotel or Airbnb?' : 'Vodeš hotel ili Airbnb?'}
                 </h1>
                 <p className="text-lg md:text-xl text-white/80 mb-8" style={{ marginTop: '0.5cm' }}>
-                  Postanite PayParq operativni partner i zarađujte upravljajući parkirnim mjestima u vašoj regiji.
+                  {locale === 'en'
+                    ? 'Become a PayParq partner and earn 10% referral bonus. Optionally list your parking for guests.'
+                    : 'Postani PayParq partner i zarađuj 10% provizije. Opciono ponudi vlastite parking prostore.'}
                 </p>
               </div>
             </div>
@@ -294,7 +357,7 @@ export default function OperativniPartner() {
               FAQ
             </p>
             <h2 className="text-2xl md:text-3xl font-semibold text-black mb-12">
-              Često postavljena pitanja
+              {locale === 'en' ? 'Frequently asked questions' : 'Često postavljena pitanja'}
             </h2>
 
             <div className="space-y-0">
@@ -328,10 +391,12 @@ export default function OperativniPartner() {
           <div className="absolute inset-0 bg-white"></div>
           <div className="relative max-w-4xl mx-auto px-6 md:px-12 text-center">
             <h2 className="text-3xl md:text-4xl font-semibold text-black mb-4">
-              Spremni za partnerstvo?
+              {locale === 'en' ? 'Ready to earn more?' : 'Spreman zaraditi više?'}
             </h2>
             <p className="text-base text-black/70 mb-8 max-w-2xl mx-auto">
-              Pridružite se PayParq operativnim partnerima i zarađujte upravljajući parkirnim mjestima.
+              {locale === 'en'
+                ? 'Join PayParq and delight your guests with affordable parking plus earn referral bonuses.'
+                : 'Pridružite se PayParqu i zadovoljite goste povoljnim parkiranjem plus zarađujte referralne provizije.'}
             </p>
             <a
               href="#register-form"
@@ -341,7 +406,7 @@ export default function OperativniPartner() {
               }}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white text-sm font-semibold shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer"
             >
-              <span>Postani partner</span>
+              <span>{locale === 'en' ? 'Become partner' : 'Postani partner'}</span>
               <span className="text-lg">→</span>
             </a>
           </div>
@@ -358,25 +423,25 @@ export default function OperativniPartner() {
             </h2>
 
             <div className="grid md:grid-cols-2 gap-6">
-              {/* Rent a Car Partner */}
-              <Link href="/rent-a-car-partner" className="group p-8 rounded-2xl border border-black/10 hover:border-black/30 hover:shadow-lg transition-all duration-300">
+              {/* Operativni Partner */}
+              <Link href="/operativni-partner" className="group p-8 rounded-2xl border border-black/10 hover:border-black/30 hover:shadow-lg transition-all duration-300">
                 <div className="flex flex-col h-full">
                   <div className="mb-6">
                     <h3 className="text-2xl font-bold text-black mb-3">
-                      {locale === 'en' ? '🚗 Rent a Car' : '🚗 Iznajmljivanje Automobila'}
+                      {locale === 'en' ? '🅿️ Parking Operator' : '🅿️ Operativni Partner'}
                     </h3>
                     <p className="text-sm text-black/70">
                       {locale === 'en'
-                        ? 'Offer PayParq parking to your rental customers and earn 10% referral bonus'
-                        : 'Ponudite PayParq parking svojim kupcima i zarađujte 10% provizije'}
+                        ? 'Manage parking spaces and earn from every booking'
+                        : 'Upravljajte parkirnim mjestima i zarađujte od svake rezervacije'}
                     </p>
                   </div>
                   <div className="flex items-start gap-2 text-xs text-black/60 mb-6 flex-1">
                     <span className="text-lg mt-0.5">✓</span>
                     <span>
                       {locale === 'en'
-                        ? 'Your guests get 10% discount on parking'
-                        : 'Vaši gosti dobivaju 10% popust na parkiranje'}
+                        ? 'Full parking space management'
+                        : 'Potpuno upravljanje parkirnim mjestima'}
                     </span>
                   </div>
                   <div className="inline-flex items-center gap-2 text-sm font-semibold text-black group-hover:gap-3 transition-all">
@@ -386,36 +451,26 @@ export default function OperativniPartner() {
                 </div>
               </Link>
 
-              {/* Hotel/Airbnb Partner */}
-              <Link href="/hotel-partner" className="group p-8 rounded-2xl border border-black/10 hover:border-black/30 hover:shadow-lg transition-all duration-300">
+              {/* Rent a Car Partner */}
+              <Link href="/rent-a-car-partner" className="group p-8 rounded-2xl border border-black/10 hover:border-black/30 hover:shadow-lg transition-all duration-300">
                 <div className="flex flex-col h-full">
                   <div className="mb-6">
                     <h3 className="text-2xl font-bold text-black mb-3">
-                      {locale === 'en' ? '🏨 Hotels & Airbnb' : '🏨 Hoteli i Airbnb'}
+                      {locale === 'en' ? '🚗 Rent a Car' : '🚗 Iznajmljivanje Automobila'}
                     </h3>
                     <p className="text-sm text-black/70">
                       {locale === 'en'
-                        ? 'Earn 10% referral bonus and optionally list your own parking'
-                        : 'Zarađujte 10% provizije i opciono ponudite vlastite parking prostore'}
+                        ? 'Offer PayParq parking to your rental customers'
+                        : 'Ponudite PayParq parking svojim kupcima'}
                     </p>
                   </div>
-                  <div className="space-y-2 flex-1 mb-6">
-                    <div className="flex items-start gap-2 text-xs text-black/60">
-                      <span className="text-lg mt-0.5">✓</span>
-                      <span>
-                        {locale === 'en'
-                          ? 'Your guests get 10% discount on parking'
-                          : 'Vaši gosti dobivaju 10% popust na parkiranje'}
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-2 text-xs text-black/60">
-                      <span className="text-lg mt-0.5">✓</span>
-                      <span>
-                        {locale === 'en'
-                          ? 'List your parking for premium experience'
-                          : 'Ponudite vlastite parking prostore'}
-                      </span>
-                    </div>
+                  <div className="flex items-start gap-2 text-xs text-black/60 mb-6 flex-1">
+                    <span className="text-lg mt-0.5">✓</span>
+                    <span>
+                      {locale === 'en'
+                        ? 'Earn 10% referral bonus'
+                        : 'Zarađujte 10% provizije'}
+                    </span>
                   </div>
                   <div className="inline-flex items-center gap-2 text-sm font-semibold text-black group-hover:gap-3 transition-all">
                     <span>{locale === 'en' ? 'Learn more' : 'Saznaj više'}</span>
@@ -433,67 +488,69 @@ export default function OperativniPartner() {
             <div className="grid gap-12 md:grid-cols-[2fr,3fr] items-end mb-12">
               <div>
                 <h2 className="text-2xl md:text-3xl font-semibold text-white mb-4">
-                  Sigurno parkiranje za moderni svijet
+                  {locale === 'en' ? 'Safe parking for the modern world' : 'Sigurno parkiranje za moderni svijet'}
                 </h2>
                 <p className="text-sm text-white/70">
-                  PayParq povezuje vlasnike parkirnih mjesta s provjerenima vozačima za bez problema urbanu mobilnost.
+                  {locale === 'en'
+                    ? 'PayParq connects parking space owners with verified drivers for hassle-free urban mobility.'
+                    : 'PayParq povezuje vlasnike parkirnih mjesta s provjerenima vozačima za bez problema urbanu mobilnost.'}
                 </p>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Poduzeće
+                    {locale === 'en' ? 'Company' : 'Poduzeće'}
                   </p>
                   <Link href="/about" className="block hover:text-white transition-colors">
-                    O nama
+                    {locale === 'en' ? 'About' : 'O nama'}
                   </Link>
                   <Link href="/careers" className="block hover:text-white transition-colors">
-                    Karijera
+                    {locale === 'en' ? 'Careers' : 'Karijera'}
                   </Link>
                   <Link href="/news" className="block hover:text-white transition-colors">
-                    Vijesti
+                    {locale === 'en' ? 'News' : 'Vijesti'}
                   </Link>
                 </div>
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Vizija
+                    {locale === 'en' ? 'Vision' : 'Vizija'}
                   </p>
                   <Link href="/product" className="block hover:text-white transition-colors">
-                    Proizvod
+                    {locale === 'en' ? 'Product' : 'Proizvod'}
                   </Link>
                   <Link href="/parking" className="block hover:text-white transition-colors">
-                    Parkiranje
+                    {locale === 'en' ? 'Parking' : 'Parkiranje'}
                   </Link>
                   <Link href="/security" className="block hover:text-white transition-colors">
-                    Sigurnost
+                    {locale === 'en' ? 'Security' : 'Sigurnost'}
                   </Link>
                 </div>
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Politike
+                    {locale === 'en' ? 'Policies' : 'Politike'}
                   </p>
                   <Link href="/legal" className="block hover:text-white transition-colors">
-                    Pravna
+                    {locale === 'en' ? 'Legal' : 'Pravna'}
                   </Link>
                   <Link href="/privacy" className="block hover:text-white transition-colors">
-                    Privatnost
+                    {locale === 'en' ? 'Privacy' : 'Privatnost'}
                   </Link>
                   <Link href="/terms" className="block hover:text-white transition-colors">
-                    Uvjeti
+                    {locale === 'en' ? 'Terms' : 'Uvjeti'}
                   </Link>
                 </div>
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Platforma
+                    {locale === 'en' ? 'Platform' : 'Platforma'}
                   </p>
                   <Link href="/locations" className="block hover:text-white transition-colors">
-                    Lokacije
+                    {locale === 'en' ? 'Locations' : 'Lokacije'}
                   </Link>
                   <Link href="/members" className="block hover:text-white transition-colors">
-                    Članovi
+                    {locale === 'en' ? 'Members' : 'Članovi'}
                   </Link>
                   <Link href="/support" className="block hover:text-white transition-colors">
-                    Podrška
+                    {locale === 'en' ? 'Support' : 'Podrška'}
                   </Link>
                 </div>
               </div>
@@ -510,8 +567,14 @@ export default function OperativniPartner() {
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-black/10 p-4 md:p-6 shadow-2xl z-50">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-bold text-black">Spremni za partnerstvo?</h3>
-              <p className="text-sm text-black/70">Registrirajte se kao operativni partner i započnite zaradu</p>
+              <h3 className="text-lg font-bold text-black">
+                {locale === 'en' ? 'Ready to become a partner?' : 'Spreman postati partner?'}
+              </h3>
+              <p className="text-sm text-black/70">
+                {locale === 'en'
+                  ? 'Register and start earning referral bonuses'
+                  : 'Registrirajte se i počnite zarađivati provizije'}
+              </p>
             </div>
             <a
               href="#register-form"
@@ -521,7 +584,7 @@ export default function OperativniPartner() {
               }}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white font-semibold hover:shadow-xl transition-all whitespace-nowrap cursor-pointer"
             >
-              <span>Registriraj se</span>
+              <span>{locale === 'en' ? 'Register' : 'Registriraj se'}</span>
               <span>→</span>
             </a>
           </div>
