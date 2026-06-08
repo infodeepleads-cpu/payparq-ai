@@ -416,7 +416,7 @@ export default function OperativniPartner() {
                       ▶
                     </div>
                   </div>
-                  <p className="text-white text-lg font-semibold mt-4">Vidite kako radi</p>
+                  <p className="text-white text-lg font-semibold mt-4">DEMO</p>
                 </div>
               </div>
             </a>
@@ -429,10 +429,10 @@ export default function OperativniPartner() {
             <div className="grid gap-12 md:grid-cols-[2fr,3fr] items-end mb-12">
               <div>
                 <h2 className="text-2xl md:text-3xl font-semibold text-white mb-4">
-                  Sigurno parkiranje za moderni svijet
+                  {locale === 'en' ? 'Secure parking for the modern world' : 'Sigurno parkiranje za moderni svijet'}
                 </h2>
                 <p className="text-sm text-white/70">
-                  PayParq povezuje vlasnike parkirnih mjesta s provjerenima vozačima za bez problema urbanu mobilnost.
+                  {locale === 'en' ? 'PayParq connects parking space owners with verified drivers for seamless urban mobility.' : 'PayParq povezuje vlasnike parkirnih mjesta s provjerenima vozačima za bez problema urbanu mobilnost.'}
                 </p>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">

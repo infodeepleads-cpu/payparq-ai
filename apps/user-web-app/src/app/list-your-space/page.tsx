@@ -72,7 +72,7 @@ export default function ListYourSpace() {
     e.preventDefault();
 
     if (!hostEmail || !hostPhone || !hostCountry) {
-      setSubmitMessage({ type: 'error', text: 'Molimo popunite sva polja' });
+      setSubmitMessage({ type: 'error', text: locale === 'en' ? 'Please fill all fields' : 'Molimo popunite sva polja' });
       return;
     }
 
@@ -96,7 +96,7 @@ export default function ListYourSpace() {
         throw new Error(data.error || 'Registration failed');
       }
 
-      setSubmitMessage({ type: 'success', text: 'Hvala! Kontaktirat ćemo vas u sljedećih 72h vezano uz vašu registraciju. Možete završiti registraciju na sljedećoj stranici.' });
+      setSubmitMessage({ type: 'success', text: locale === 'en' ? 'Thank you! We will contact you within 72 hours regarding your registration. You can complete your registration on the next page.' : 'Hvala! Kontaktirat ćemo vas u sljedećih 72h vezano uz vašu registraciju. Možete završiti registraciju na sljedećoj stranici.' });
 
       // Redirect to host form with prefilled data after 2 seconds
       setTimeout(() => {
@@ -111,7 +111,7 @@ export default function ListYourSpace() {
       console.error('Submission error:', error);
       setSubmitMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'Nešto je pošlo naopako. Molimo pokušajte ponovo.'
+        text: error instanceof Error ? error.message : (locale === 'en' ? 'Something went wrong. Please try again.' : 'Nešto je pošlo naopako. Molimo pokušajte ponovo.')
       });
     } finally {
       setIsSubmitting(false);
@@ -120,36 +120,36 @@ export default function ListYourSpace() {
 
   const faqs = [
     {
-      q: 'Da li je iznajmljivanje parkirnog mjesta legalno?',
-      a: 'Iznajmljivanje parkirnog mjesta je potpuno legalno i sigurno. Preporučujemo da se informirate o lokalnim propisima jer mogu varirati po mjestu.',
+      q: locale === 'en' ? 'Is it legal to rent parking spaces?' : 'Da li je iznajmljivanje parkirnog mjesta legalno?',
+      a: locale === 'en' ? 'Renting parking spaces is completely legal and safe. We recommend you check local regulations as they may vary by location.' : 'Iznajmljivanje parkirnog mjesta je potpuno legalno i sigurno. Preporučujemo da se informirate o lokalnim propisima jer mogu varirati po mjestu.',
     },
     {
-      q: 'Trebam li dozvole ili registraciju?',
-      a: 'Zahtjevi za dozvole i registraciju variraju ovisno o općini i mjestu. Molimo vas da se informirate kod nadležnog lokalnog tijela.',
+      q: locale === 'en' ? 'Do I need permits or registration?' : 'Trebam li dozvole ili registraciju?',
+      a: locale === 'en' ? 'Permit and registration requirements vary by municipality and location. We recommend checking with your local authorities.' : 'Zahtjevi za dozvole i registraciju variraju ovisno o općini i mjestu. Molimo vas da se informirate kod nadležnog lokalnog tijela.',
     },
     {
-      q: 'Kako se prijavljuje prihod od najma?',
-      a: 'Prihod trebate prijaviti kao prihod od samostalne djelatnosti ili kao prihod od najma. Obratite se svojoj poreznoj upravi ili računovodstvenom stručnjaku za specifične upute.',
+      q: locale === 'en' ? 'How do I report rental income?' : 'Kako se prijavljuje prihod od najma?',
+      a: locale === 'en' ? 'You should report the income as self-employment income or rental income. Consult with your tax authority or accountant for specific guidance.' : 'Prihod trebate prijaviti kao prihod od samostalne djelatnosti ili kao prihod od najma. Obratite se svojoj poreznoj upravi ili računovodstvenom stručnjaku za specifične upute.',
     },
     {
-      q: 'Što ako ne želim sam upravljati parkirnim mjestom?',
-      a: 'Možete koristiti naš operativni partneri sustav - pasivni (samo zarada) ili aktivni (potpuna uprava). Kontaktirajte nas za detalje.',
+      q: locale === 'en' ? 'What if I don\'t want to manage the parking space myself?' : 'Što ako ne želim sam upravljati parkirnim mjestom?',
+      a: locale === 'en' ? 'You can use our operative partner system - passive (earnings only) or active (full management). Contact us for details.' : 'Možete koristiti naš operativni partneri sustav - pasivni (samo zarada) ili aktivni (potpuna uprava). Kontaktirajte nas za detalje.',
     },
     {
-      q: 'Kada dobivam isplatu?',
-      a: 'Sve uplate se isplaćuju na prvi radni dan sljedećeg mjeseca. Primjer: rezervacije iz siječnja plaćaju se u veljači.',
+      q: locale === 'en' ? 'When do I receive payment?' : 'Kada dobivam isplatu?',
+      a: locale === 'en' ? 'All payments are processed on the first business day of the following month. Example: January bookings are paid in February.' : 'Sve uplate se isplaćuju na prvi radni dan sljedećeg mjeseca. Primjer: rezervacije iz siječnja plaćaju se u veljači.',
     },
     {
-      q: 'Koji se načini plaćanja prihvaćaju?',
-      a: 'Prihvaćamo bankove transfere i digitalne metode plaćanja. Upravljajte preferencama u svojoj host aplikaciji.',
+      q: locale === 'en' ? 'What payment methods are accepted?' : 'Koji se načini plaćanja prihvaćaju?',
+      a: locale === 'en' ? 'We accept bank transfers and digital payment methods. Manage your preferences in your host app.' : 'Prihvaćamo bankove transfere i digitalne metode plaćanja. Upravljajte preferencama u svojoj host aplikaciji.',
     },
     {
-      q: 'Jesu li naplaćene naknade?',
-      a: 'Naplaćujemo uslužnu naknadu koju dodamo na Vašu cijenu kada vozač rezervira vaše mjesto. Nema skrivenih naknada ili troškova oglašavanja.',
+      q: locale === 'en' ? 'Are there any fees?' : 'Jesu li naplaćene naknade?',
+      a: locale === 'en' ? 'We charge a service fee that we add to your price when a driver books your space. There are no hidden fees or advertising costs.' : 'Naplaćujemo uslužnu naknadu koju dodamo na Vašu cijenu kada vozač rezervira vaše mjesto. Nema skrivenih naknada ili troškova oglašavanja.',
     },
     {
-      q: 'Je li moj novac siguran?',
-      a: 'Da. Sva sredstva su osigurana i prebacuju se prema rasporedu. Koristimo industrijske standarde enkripcije.',
+      q: locale === 'en' ? 'Is my money safe?' : 'Je li moj novac siguran?',
+      a: locale === 'en' ? 'Yes. All funds are secured and transferred on schedule. We use industry-standard encryption.' : 'Da. Sva sredstva su osigurana i prebacuju se prema rasporedu. Koristimo industrijske standarde enkripcije.',
     },
   ];
 
@@ -296,19 +296,19 @@ export default function ListYourSpace() {
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-4">
-                  Obrazac za oglašavanje prostora
+                  {locale === 'en' ? 'Listing form' : 'Obrazac za oglašavanje prostora'}
                 </p>
                 <h2 className="text-3xl md:text-4xl font-bold mb-4 text-black">
-                  Koliko biste mogli zaraditi?
+                  {locale === 'en' ? 'How much could you earn?' : 'Koliko biste mogli zaraditi?'}
                 </h2>
                 <p className="text-lg text-black/70 mb-8">
-                  Koristite naš kalkulator zarade da vidite koliko biste mogli zaraditi bez puno truda!
+                  {locale === 'en' ? 'Use our earnings calculator to see how much you could earn without much effort!' : 'Koristite naš kalkulator zarade da vidite koliko biste mogli zaraditi bez puno truda!'}
                 </p>
                 <Link
                   href="/calculator"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#5F3DFC] text-white text-sm font-semibold shadow-md hover:bg-[#4330c4] transition-colors"
                 >
-                  Izračunajte moju zaradu
+                  {locale === 'en' ? 'Calculate my earnings' : 'Izračunajte moju zaradu'}
                 </Link>
               </div>
 
@@ -325,7 +325,7 @@ export default function ListYourSpace() {
                             <span className="text-xs font-black tracking-tight text-white">P</span>
                           </div>
                         </div>
-                        <h3 className="text-base font-bold text-white text-center">Kalkulator zarade</h3>
+                        <h3 className="text-base font-bold text-white text-center">{locale === 'en' ? 'Earnings Calculator' : 'Kalkulator zarade'}</h3>
                       </div>
                       {/* Phone Content */}
                       <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50">
@@ -370,7 +370,7 @@ export default function ListYourSpace() {
 
                         {/* Reviews */}
                         <div className="space-y-2 mt-4">
-                          <p className="text-xs font-semibold text-black px-1">Nedavne recenzije</p>
+                          <p className="text-xs font-semibold text-black px-1">{locale === 'en' ? 'Recent reviews' : 'Nedavne recenzije'}</p>
 
                           <div className="bg-white rounded-lg p-2.5 border border-gray-200">
                             <div className="flex items-start gap-2 mb-1">
@@ -380,7 +380,7 @@ export default function ListYourSpace() {
                                 <p className="text-xs text-yellow-500">★★★★★ 5.0</p>
                               </div>
                             </div>
-                            <p className="text-xs text-black/70">"Odličnog lokacija, zaradio sam €320 prošlog mjeseca!"</p>
+                            <p className="text-xs text-black/70">{locale === 'en' ? '"Excellent location, earned €320 last month!"' : '"Odličnog lokacija, zaradio sam €320 prošlog mjeseca!"'}</p>
                           </div>
 
                           <div className="bg-white rounded-lg p-2.5 border border-gray-200">
@@ -391,22 +391,22 @@ export default function ListYourSpace() {
                                 <p className="text-xs text-yellow-500">★★★★★ 5.0</p>
                               </div>
                             </div>
-                            <p className="text-xs text-black/70">"Lako za upravljanje, odličan support"</p>
+                            <p className="text-xs text-black/70">{locale === 'en' ? '"Easy to manage, great support"' : '"Lako za upravljanje, odličan support"'}</p>
                           </div>
                         </div>
 
                         {/* Earnings Widget */}
                         <div className="bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] rounded-lg p-3 mt-4">
-                          <p className="text-xs text-white/80 mb-1">Vaša mjesečna zarada</p>
+                          <p className="text-xs text-white/80 mb-1">{locale === 'en' ? 'Your monthly earnings' : 'Vaša mjesečna zarada'}</p>
                           <p className="text-2xl font-bold text-white">€560</p>
-                          <p className="text-xs text-white/70 mt-1">2 prostora • Prosječno €280/prostor</p>
+                          <p className="text-xs text-white/70 mt-1">{locale === 'en' ? '2 spaces • Average €280/space' : '2 prostora • Prosječno €280/prostor'}</p>
                         </div>
 
                         <Link
                           href="/host"
                           className="w-full block bg-[#5F3DFC] text-white py-2 rounded-lg font-semibold text-xs hover:bg-[#4330c4] transition-colors cursor-pointer text-center mt-2"
                         >
-                          Oglasite svoj prostor
+                          {locale === 'en' ? 'List your space' : 'Oglasite svoj prostor'}
                         </Link>
                       </div>
                     </div>
@@ -427,8 +427,8 @@ export default function ListYourSpace() {
               <div className="grid md:grid-cols-2 gap-8 items-center">
                 <div>
                   <div className="text-4xl font-black text-[#5F3DFC] mb-4">1</div>
-                  <h3 className="text-4xl font-bold text-black mb-4">Pretraga</h3>
-                  <p className="text-lg text-black/70">Pregledajte parkirna mjesta po lokaciji, pogledajte fotografije, provjerite cijene i dostupnost.</p>
+                  <h3 className="text-4xl font-bold text-black mb-4">{locale === 'en' ? 'Search' : 'Pretraga'}</h3>
+                  <p className="text-lg text-black/70">{locale === 'en' ? 'Browse parking spaces by location, view photos, check prices and availability.' : 'Pregledajte parkirna mjesta po lokaciji, pogledajte fotografije, provjerite cijene i dostupnost.'}</p>
                 </div>
                 <div className="rounded-xl overflow-hidden h-64 md:h-80 shadow-lg">
                   <img
@@ -443,8 +443,8 @@ export default function ListYourSpace() {
               <div className="grid md:grid-cols-2 gap-8 items-center md:grid-flow-dense">
                 <div>
                   <div className="text-4xl font-black text-[#5F3DFC] mb-4">2</div>
-                  <h3 className="text-4xl font-bold text-black mb-4">Plaćanje</h3>
-                  <p className="text-lg text-black/70">Odaberite datume i vrijeme, dovršite sigurnu uplatu i dobijte trenutnu potvrdu.</p>
+                  <h3 className="text-4xl font-bold text-black mb-4">{locale === 'en' ? 'Payment' : 'Plaćanje'}</h3>
+                  <p className="text-lg text-black/70">{locale === 'en' ? 'Select dates and times, complete secure payment and get instant confirmation.' : 'Odaberite datume i vrijeme, dovršite sigurnu uplatu i dobijte trenutnu potvrdu.'}</p>
                 </div>
                 <div className="rounded-xl overflow-hidden h-64 md:h-80 shadow-lg">
                   <img
@@ -458,8 +458,8 @@ export default function ListYourSpace() {
               {/* Step 3: Pass */}
               <div className="grid md:grid-cols-2 gap-8 items-center">
                 <div>
-                  <h3 className="text-4xl font-bold text-black mb-4" translate="no"><span className="text-[#5F3DFC]">3</span> Potvrda</h3>
-                  <p className="text-lg text-black/70" translate="no">Primite svoju propusnica za parkiranje s QR kodom putem e-poste, pristupite kodovima za ulazak u aplikaciju i spremni ste za parkiranje.</p>
+                  <h3 className="text-4xl font-bold text-black mb-4" translate="no"><span className="text-[#5F3DFC]">3</span> {locale === 'en' ? 'Confirmation' : 'Potvrda'}</h3>
+                  <p className="text-lg text-black/70" translate="no">{locale === 'en' ? 'Receive your parking pass with QR code via email, access gate codes in the app and you\'re ready to park.' : 'Primite svoju propusnica za parkiranje s QR kodom putem e-poste, pristupite kodovima za ulazak u aplikaciju i spremni ste za parkiranje.'}</p>
                 </div>
                 <div className="rounded-xl overflow-hidden h-64 md:h-80 shadow-lg">
                   <img
@@ -478,14 +478,36 @@ export default function ListYourSpace() {
         <section className="bg-[#F5F5F7] py-8 md:py-20">
           <div className="max-w-6xl mx-auto px-6 md:px-12">
             <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-2">
-              Kako do zarade?
+              {locale === 'en' ? 'How to earn' : 'Kako do zarade?'}
             </p>
             <h2 className="text-2xl md:text-3xl font-semibold text-black mb-12">
-              Tri jednostavna koraka za početak zarade
+              {locale === 'en' ? 'Three simple steps to start earning' : 'Tri jednostavna koraka za početak zarade'}
             </h2>
 
             <div className="grid md:grid-cols-3 gap-6">
-              {[
+              {(locale === 'en' ? [
+                {
+                  step: '01',
+                  title: 'List your space',
+                  desc: 'Add space details, set price and upload photos in minutes.',
+                  image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=300&fit=crop',
+                  alt: 'Creating listing on phone'
+                },
+                {
+                  step: '02',
+                  title: 'Drivers book and park',
+                  desc: 'Verified drivers find and book your space. Get notified instantly.',
+                  image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop',
+                  alt: 'Happy driver booking'
+                },
+                {
+                  step: '03',
+                  title: 'You get paid',
+                  desc: 'Earnings are automatically transferred to your account. No extra work required.',
+                  image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=300&fit=crop',
+                  alt: 'Smiling person with money'
+                },
+              ] : [
                 {
                   step: '01',
                   title: 'Oglasite vašu parcelu',
@@ -507,7 +529,7 @@ export default function ListYourSpace() {
                   image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=300&fit=crop',
                   alt: 'Smiling person with money'
                 },
-              ].map((item, i) => (
+              ]).map((item, i) => (
                 <div
                   key={i}
                   className="rounded-2xl border border-black/10 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow"
@@ -583,7 +605,7 @@ export default function ListYourSpace() {
               href="#register-form"
               className="inline-flex items-center gap-1 md:gap-2 px-3 md:px-6 py-2 md:py-3 rounded-full bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white text-xs md:text-sm font-semibold shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer"
             >
-              <span>Oglasite svoje parkirno mjesto</span>
+              <span>{locale === 'en' ? 'List your parking space' : 'Oglasite svoje parkirno mjesto'}</span>
               <span className="text-sm md:text-lg">→</span>
             </Link>
           </div>
@@ -610,7 +632,7 @@ export default function ListYourSpace() {
                       ▶
                     </div>
                   </div>
-                  <p className="text-white text-lg font-semibold mt-4">Vidite kako radi</p>
+                  <p className="text-white text-lg font-semibold mt-4">DEMO</p>
                 </div>
               </div>
             </a>
@@ -623,83 +645,83 @@ export default function ListYourSpace() {
             <div className="grid gap-12 md:grid-cols-[2fr,3fr] items-end mb-12">
               <div>
                 <h2 className="text-2xl md:text-3xl font-semibold text-white mb-4">
-                  Sigurno parkiranje za moderni svijet
+                  {locale === 'en' ? 'Secure parking for the modern world' : 'Sigurno parkiranje za moderni svijet'}
                 </h2>
                 <p className="text-sm text-white/70">
-                  PayParq povezuje vlasnike parkirnih mjesta s provjerenima vozačima za bez problema urbanu mobilnost.
+                  {locale === 'en' ? 'PayParq connects parking space owners with verified drivers for seamless urban mobility.' : 'PayParq povezuje vlasnike parkirnih mjesta s provjerenima vozačima za bez problema urbanu mobilnost.'}
                 </p>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Poduzeće
+                    {locale === 'en' ? 'Company' : 'Poduzeće'}
                   </p>
                   <Link href="/about" className="block hover:text-white transition-colors">
-                    O nama
+                    {locale === 'en' ? 'About' : 'O nama'}
                   </Link>
                   <Link href="/careers" className="block hover:text-white transition-colors">
-                    Karijera
+                    {locale === 'en' ? 'Careers' : 'Karijera'}
                   </Link>
                   <Link href="/news" className="block hover:text-white transition-colors">
-                    Vijesti
+                    {locale === 'en' ? 'News' : 'Vijesti'}
                   </Link>
                 </div>
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Vizija
+                    {locale === 'en' ? 'Vision' : 'Vizija'}
                   </p>
                   <Link href="/product" className="block hover:text-white transition-colors">
-                    Proizvod
+                    {locale === 'en' ? 'Product' : 'Proizvod'}
                   </Link>
                   <Link href="/parking" className="block hover:text-white transition-colors">
-                    Parkiranje
+                    {locale === 'en' ? 'Parking' : 'Parkiranje'}
                   </Link>
                   <Link href="/security" className="block hover:text-white transition-colors">
-                    Sigurnost
+                    {locale === 'en' ? 'Security' : 'Sigurnost'}
                   </Link>
                 </div>
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Politike
+                    {locale === 'en' ? 'Policies' : 'Politike'}
                   </p>
                   <Link href="/legal" className="block hover:text-white transition-colors">
-                    Pravna
+                    {locale === 'en' ? 'Legal' : 'Pravna'}
                   </Link>
                   <Link href="/privacy" className="block hover:text-white transition-colors">
-                    Privatnost
+                    {locale === 'en' ? 'Privacy' : 'Privatnost'}
                   </Link>
                   <Link href="/terms" className="block hover:text-white transition-colors">
-                    Uvjeti
+                    {locale === 'en' ? 'Terms' : 'Uvjeti'}
                   </Link>
                 </div>
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Platforma
+                    {locale === 'en' ? 'Platform' : 'Platforma'}
                   </p>
                   <Link href="/locations" className="block hover:text-white transition-colors">
-                    Lokacije
+                    {locale === 'en' ? 'Locations' : 'Lokacije'}
                   </Link>
                   <Link href="/members" className="block hover:text-white transition-colors">
-                    Članovi
+                    {locale === 'en' ? 'Members' : 'Članovi'}
                   </Link>
                   <Link href="/support" className="block hover:text-white transition-colors">
-                    Podrška
+                    {locale === 'en' ? 'Support' : 'Podrška'}
                   </Link>
                 </div>
               </div>
             </div>
             <div className="pt-12 border-t border-white/10 space-y-4">
               <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-white">Postani operativni partner</h3>
-                <p className="text-sm text-white/70">Upravljajte parkirnim mjestima i zaradite dodatni dohodak bez napora.</p>
+                <h3 className="text-lg font-semibold text-white">{locale === 'en' ? 'Become an operative partner' : 'Postani operativni partner'}</h3>
+                <p className="text-sm text-white/70">{locale === 'en' ? 'Manage parking spaces and earn extra income effortlessly.' : 'Upravljajte parkirnim mjestima i zaradite dodatni dohodak bez napora.'}</p>
                 <Link href="/operativni-partner" className="inline-block px-4 py-2 bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white text-sm font-semibold rounded-lg hover:shadow-lg transition-shadow">
-                  Registriraj se
+                  {locale === 'en' ? 'Sign up' : 'Registriraj se'}
                 </Link>
               </div>
               <div className="pt-4 border-t border-white/10">
-                <p className="text-white/70 text-sm mb-2">Već imate račun?</p>
+                <p className="text-white/70 text-sm mb-2">{locale === 'en' ? 'Already have an account?' : 'Već imate račun?'}</p>
                 <Link href="/members" className="text-[#5F3DFC] text-sm font-semibold hover:text-[#4330c4] transition-colors">
-                  Prijavite se
+                  {locale === 'en' ? 'Sign in' : 'Prijavite se'}
                 </Link>
               </div>
               <div className="pt-4 border-t border-white/10">
