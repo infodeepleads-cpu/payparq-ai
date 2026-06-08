@@ -348,38 +348,38 @@ export default function OperativniPartner() {
         </section>
 
         {/* Other Partner Programs */}
-        <section className="bg-white py-16 md:py-20">
+        <section className="py-16 md:py-20" style={{ background: 'linear-gradient(135deg, #1a0533 0%, #2d1054 40%, #0f0a2e 100%)' }}>
           <div className="max-w-4xl mx-auto px-6 md:px-12">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-2">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-violet-300/70 mb-2">
               {locale === 'en' ? 'OTHER OPPORTUNITIES' : 'OSTALE MOGUĆNOSTI'}
             </p>
-            <h2 className="text-2xl md:text-3xl font-semibold text-black mb-12">
+            <h2 className="text-2xl md:text-3xl font-semibold text-white mb-12">
               {locale === 'en' ? 'More ways to earn with PayParq' : 'Više načina za zaradu s PayParqom'}
             </h2>
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* Rent a Car Partner */}
-              <Link href="/rent-a-car-partner" className="group p-8 rounded-2xl border border-black/10 hover:border-black/30 hover:shadow-lg transition-all duration-300">
+              <Link href="/rent-a-car-partner" className="group p-8 rounded-2xl border border-white/10 hover:border-violet-400/50 hover:bg-white/5 transition-all duration-300">
                 <div className="flex flex-col h-full">
                   <div className="mb-6">
-                    <h3 className="text-2xl font-bold text-black mb-3">
+                    <h3 className="text-2xl font-bold text-white mb-3">
                       {locale === 'en' ? '🚗 Rent a Car' : '🚗 Iznajmljivanje Automobila'}
                     </h3>
-                    <p className="text-sm text-black/70">
+                    <p className="text-sm text-white/60">
                       {locale === 'en'
                         ? 'Offer PayParq parking to your rental customers and earn 10% referral bonus'
                         : 'Ponudite PayParq parking svojim kupcima i zarađujte 10% provizije'}
                     </p>
                   </div>
-                  <div className="flex items-start gap-2 text-xs text-black/60 mb-6 flex-1">
+                  <div className="flex items-start gap-2 text-xs text-violet-300/80 mb-6 flex-1">
                     <span className="text-lg mt-0.5">✓</span>
                     <span>
                       {locale === 'en'
-                        ? 'Your guests get 10% discount on parking'
-                        : 'Vaši gosti dobivaju 10% popust na parkiranje'}
+                        ? 'Your customers get 10% discount on parking'
+                        : 'Vaši kupci dobivaju 10% popust na parkiranje'}
                     </span>
                   </div>
-                  <div className="inline-flex items-center gap-2 text-sm font-semibold text-black group-hover:gap-3 transition-all">
+                  <div className="inline-flex items-center gap-2 text-sm font-semibold text-violet-300 group-hover:gap-3 transition-all">
                     <span>{locale === 'en' ? 'Learn more' : 'Saznaj više'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </div>
@@ -387,20 +387,20 @@ export default function OperativniPartner() {
               </Link>
 
               {/* Hotel/Airbnb Partner */}
-              <Link href="/hotel-partner" className="group p-8 rounded-2xl border border-black/10 hover:border-black/30 hover:shadow-lg transition-all duration-300">
+              <Link href="/hotel-partner" className="group p-8 rounded-2xl border border-white/10 hover:border-violet-400/50 hover:bg-white/5 transition-all duration-300">
                 <div className="flex flex-col h-full">
                   <div className="mb-6">
-                    <h3 className="text-2xl font-bold text-black mb-3">
+                    <h3 className="text-2xl font-bold text-white mb-3">
                       {locale === 'en' ? '🏨 Hotels & Airbnb' : '🏨 Hoteli i Airbnb'}
                     </h3>
-                    <p className="text-sm text-black/70">
+                    <p className="text-sm text-white/60">
                       {locale === 'en'
                         ? 'Earn 10% referral bonus and optionally list your own parking'
-                        : 'Zarađujte 10% provizije i opciono ponudite vlastite parking prostore'}
+                        : 'Zarađujte 10% provizije i opcionalno ponudite vlastiti parking prostor'}
                     </p>
                   </div>
                   <div className="space-y-2 flex-1 mb-6">
-                    <div className="flex items-start gap-2 text-xs text-black/60">
+                    <div className="flex items-start gap-2 text-xs text-violet-300/80">
                       <span className="text-lg mt-0.5">✓</span>
                       <span>
                         {locale === 'en'
@@ -408,16 +408,16 @@ export default function OperativniPartner() {
                           : 'Vaši gosti dobivaju 10% popust na parkiranje'}
                       </span>
                     </div>
-                    <div className="flex items-start gap-2 text-xs text-black/60">
+                    <div className="flex items-start gap-2 text-xs text-violet-300/80">
                       <span className="text-lg mt-0.5">✓</span>
                       <span>
                         {locale === 'en'
-                          ? 'List your parking for premium experience'
-                          : 'Ponudite vlastite parking prostore'}
+                          ? 'List your own parking'
+                          : 'Ponudite vlastiti parking prostor'}
                       </span>
                     </div>
                   </div>
-                  <div className="inline-flex items-center gap-2 text-sm font-semibold text-black group-hover:gap-3 transition-all">
+                  <div className="inline-flex items-center gap-2 text-sm font-semibold text-violet-300 group-hover:gap-3 transition-all">
                     <span>{locale === 'en' ? 'Learn more' : 'Saznaj više'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </div>

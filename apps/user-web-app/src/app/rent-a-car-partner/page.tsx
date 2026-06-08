@@ -318,7 +318,7 @@ export default function RentACarPartner() {
 
               <div className="md:order-1 md:col-span-1 order-2 md:mt-[-2cm]" style={{ marginTop: '0' }}>
                 <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight mb-6 text-white">
-                  {locale === 'en' ? 'Run a car rental?' : 'Vodeš iznajmljivanje automobila?'}
+                  {locale === 'en' ? 'Run a car rental?' : 'Vodiš iznajmljivanje automobila?'}
                 </h1>
                 <p className="text-lg md:text-xl text-white/80 mb-8" style={{ marginTop: '0.5cm' }}>
                   {locale === 'en'
@@ -393,30 +393,30 @@ export default function RentACarPartner() {
         </section>
 
         {/* Other Partner Programs */}
-        <section className="bg-white py-16 md:py-20">
+        <section className="py-16 md:py-20" style={{ background: 'linear-gradient(135deg, #1a0533 0%, #2d1054 40%, #0f0a2e 100%)' }}>
           <div className="max-w-4xl mx-auto px-6 md:px-12">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-2">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-violet-300/70 mb-2">
               {locale === 'en' ? 'OTHER OPPORTUNITIES' : 'OSTALE MOGUĆNOSTI'}
             </p>
-            <h2 className="text-2xl md:text-3xl font-semibold text-black mb-12">
+            <h2 className="text-2xl md:text-3xl font-semibold text-white mb-12">
               {locale === 'en' ? 'More ways to earn with PayParq' : 'Više načina za zaradu s PayParqom'}
             </h2>
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* Operativni Partner */}
-              <Link href="/operativni-partner" className="group p-8 rounded-2xl border border-black/10 hover:border-black/30 hover:shadow-lg transition-all duration-300">
+              <Link href="/operativni-partner" className="group p-8 rounded-2xl border border-white/10 hover:border-violet-400/50 hover:bg-white/5 transition-all duration-300">
                 <div className="flex flex-col h-full">
                   <div className="mb-6">
-                    <h3 className="text-2xl font-bold text-black mb-3">
+                    <h3 className="text-2xl font-bold text-white mb-3">
                       {locale === 'en' ? '🅿️ Parking Operator' : '🅿️ Operativni Partner'}
                     </h3>
-                    <p className="text-sm text-black/70">
+                    <p className="text-sm text-white/60">
                       {locale === 'en'
                         ? 'Manage parking spaces and earn from every booking'
                         : 'Upravljajte parkirnim mjestima i zarađujte od svake rezervacije'}
                     </p>
                   </div>
-                  <div className="flex items-start gap-2 text-xs text-black/60 mb-6 flex-1">
+                  <div className="flex items-start gap-2 text-xs text-violet-300/80 mb-6 flex-1">
                     <span className="text-lg mt-0.5">✓</span>
                     <span>
                       {locale === 'en'
@@ -424,7 +424,7 @@ export default function RentACarPartner() {
                         : 'Potpuno upravljanje parkirnim mjestima'}
                     </span>
                   </div>
-                  <div className="inline-flex items-center gap-2 text-sm font-semibold text-black group-hover:gap-3 transition-all">
+                  <div className="inline-flex items-center gap-2 text-sm font-semibold text-violet-300 group-hover:gap-3 transition-all">
                     <span>{locale === 'en' ? 'Learn more' : 'Saznaj više'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </div>
@@ -432,20 +432,20 @@ export default function RentACarPartner() {
               </Link>
 
               {/* Hotel Partner */}
-              <Link href="/hotel-partner" className="group p-8 rounded-2xl border border-black/10 hover:border-black/30 hover:shadow-lg transition-all duration-300">
+              <Link href="/hotel-partner" className="group p-8 rounded-2xl border border-white/10 hover:border-violet-400/50 hover:bg-white/5 transition-all duration-300">
                 <div className="flex flex-col h-full">
                   <div className="mb-6">
-                    <h3 className="text-2xl font-bold text-black mb-3">
+                    <h3 className="text-2xl font-bold text-white mb-3">
                       {locale === 'en' ? '🏨 Hotels & Airbnb' : '🏨 Hoteli i Airbnb'}
                     </h3>
-                    <p className="text-sm text-black/70">
+                    <p className="text-sm text-white/60">
                       {locale === 'en'
                         ? 'Earn 10% referral bonus and optionally list your own parking'
-                        : 'Zarađujte 10% provizije i opciono ponudite vlastite parking prostore'}
+                        : 'Zarađujte 10% provizije i opcionalno ponudite vlastiti parking prostor'}
                     </p>
                   </div>
                   <div className="space-y-2 flex-1 mb-6">
-                    <div className="flex items-start gap-2 text-xs text-black/60">
+                    <div className="flex items-start gap-2 text-xs text-violet-300/80">
                       <span className="text-lg mt-0.5">✓</span>
                       <span>
                         {locale === 'en'
@@ -453,16 +453,16 @@ export default function RentACarPartner() {
                           : 'Vaši gosti dobivaju 10% popust'}
                       </span>
                     </div>
-                    <div className="flex items-start gap-2 text-xs text-black/60">
+                    <div className="flex items-start gap-2 text-xs text-violet-300/80">
                       <span className="text-lg mt-0.5">✓</span>
                       <span>
                         {locale === 'en'
-                          ? 'List your parking for free'
-                          : 'Ponudite vlastite parking prostore'}
+                          ? 'List your own parking'
+                          : 'Ponudite vlastiti parking prostor'}
                       </span>
                     </div>
                   </div>
-                  <div className="inline-flex items-center gap-2 text-sm font-semibold text-black group-hover:gap-3 transition-all">
+                  <div className="inline-flex items-center gap-2 text-sm font-semibold text-violet-300 group-hover:gap-3 transition-all">
                     <span>{locale === 'en' ? 'Learn more' : 'Saznaj više'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </div>

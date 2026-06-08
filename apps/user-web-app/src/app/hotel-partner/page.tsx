@@ -28,6 +28,7 @@ export default function HotelPartner() {
   const [contactPerson, setContactPerson] = useState('');
   const [numRooms, setNumRooms] = useState('');
   const [wantParkingListing, setWantParkingListing] = useState(false);
+  const [wantPremiumExperience, setWantPremiumExperience] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showStickyCta, setShowStickyCta] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,6 +73,7 @@ export default function HotelPartner() {
           contactPerson,
           numRooms,
           wantParkingListing,
+          wantPremiumExperience,
           type: 'hotel_partner',
         }),
       });
@@ -86,7 +88,7 @@ export default function HotelPartner() {
         type: 'success',
         text: locale === 'en'
           ? 'Thank you! We will contact you within 72 hours.'
-          : 'Hvala! Kontaktirat ćemo vas u sljedećih 72h vezano uz vašu registraciju.'
+          : 'Hvala! kontaktirat ćemo vas u sljedećih 72h vezano uz vašu registraciju.'
       });
     } catch (error) {
       console.error('Submission error:', error);
@@ -154,7 +156,7 @@ export default function HotelPartner() {
               <div className="flex justify-center md:justify-end md:order-2 md:col-span-1 order-1 w-full md:w-auto md:mr-[-60px] md:mt-[-90px]">
                 <form id="register-form" onSubmit={handleRegisterSubmit} className="rounded-2xl bg-white px-6 md:px-8 pt-14 md:pt-10 pb-10 md:pb-12 shadow-lg flex flex-col justify-start w-full max-w-sm md:max-w-md">
                   <h3 className="text-3xl font-bold text-black mb-6">
-                    {locale === 'en' ? 'Become a PayParq Partner' : 'Postani PayParq Partner'}
+                    {locale === 'en' ? 'Become a PayParq Referral Host' : 'Postani PayParq Referal Host'}
                   </h3>
 
                   <div className="space-y-4 flex-1 flex flex-col">
@@ -275,11 +277,29 @@ export default function HotelPartner() {
                         className="w-4 h-4 rounded border-blue-300 mt-0.5 cursor-pointer accent-blue-600"
                       />
                       <label htmlFor="parking" className="text-xs text-blue-900 cursor-pointer leading-tight flex-1">
-                        <span className="font-semibold">{locale === 'en' ? 'I want to list my parking' : 'Želim ponuditi vlastite parking prostore'}</span>
+                        <span className="font-semibold">{locale === 'en' ? 'I want to list my parking' : 'Želim ponuditi vlastiti parking prostor'}</span>
                         <p className="text-blue-800/70 mt-1">
                           {locale === 'en'
                             ? 'Offer premium parking experience to your guests for free'
                             : 'Ponudite premium parkiranje gostima besplatno'}
+                        </p>
+                      </label>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-4 bg-violet-50 border border-violet-200 rounded-lg">
+                      <input
+                        type="checkbox"
+                        id="premium"
+                        checked={wantPremiumExperience}
+                        onChange={(e) => setWantPremiumExperience(e.target.checked)}
+                        className="w-4 h-4 rounded border-violet-300 mt-0.5 cursor-pointer accent-violet-600"
+                      />
+                      <label htmlFor="premium" className="text-xs text-violet-900 cursor-pointer leading-tight flex-1">
+                        <span className="font-semibold">{locale === 'en' ? 'Premium parking experience for my guests' : 'Premium parking iskustvo za moje goste'}</span>
+                        <p className="text-violet-800/70 mt-1">
+                          {locale === 'en'
+                            ? 'Provide guests with discount codes and a seamless digital parking journey'
+                            : 'Pružite gostima kodove za popust i besprijekorno digitalno iskustvo parkiranja'}
                         </p>
                       </label>
                     </div>
@@ -338,12 +358,12 @@ export default function HotelPartner() {
 
               <div className="md:order-1 md:col-span-1 order-2 md:mt-[-2cm]" style={{ marginTop: '0' }}>
                 <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight mb-6 text-white">
-                  {locale === 'en' ? 'Run a hotel or Airbnb?' : 'Vodeš hotel ili Airbnb?'}
+                  {locale === 'en' ? 'Run a hotel or Airbnb?' : 'Vodiš hotel ili Airbnb?'}
                 </h1>
                 <p className="text-lg md:text-xl text-white/80 mb-8" style={{ marginTop: '0.5cm' }}>
                   {locale === 'en'
-                    ? 'Become a PayParq partner and earn 10% referral bonus. Optionally list your parking for guests.'
-                    : 'Postani PayParq partner i zarađuj 10% provizije. Opciono ponudi vlastite parking prostore.'}
+                    ? 'Become a PayParq partner and earn 10% referral bonus. Optionally list your own parking.'
+                    : 'Postani PayParq partner i zarađuj 10% provizije. Opcionalno ponudi vlastiti parking prostor.'}
                 </p>
               </div>
             </div>
@@ -412,31 +432,122 @@ export default function HotelPartner() {
           </div>
         </section>
 
-        {/* Other Partner Programs */}
-        <section className="bg-white py-16 md:py-20">
-          <div className="max-w-4xl mx-auto px-6 md:px-12">
+        {/* PayParq Experience for Guests */}
+        <section className="bg-white py-16 md:py-24">
+          <div className="max-w-5xl mx-auto px-6 md:px-12">
             <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-2">
+              {locale === 'en' ? 'GUEST EXPERIENCE' : 'ISKUSTVO GOSTIJU'}
+            </p>
+            <h2 className="text-2xl md:text-3xl font-semibold text-black mb-4">
+              {locale === 'en' ? 'PayParq experience for your guests' : 'PayParq iskustvo za vaše goste'}
+            </h2>
+            <p className="text-base text-black/60 mb-12 max-w-2xl">
+              {locale === 'en'
+                ? 'Your guests deserve seamless parking from check-in to check-out. PayParq delivers a premium, friction-free parking journey.'
+                : 'Vaši gosti zaslužuju besprijekorno parkiranje od dolaska do odlaska. PayParq pruža premium, bezproblematično iskustvo parkiranja.'}
+            </p>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="p-6 rounded-2xl bg-gray-50 border border-black/5">
+                <div className="text-3xl mb-4">⚡</div>
+                <h3 className="text-base font-semibold text-black mb-2">
+                  {locale === 'en' ? 'Instant reservation' : 'Brza rezervacija'}
+                </h3>
+                <p className="text-sm text-black/60 leading-relaxed">
+                  {locale === 'en'
+                    ? 'Guests book parking in seconds directly from their phone. No queues, no cash, no stress.'
+                    : 'Gosti rezerviraju parkiranje za nekoliko sekundi izravno s mobitela. Bez čekanja, bez gotovine, bez stresa.'}
+                </p>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-gray-50 border border-black/5">
+                <div className="text-3xl mb-4">🎫</div>
+                <h3 className="text-base font-semibold text-black mb-2">
+                  {locale === 'en' ? 'Digital parking pass' : 'Digitalna parking propusnica'}
+                </h3>
+                <p className="text-sm text-black/60 leading-relaxed">
+                  {locale === 'en'
+                    ? 'A QR-based parking pass delivered to the guest\'s phone. Scan to enter, scan to exit — completely contactless.'
+                    : 'QR parking propusnica dostavljena na mobitel gosta. Skeniraj za ulaz, skeniraj za izlaz — potpuno beskontaktno.'}
+                </p>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-gray-50 border border-black/5">
+                <div className="text-3xl mb-4">🅿️</div>
+                <h3 className="text-base font-semibold text-black mb-2">
+                  {locale === 'en' ? 'Parking without friction' : 'Parkiranje bez trenja'}
+                </h3>
+                <p className="text-sm text-black/60 leading-relaxed">
+                  {locale === 'en'
+                    ? 'No searching, no overpaying, no tickets. Guests always know where to park and exactly how much it costs.'
+                    : 'Bez traženja mjesta, bez preplaćivanja, bez kazni. Gosti uvijek znaju gdje parkirati i točno koliko to košta.'}
+                </p>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-gray-50 border border-black/5">
+                <div className="text-3xl mb-4">💜</div>
+                <h3 className="text-base font-semibold text-black mb-2">
+                  {locale === 'en' ? 'Premium experience' : 'Premium iskustvo'}
+                </h3>
+                <p className="text-sm text-black/60 leading-relaxed">
+                  {locale === 'en'
+                    ? 'Vetted, secure parking locations with real reviews. Guests feel taken care of — reflecting well on your property.'
+                    : 'Provjerene, sigurne lokacije s pravim recenzijama. Gosti se osjećaju zbrinutima — što dobro odražava na vaš objekt.'}
+                </p>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-gray-50 border border-black/5">
+                <div className="text-3xl mb-4">📍</div>
+                <h3 className="text-base font-semibold text-black mb-2">
+                  {locale === 'en' ? 'Nearby parking map' : 'Mapa parkiranja u blizini'}
+                </h3>
+                <p className="text-sm text-black/60 leading-relaxed">
+                  {locale === 'en'
+                    ? 'Guests instantly see all available parking near your property, with prices and availability in real time.'
+                    : 'Gosti odmah vide sva dostupna parkirna mjesta u blizini vašeg objekta, s cijenama i dostupnošću u realnom vremenu.'}
+                </p>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-gray-50 border border-black/5">
+                <div className="text-3xl mb-4">🔒</div>
+                <h3 className="text-base font-semibold text-black mb-2">
+                  {locale === 'en' ? 'Safe & verified' : 'Sigurno i provjereno'}
+                </h3>
+                <p className="text-sm text-black/60 leading-relaxed">
+                  {locale === 'en'
+                    ? 'Every parking location is verified by PayParq. Guests park with confidence, every time.'
+                    : 'Svaka parking lokacija je verificirana od strane PayParqa. Gosti parkiraju sa sigurnošću, svaki put.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Other Partner Programs */}
+        <section className="py-16 md:py-20" style={{ background: 'linear-gradient(135deg, #1a0533 0%, #2d1054 40%, #0f0a2e 100%)' }}>
+          <div className="max-w-4xl mx-auto px-6 md:px-12">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-violet-300/70 mb-2">
               {locale === 'en' ? 'OTHER OPPORTUNITIES' : 'OSTALE MOGUĆNOSTI'}
             </p>
-            <h2 className="text-2xl md:text-3xl font-semibold text-black mb-12">
+            <h2 className="text-2xl md:text-3xl font-semibold text-white mb-12">
               {locale === 'en' ? 'More ways to earn with PayParq' : 'Više načina za zaradu s PayParqom'}
             </h2>
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* Operativni Partner */}
-              <Link href="/operativni-partner" className="group p-8 rounded-2xl border border-black/10 hover:border-black/30 hover:shadow-lg transition-all duration-300">
+              <Link href="/operativni-partner" className="group p-8 rounded-2xl border border-white/10 hover:border-violet-400/50 hover:bg-white/5 transition-all duration-300">
                 <div className="flex flex-col h-full">
                   <div className="mb-6">
-                    <h3 className="text-2xl font-bold text-black mb-3">
+                    <h3 className="text-2xl font-bold text-white mb-3">
                       {locale === 'en' ? '🅿️ Parking Operator' : '🅿️ Operativni Partner'}
                     </h3>
-                    <p className="text-sm text-black/70">
+                    <p className="text-sm text-white/60">
                       {locale === 'en'
                         ? 'Manage parking spaces and earn from every booking'
                         : 'Upravljajte parkirnim mjestima i zarađujte od svake rezervacije'}
                     </p>
                   </div>
-                  <div className="flex items-start gap-2 text-xs text-black/60 mb-6 flex-1">
+                  <div className="flex items-start gap-2 text-xs text-violet-300/80 mb-6 flex-1">
                     <span className="text-lg mt-0.5">✓</span>
                     <span>
                       {locale === 'en'
@@ -444,7 +555,7 @@ export default function HotelPartner() {
                         : 'Potpuno upravljanje parkirnim mjestima'}
                     </span>
                   </div>
-                  <div className="inline-flex items-center gap-2 text-sm font-semibold text-black group-hover:gap-3 transition-all">
+                  <div className="inline-flex items-center gap-2 text-sm font-semibold text-violet-300 group-hover:gap-3 transition-all">
                     <span>{locale === 'en' ? 'Learn more' : 'Saznaj više'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </div>
@@ -452,19 +563,19 @@ export default function HotelPartner() {
               </Link>
 
               {/* Rent a Car Partner */}
-              <Link href="/rent-a-car-partner" className="group p-8 rounded-2xl border border-black/10 hover:border-black/30 hover:shadow-lg transition-all duration-300">
+              <Link href="/rent-a-car-partner" className="group p-8 rounded-2xl border border-white/10 hover:border-violet-400/50 hover:bg-white/5 transition-all duration-300">
                 <div className="flex flex-col h-full">
                   <div className="mb-6">
-                    <h3 className="text-2xl font-bold text-black mb-3">
+                    <h3 className="text-2xl font-bold text-white mb-3">
                       {locale === 'en' ? '🚗 Rent a Car' : '🚗 Iznajmljivanje Automobila'}
                     </h3>
-                    <p className="text-sm text-black/70">
+                    <p className="text-sm text-white/60">
                       {locale === 'en'
                         ? 'Offer PayParq parking to your rental customers'
                         : 'Ponudite PayParq parking svojim kupcima'}
                     </p>
                   </div>
-                  <div className="flex items-start gap-2 text-xs text-black/60 mb-6 flex-1">
+                  <div className="flex items-start gap-2 text-xs text-violet-300/80 mb-6 flex-1">
                     <span className="text-lg mt-0.5">✓</span>
                     <span>
                       {locale === 'en'
@@ -472,7 +583,7 @@ export default function HotelPartner() {
                         : 'Zarađujte 10% provizije'}
                     </span>
                   </div>
-                  <div className="inline-flex items-center gap-2 text-sm font-semibold text-black group-hover:gap-3 transition-all">
+                  <div className="inline-flex items-center gap-2 text-sm font-semibold text-violet-300 group-hover:gap-3 transition-all">
                     <span>{locale === 'en' ? 'Learn more' : 'Saznaj više'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </div>
