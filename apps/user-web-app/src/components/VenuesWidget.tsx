@@ -1,14 +1,16 @@
 'use client';
 
 import { VENUES } from '@/data/venues';
+import { useLocale } from '@/components/LocaleProvider';
 
 export function VenuesWidget() {
+  const { locale } = useLocale();
   const venues = Object.values(VENUES).slice(0, 6);
 
   return (
     <div className="rounded-2xl border border-black/5 bg-[#05020A] text-white p-6 md:p-8">
       <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-4">
-        Parking za Utakmice i Događanja
+        {locale === 'en' ? 'Parking for Matches & Events' : 'Parking za Utakmice i Događanja'}
       </p>
       <div className="flex flex-wrap gap-3">
         {venues.map((venue) => (

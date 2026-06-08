@@ -1,14 +1,16 @@
 'use client';
 
 import { CITIES } from '@/data/cities';
+import { useLocale } from '@/components/LocaleProvider';
 
 export function CitiesWidget() {
+  const { locale } = useLocale();
   const cities = Object.values(CITIES).slice(0, 6);
 
   return (
     <div className="rounded-2xl border border-black/5 bg-[#05020A] text-white p-6 md:p-8">
       <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-4">
-        Parking u Hrvatskim Gradovima
+        {locale === 'en' ? 'Parking in Croatian Cities' : 'Parking u Hrvatskim Gradovima'}
       </p>
       <div className="flex flex-wrap gap-3">
         {cities.map((city) => (
