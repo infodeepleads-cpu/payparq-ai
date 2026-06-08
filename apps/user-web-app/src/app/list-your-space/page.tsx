@@ -19,6 +19,7 @@ const COUNTRIES = [
 ];
 
 export default function ListYourSpace() {
+  const locale = 'hr';
   const [spaces, setSpaces] = useState(1);
   const [days, setDays] = useState(5);
   const [price, setPrice] = useState(8);
