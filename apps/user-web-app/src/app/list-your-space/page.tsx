@@ -167,14 +167,14 @@ export default function ListYourSpace() {
             <div className="flex flex-col md:grid md:grid-cols-2 gap-1 md:gap-12 items-center justify-center px-4 md:px-0">
               <div className="flex justify-center md:justify-end md:order-2 md:col-span-1 order-1 w-full md:w-auto md:mr-[-60px] md:mt-[-90px] -mt-4">
                 <form id="register-form" onSubmit={handleRegisterSubmit} className="rounded-2xl bg-white px-6 md:px-8 pt-7 md:pt-5 pb-10 md:pb-12 shadow-lg flex flex-col justify-start w-full max-w-sm md:max-w-md -mt-5 md:mt-0">
-                  <h3 className="text-3xl font-bold text-black mb-6">Postani PayParq Host</h3>
+                  <h3 className="text-3xl font-bold text-black mb-6">{locale === 'en' ? 'Become a PayParq Host' : 'Postani PayParq Host'}</h3>
 
                   <div className="space-y-4 flex flex-col">
                     <div>
-                      <label className="text-xs font-semibold text-black/80 mb-0.5 block">E-pošta</label>
+                      <label className="text-xs font-semibold text-black/80 mb-0.5 block">{locale === 'en' ? 'Email' : 'E-pošta'}</label>
                       <input
                         type="email"
-                        placeholder="Upišite vašu email adresu"
+                        placeholder={locale === 'en' ? 'Enter your email' : 'Upišite vašu email adresu'}
                         value={hostEmail}
                         onChange={(e) => setHostEmail(e.target.value)}
                         className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-black focus:text-black transition-colors placeholder:text-black/40"
@@ -183,14 +183,14 @@ export default function ListYourSpace() {
 
                     <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <label className="text-xs font-semibold text-black/80 mb-1.5 block">Pozivni broj</label>
+                        <label className="text-xs font-semibold text-black/80 mb-1.5 block">{locale === 'en' ? 'Phone code' : 'Pozivni broj'}</label>
                         <div className="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-xs text-black flex items-center gap-1.5">
                           <span>{COUNTRIES.find(c => c.code === hostCountry)?.flag}</span>
                           <span className="font-semibold">{COUNTRIES.find(c => c.code === hostCountry)?.phone}</span>
                         </div>
                       </div>
                       <div className="col-span-2">
-                        <label className="text-xs font-semibold text-black/80 mb-1.5 block">Broj mobilnog telefona</label>
+                        <label className="text-xs font-semibold text-black/80 mb-1.5 block">{locale === 'en' ? 'Phone number' : 'Broj mobilnog telefona'}</label>
                         <input
                           type="tel"
                           placeholder="1 234 5678"
@@ -202,7 +202,7 @@ export default function ListYourSpace() {
                     </div>
 
                     <div>
-                      <label className="text-xs font-semibold text-black/80 mb-1 block">Država</label>
+                      <label className="text-xs font-semibold text-black/80 mb-1 block">{locale === 'en' ? 'Country' : 'Država'}</label>
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 pointer-events-none" />
                         <select
@@ -217,7 +217,7 @@ export default function ListYourSpace() {
                             paddingRight: '2.5rem',
                           }}
                         >
-                        <option value="" disabled className="text-black/40">Odaberite državu</option>
+                        <option value="" disabled className="text-black/40">{locale === 'en' ? 'Select country' : 'Odaberite državu'}</option>
                         {COUNTRIES.map((country) => (
                           <option key={country.code} value={country.code} className="text-black">
                             {country.name}
@@ -234,12 +234,16 @@ export default function ListYourSpace() {
                         className="w-4 h-4 rounded border-black/20 mt-0.5 cursor-pointer accent-black"
                       />
                       <label htmlFor="terms" className="text-xs text-black/70 cursor-pointer leading-tight">
-                        Registracijom se slažete s našim <span className="font-semibold text-black hover:underline">Uvjetima korištenja</span> i <span className="font-semibold text-black hover:underline">Politikom privatnosti</span>
+                        {locale === 'en'
+                          ? 'By registering, you agree to our Terms of Use and Privacy Policy'
+                          : 'Registracijom se slažete s našim Uvjetima korištenja i Politikom privatnosti'}
                       </label>
                     </div>
 
                     <p className="text-xs text-black/60 pt-1 leading-tight">
-                      Kad postanete domaćin, povremeno ćemo vam slati ponude i promocije vezane uz naše usluge. Uvijek možete otkazati pretplatu promjenom postavki komunikacije.
+                      {locale === 'en'
+                        ? 'As a host, we\'ll occasionally send you offers and promotions related to our services. You can always unsubscribe by changing your communication preferences.'
+                        : 'Kad postanete domaćin, povremeno ćemo vam slati ponude i promocije vezane uz naše usluge. Uvijek možete otkazati pretplatu promjenom postavki komunikacije.'}
                     </p>
 
                     {submitMessage && (
@@ -257,13 +261,13 @@ export default function ListYourSpace() {
                       disabled={isSubmitting}
                       className="w-full mt-3 bg-black text-white font-bold py-2.5 rounded-lg hover:bg-gray-900 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isSubmitting ? 'Registracija...' : 'Registriraj se sada'}
+                      {isSubmitting ? (locale === 'en' ? 'Registering...' : 'Registracija...') : (locale === 'en' ? 'Register now' : 'Registriraj se sada')}
                     </button>
 
                     <div className="text-center pt-0 space-y-1">
-                      <p className="text-xs text-black/70">Već imate račun?</p>
+                      <p className="text-xs text-black/70">{locale === 'en' ? 'Already have an account?' : 'Već imate račun?'}</p>
                       <Link href="/members" className="text-xs font-semibold text-black hover:text-gray-700 transition-colors inline-block">
-                        Prijavite se
+                        {locale === 'en' ? 'Sign in' : 'Prijavite se'}
                       </Link>
                     </div>
                   </div>
@@ -272,10 +276,12 @@ export default function ListYourSpace() {
 
               <div className="md:order-1 md:col-span-1 order-2 mt-8 md:mt-0">
                 <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight mb-4">
-                  <span className="text-white">Zarađujte rentajući parking mjesta</span> <span className="text-white">s Payparqom.</span>
+                  <span className="text-white">{locale === 'en' ? 'Earn by renting parking spaces' : 'Zarađujte rentajući parking mjesta'}</span> <span className="text-white">{locale === 'en' ? 'with PayParq.' : 's Payparqom.'}</span>
                 </h1>
                 <p className="text-lg text-white mb-8">
-                  Postanite PayParq partner domaćin, postavite svoj raspored i zarađujte rentajući.
+                  {locale === 'en'
+                    ? 'Become a PayParq host, set your schedule, and earn by renting.'
+                    : 'Postanite PayParq partner domaćin, postavite svoj raspored i zarađujte rentajući.'}
                 </p>
               </div>
             </div>
@@ -412,7 +418,7 @@ export default function ListYourSpace() {
         {/* How Booking Works */}
         <section className="bg-white py-8 md:py-24">
           <div className="max-w-6xl mx-auto px-6 md:px-12">
-            <h2 className="text-4xl md:text-5xl font-bold text-black mb-16 text-center">Kako funkcionira PayParq?</h2>
+            <h2 className="text-4xl md:text-5xl font-bold text-black mb-16 text-center">{locale === 'en' ? 'How does PayParq work?' : 'Kako funkcionira PayParq?'}</h2>
 
             <div className="space-y-12">
               {/* Step 1: Search */}
@@ -527,7 +533,7 @@ export default function ListYourSpace() {
               FAQ
             </p>
             <h2 className="text-2xl md:text-3xl font-semibold text-black mb-12">
-              Često postavljena pitanja
+              {locale === 'en' ? 'Frequently asked questions' : 'Često postavljena pitanja'}
             </h2>
 
             <div className="space-y-0">
@@ -564,10 +570,12 @@ export default function ListYourSpace() {
           <div className="absolute inset-0 bg-gradient-to-r from-white to-[#5F3DFC]"></div>
           <div className="relative max-w-4xl mx-auto px-6 md:px-12 text-center">
             <h2 className="text-3xl md:text-4xl font-semibold text-black mb-4">
-              Spremni za zaradu?
+              {locale === 'en' ? 'Ready to earn?' : 'Spremni za zaradu?'}
             </h2>
             <p className="text-base text-black/70 mb-8 max-w-2xl mx-auto">
-              Pridružite se tisućama domaćina koji zarađuju pasivni dohodak s PayParqom.
+              {locale === 'en'
+                ? 'Join thousands of hosts earning passive income with PayParq.'
+                : 'Pridružite se tisućama domaćina koji zarađuju pasivni dohodak s PayParqom.'}
             </p>
             <Link
               href="#register-form"
@@ -705,8 +713,8 @@ export default function ListYourSpace() {
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-black/10 p-4 md:p-6 shadow-2xl z-50">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-bold text-black">Spremni za zaradu?</h3>
-              <p className="text-sm text-black/70">Oglasite svoje parkirno mjesto i počnite zarađivati danas</p>
+              <h3 className="text-lg font-bold text-black">{locale === 'en' ? 'Ready to earn?' : 'Spremni za zaradu?'}</h3>
+              <p className="text-sm text-black/70">{locale === 'en' ? 'List your parking space and start earning today' : 'Oglasite svoje parkirno mjesto i počnite zarađivati danas'}</p>
             </div>
             <a
               href="#register-form"
@@ -716,7 +724,7 @@ export default function ListYourSpace() {
               }}
               className="inline-flex items-center gap-1.5 md:gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-full bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white text-sm md:text-sm font-semibold hover:shadow-xl transition-all whitespace-nowrap cursor-pointer"
             >
-              <span>Oglasite odmah</span>
+              <span>{locale === 'en' ? 'List now' : 'Oglasite odmah'}</span>
               <span className="text-sm md:text-base">→</span>
             </a>
           </div>
