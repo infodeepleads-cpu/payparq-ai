@@ -104,7 +104,7 @@ export default function OperativniPartner() {
     },
     {
       q: locale === 'en' ? 'How is compensation determined?' : 'Kako se određuje naknada?',
-      a: locale === 'en' ? 'Compensation is determined based on the number of spaces, location, and time horizon. Let's discuss with our sales team for detailed terms.' : 'Naknada se određuje na osnovu broja mjesta, lokacije i vremenskog horizonta. Razgovarajmo s našom prodajnom timom za detaljne uvjete.',
+      a: locale === 'en' ? 'Compensation is determined based on the number of spaces, location, and time horizon. Let\'s discuss with our sales team for detailed terms.' : 'Naknada se određuje na osnovu broja mjesta, lokacije i vremenskog horizonta. Razgovarajmo s našom prodajnom timom za detaljne uvjete.',
     },
     {
       q: locale === 'en' ? 'Do I need my own systems?' : 'Trebam li vlastite sustave?',
