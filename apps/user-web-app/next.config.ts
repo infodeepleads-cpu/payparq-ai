@@ -13,6 +13,7 @@ try {
 const nextConfig: NextConfig = {
   turbopack: {},
   images: {
+    unoptimized: true,
     remotePatterns: [
       ...(supabaseHost ? [{ protocol: "https" as const, hostname: supabaseHost, pathname: "/storage/**" }, { protocol: "https" as const, hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }] : []),
       { protocol: "https", hostname: "images.unsplash.com" },

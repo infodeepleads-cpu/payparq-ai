@@ -1,11 +1,7 @@
-{
-  "buildCommand": "npm run build",
-  "installCommand": "npm ci",
-  "framework": "nextjs",
-  "crons": [
-    {
-      "path": "/api/cron/review-emails",
-      "schedule": "0 8 * * *"
+﻿{
+  "functions": {
+    "src/app/api/**": {
+      "runtime": "edge"
     }
-  ]
+  }
 }

@@ -1,5 +1,7 @@
 'use client';
 
+export const revalidate = 3600; // Revalidate every 1 hour
+
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ChevronDown, Search, ArrowRight } from 'lucide-react';
