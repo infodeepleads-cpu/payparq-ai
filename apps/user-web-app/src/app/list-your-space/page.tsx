@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ChevronDown, Search } from 'lucide-react';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
+import { useLocale } from '@/components/LocaleProvider';
 
 const COUNTRIES = [
   { code: 'HR', name: 'Hrvatska', flag: '🇭🇷', phone: '+385' },
@@ -19,7 +20,7 @@ const COUNTRIES = [
 ];
 
 export default function ListYourSpace() {
-  const locale: 'hr' | 'en' = 'hr';
+  const { locale } = useLocale();
   const [spaces, setSpaces] = useState(1);
   const [days, setDays] = useState(5);
   const [price, setPrice] = useState(8);
