@@ -1538,7 +1538,7 @@ export default function MembersPage() {
           if (resV2.ok) {
             const dataV2 = (await resV2.json()) as { code?: string; error?: string } | null;
             if (dataV2?.code) {
-              return { locationId: listing.id, locationName: listing.name, code: dataV2.code, expiresAt: '' };
+              return { locationId: listing.id, locationName: listing.name, code: dataV2.code, expiresAt: '', approvalStatus: 'active' };
             }
           }
 
@@ -1547,14 +1547,14 @@ export default function MembersPage() {
           if (resLegacy.ok) {
             const dataLegacy = (await resLegacy.json()) as { code?: string; error?: string } | null;
             if (dataLegacy?.code) {
-              return { locationId: listing.id, locationName: listing.name, code: dataLegacy.code, expiresAt: '' };
+              return { locationId: listing.id, locationName: listing.name, code: dataLegacy.code, expiresAt: '', approvalStatus: 'active' };
             }
           }
         } catch {}
         return null;
       })
     ).then((codes) => {
-      setReferralCodes(codes.filter((c) => c !== null) as Array<{locationId: string; locationName: string; code: string; expiresAt: string}>);
+      setReferralCodes(codes.filter((c) => c !== null) as Array<{locationId: string; locationName: string; code: string; expiresAt: string; approvalStatus: string}>);
       setReferralCodesLoading(false);
     });
   }, [ownerListings]);
