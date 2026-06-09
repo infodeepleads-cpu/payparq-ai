@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
             .maybeSingle();
 
           if (location?.owner_id) {
-            // Calculate ledger amounts
+            // ========== GREEN PART: UNCHANGED OWNER LEDGER ==========
             // Stripe fee: ~2.9% + €0.30
             const stripeFee = Math.round(chargedCents * 0.029) + 30;
             const afterStripeFee = chargedCents - stripeFee;
@@ -157,19 +157,55 @@ export async function POST(request: NextRequest) {
               check_out: meta.check_out || '',
               status: 'reserved',
             });
+            // ========== END GREEN PART ==========
 
-            // Create referral record if promo code was used
-            if (promoCodeId) {
-              const referralAmount = Math.round(chargedCents * 0.1); // 10% referral
-              await supabase.from('referrals').insert({
-                booking_id: session.id,
-                location_id: locationId,
-                promo_code_id: promoCodeId,
-                referral_amount: referralAmount,
-                status: 'pending',
-              });
-              console.log('[webhook] Referral created for promo code:', promoCodeId, 'amount:', referralAmount);
+            // ========== NEW: V2 REFERRAL SYSTEM ==========
+            // Handle new referral codes (format: USER-ABC123 or CITY-TYPE-ID)
+            const referralCode = meta.referral_code || meta.referralCode || '';
+            const referrerId = meta.referrer_id || meta.referrerId || '';
+
+            if (referralCode && referrerId) {
+              const travelerDiscountCents = Math.round(chargedCents * 0.1);
+              const referrerEarningCents = Math.round(chargedCents * 0.1);
+
+              // Create booking_referral_codes record
+              try {
+                const { error: rcErr } = await supabase.from('booking_referral_codes').insert({
+                  booking_id: session.id,
+                  referral_code: referralCode,
+                  referrer_id: referrerId,
+                  referrer_earning_cents: referrerEarningCents,
+                  traveler_discount_cents: travelerDiscountCents,
+                  booking_status: 'completed',
+                  completed_at: new Date().toISOString(),
+                });
+                if (rcErr) console.warn('[webhook] Failed to create booking_referral_codes:', rcErr);
+                else console.log('[webhook] V2 Referral created:', referralCode, 'earning:', referrerEarningCents);
+              } catch (rcEx) {
+                console.warn('[webhook] Exception creating booking_referral_codes:', rcEx);
+              }
             }
+            // ========== END NEW REFERRAL SYSTEM ==========
+
+            // ========== LEGACY: V1 REFERRAL SYSTEM (BACKWARD COMPAT) ==========
+            // Create referral record if promo code was used (old system)
+            if (promoCodeId) {
+              const referralAmount = Math.round(chargedCents * 0.1);
+              try {
+                const { error: legacyErr } = await supabase.from('referrals').insert({
+                  booking_id: session.id,
+                  location_id: locationId,
+                  promo_code_id: promoCodeId,
+                  referral_amount: referralAmount,
+                  status: 'pending',
+                });
+                if (legacyErr) console.warn('[webhook] Failed to create legacy referral:', legacyErr);
+                else console.log('[webhook] Legacy Referral created for promo code:', promoCodeId, 'amount:', referralAmount);
+              } catch (legacyEx) {
+                console.warn('[webhook] Exception creating legacy referral:', legacyEx);
+              }
+            }
+            // ========== END LEGACY SYSTEM ==========
 
             await sendPaymentNotification(location.owner_id, {
               location: location.name || 'Parking lot',

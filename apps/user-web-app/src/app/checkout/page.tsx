@@ -574,7 +574,7 @@ function Field({ label, note, ...props }: { label: string; note?: string } & Rea
 function PaidCheckoutForm({
   amountEur, locationName, checkIn: initialCheckIn, checkOut: initialCheckOut,
   locationId, displayId, originalAmountCents, onAmountChange, isFree, address, clientSecret,
-  phCents = 0, pdCents = 0, pmCents = 0, checkoutSlots, onPaymentReady,
+  phCents = 0, pdCents = 0, pmCents = 0, checkoutSlots, onPaymentReady, initialRefCode,
 }: {
   amountEur: number;
   locationName: string;
@@ -592,6 +592,7 @@ function PaidCheckoutForm({
   pmCents?: number;
   checkoutSlots?: CheckoutSlot[];
   onPaymentReady?: () => void;
+  initialRefCode?: string;
 }) {
   const { locale } = useLocale();
   const stripe = useStripe();
@@ -645,6 +646,12 @@ function PaidCheckoutForm({
   const [promoDiscountCents, setPromoDiscountCents] = useState(0);
   const [promoDiscountPercent, setPromoDiscountPercent] = useState(0);
   const [promoCodeId, setPromoCodeId] = useState<string | null>(null);
+  const [referrerId, setReferrerId] = useState<string | null>(null);
+  const [referralCodeV2, setReferralCodeV2] = useState<string | null>(null);
+
+  // Auto-apply referral code from URL ?ref= param
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (initialRefCode) applyPromo(initialRefCode); }, []);
 
   // Mobile payment options toggle
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
@@ -715,13 +722,14 @@ function PaidCheckoutForm({
     updatePIAmount(newAmountCents);
   }, [checkOut, displayAmountCents, clientSecret]);
 
-  const applyPromo = async () => {
-    const code = promoInput.trim();
+  const applyPromo = async (codeOverride?: string) => {
+    const code = (codeOverride !== undefined ? codeOverride : promoInput).trim();
     if (!code) return;
+    if (codeOverride) setPromoInput(codeOverride);
     setPromoStatus('loading');
     setPromoError(null);
     try {
-      // Try new auto referral code first
+      // Try new auto referral code first (also handles V2 referral codes)
       const res = await fetch('/api/promo/validate-auto', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -735,6 +743,10 @@ function PaidCheckoutForm({
         setPromoDiscountCents(discountCents);
         setPromoDiscountPercent(data.discount_percent);
         setPromoCodeId(data.promo_code_id);
+        if (data.is_referral_v2 && data.referrer_id) {
+          setReferrerId(data.referrer_id);
+          setReferralCodeV2(code);
+        }
         onAmountChange(finalAmountCents, code);
         return;
       }
@@ -770,6 +782,8 @@ function PaidCheckoutForm({
     setPromoDiscountCents(0);
     setPromoDiscountPercent(0);
     setPromoCodeId(null);
+    setReferrerId(null);
+    setReferralCodeV2(null);
     onAmountChange(originalAmountCents);
   };
 
@@ -829,6 +843,8 @@ function PaidCheckoutForm({
               phone,
               promoCodeId: promoCodeId || undefined,
               discountAmount: promoDiscountCents || undefined,
+              referrer_id: referrerId || undefined,
+              referral_code: referralCodeV2 || undefined,
             }),
           });
         } catch { /* non-blocking */ }
@@ -1077,6 +1093,7 @@ function CheckoutInner() {
   const pdCents = parseInt(searchParams.get('pd') || '0', 10);
   const pmCents = parseInt(searchParams.get('pm') || '0', 10);
   const source = searchParams.get('source') || 'platform';
+  const refCode = searchParams.get('ref') || '';
 
   const [amountCents, setAmountCents] = useState(initialAmountCents);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -1296,6 +1313,7 @@ function CheckoutInner() {
         phCents={phCents} pdCents={pdCents} pmCents={pmCents}
         checkoutSlots={checkoutSlots}
         onPaymentReady={() => setPaymentReady(true)}
+        initialRefCode={refCode || undefined}
       />
     </Elements>
       </div>

@@ -34,6 +34,37 @@ export async function GET(req: NextRequest) {
     .order("created_at", { ascending: false })
     .limit(20);
 
+  // Get referral earnings
+  const { data: referralData } = await supabaseAdmin
+    .from("booking_referral_codes")
+    .select("referral_code, referrer_earning_cents, booking_status, brc: referral_codes_listing(location_id, location: locations(name))")
+    .eq("referrer_id", ownerId);
+
+  const referralByCode: Record<string, { earnings_cents: number; bookings: number; location_name: string; code: string }> = {};
+  let referralEarningsCents = 0;
+  let referralPendingCents = 0;
+
+  (referralData || []).forEach((item: any) => {
+    const earnings = item.referrer_earning_cents || 0;
+    referralEarningsCents += earnings;
+    if (item.booking_status !== "completed") {
+      referralPendingCents += earnings;
+    }
+    if (!referralByCode[item.referral_code]) {
+      referralByCode[item.referral_code] = {
+        code: item.referral_code,
+        earnings_cents: 0,
+        bookings: 0,
+        location_name: "Unknown",
+      };
+    }
+    referralByCode[item.referral_code].earnings_cents += earnings;
+    referralByCode[item.referral_code].bookings += 1;
+    if (item.brc?.location?.name) {
+      referralByCode[item.referral_code].location_name = item.brc.location.name;
+    }
+  });
+
   const reserved = (ledger || [])
     .filter((e: any) => e.status === "reserved")
     .reduce((sum: number, e: any) => sum + (e.owner_reserved_cents || 0), 0);
@@ -46,5 +77,8 @@ export async function GET(req: NextRequest) {
     total_earned_cents: totalEarned,
     ledger: ledger || [],
     payouts: payouts || [],
+    referral_earnings_cents: referralEarningsCents,
+    referral_pending_cents: referralPendingCents,
+    referral_by_location: Object.values(referralByCode).sort((a, b) => b.earnings_cents - a.earnings_cents),
   });
 }

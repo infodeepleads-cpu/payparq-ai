@@ -84,7 +84,7 @@ export async function PUT(req: NextRequest) {
     });
 
     const body = await req.json();
-    const { payment_intent_id, email, plate, phone, pricing_type, amount_cents, booking_source, commission, service_fee } = body;
+    const { payment_intent_id, email, plate, phone, pricing_type, amount_cents, booking_source, commission, service_fee, promoCodeId, discountAmount, referrer_id, referral_code } = body;
 
     if (!payment_intent_id || !/^pi_/.test(payment_intent_id)) {
       return NextResponse.json({ error: 'Invalid payment_intent_id' }, { status: 400 });
@@ -106,6 +106,10 @@ export async function PUT(req: NextRequest) {
         ...(booking_source ? { booking_source } : {}),
         ...(commission !== undefined ? { commission: commission.toString() } : {}),
         ...(service_fee !== undefined ? { service_fee: service_fee.toString() } : {}),
+        ...(promoCodeId ? { promoCodeId } : {}),
+        ...(discountAmount !== undefined ? { discountAmount: discountAmount.toString() } : {}),
+        ...(referrer_id ? { referrer_id } : {}),
+        ...(referral_code ? { referral_code } : {}),
       },
     });
 

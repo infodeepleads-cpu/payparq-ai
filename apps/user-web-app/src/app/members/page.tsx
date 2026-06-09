@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, FormEvent, useCallback } from "react";
+import { useEffect, useState, FormEvent, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import QRCode from "qrcode.react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FooterBrand } from "@/components/FooterBrand";
 import { OperationsPanel } from "@/components/OperationsPanel";
@@ -271,7 +272,7 @@ function readMemberPlates(currentUser: User | null) {
 }
 
 function PayoutsPanel({ user, locale }: { user: User | null; locale: 'en' | 'hr' }) {
-  const [earnings, setEarnings] = useState<{ pending_cents: number; total_earned_cents: number; ledger: any[]; payouts: any[] } | null>(null);
+  const [earnings, setEarnings] = useState<{ pending_cents: number; total_earned_cents: number; ledger: any[]; payouts: any[]; referral_earnings_cents?: number; referral_pending_cents?: number; referral_by_location?: Array<{location_name: string; code: string; earnings_cents: number; bookings: number}> } | null>(null);
   const [bankDetails, setBankDetails] = useState<{ bank_iban: string | null; bank_account_holder: string | null; bank_country: string; configured: boolean } | null>(null);
   const [editingBank, setEditingBank] = useState(false);
   const [ibanInput, setIbanInput] = useState('');
@@ -334,6 +335,43 @@ function PayoutsPanel({ user, locale }: { user: User | null; locale: 'en' | 'hr'
           </div>
         </div>
       </div>
+
+      {/* Referral Earnings */}
+      {(earnings?.referral_earnings_cents ?? 0) > 0 || (earnings?.referral_pending_cents ?? 0) > 0 ? (
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4 space-y-3">
+          <p className="text-xs font-semibold text-green-700 uppercase">Referral Earnings</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[11px] text-green-700/70 uppercase font-semibold">Pending</p>
+              <p className="text-lg font-bold text-green-700">€{((earnings?.referral_pending_cents ?? 0) / 100).toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-[11px] text-green-700/70 uppercase font-semibold">Total Earned</p>
+              <p className="text-lg font-bold text-green-700">€{((earnings?.referral_earnings_cents ?? 0) / 100).toFixed(2)}</p>
+            </div>
+          </div>
+          {(earnings?.referral_by_location?.length ?? 0) > 0 && (
+            <div className="pt-2 border-t border-green-200 space-y-1.5">
+              <p className="text-[11px] font-semibold text-green-700/70 uppercase">By Code</p>
+              {earnings!.referral_by_location!.slice(0, 3).map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-green-900">{item.code}</p>
+                    <p className="text-[11px] text-green-700/60">{item.location_name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-green-700">€{(item.earnings_cents / 100).toFixed(2)}</p>
+                    <p className="text-[11px] text-green-700/60">{item.bookings} bookings</p>
+                  </div>
+                </div>
+              ))}
+              {(earnings?.referral_by_location?.length ?? 0) > 3 && (
+                <p className="text-[11px] text-green-700/60 pt-1">+{earnings!.referral_by_location!.length - 3} more</p>
+              )}
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {/* Bank details */}
       <div className="rounded-lg border border-black/10 p-4 space-y-3">
@@ -505,6 +543,8 @@ const MEMBERS_TRANSLATIONS = {
   'Download PDF': { en: 'Download PDF', hr: 'Preuzmi PDF' },
   'Processing...': { en: 'Processing...', hr: 'Obrada...' },
   'Copy': { en: 'Copy', hr: 'Kopirati' },
+  'Copy Link': { en: 'Copy Link', hr: 'Kopiraj Poveznicu' },
+  'Download QR': { en: 'Download QR', hr: 'Preuzmi QR' },
   'Share referral codes & earn 10% commission.': { en: 'Share referral codes & earn 10% commission.', hr: 'Dijeli referral kodove i inoltre 10% provizije.' },
   'Croatian': { en: 'Croatian', hr: 'Hrvatski' },
   'Quick overview and actions': { en: 'Quick overview and actions.', hr: 'Brzi pregled i akcije.' },
@@ -613,9 +653,11 @@ export default function MembersPage() {
   const [buyAddonFuelType, setBuyAddonFuelType] = useState<'diesel' | 'benzin'>('diesel');
   const [addonsBuyLoading, setAddonsBuyLoading] = useState(false);
   const [addonsBuyError, setAddonsBuyError] = useState('');
-  const [referralCodes, setReferralCodes] = useState<Array<{locationId: string; locationName: string; code: string; expiresAt: string}>>([]);
+  const [referralCodes, setReferralCodes] = useState<Array<{locationId: string; locationName: string; code: string; expiresAt: string; approvalStatus: string}>>([]);
   const [referralCodesLoading, setReferralCodesLoading] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const qrRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Localhost bypass - force signed in state
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
@@ -1480,7 +1522,7 @@ export default function MembersPage() {
       });
   }, [user, supabase]);
 
-  // Fetch referral codes for all owner listings
+  // Fetch referral codes for all owner listings (both new v2 and legacy)
   useEffect(() => {
     if (ownerListings.length === 0) {
       setReferralCodes([]);
@@ -1491,11 +1533,21 @@ export default function MembersPage() {
     Promise.all(
       ownerListings.map(async (listing) => {
         try {
-          const res = await fetch(`/api/promo/auto?location_id=${encodeURIComponent(listing.id)}`);
-          if (res.ok) {
-            const data = (await res.json()) as { code?: string; error?: string } | null;
-            if (data?.code) {
-              return { locationId: listing.id, locationName: listing.name, code: data.code, expiresAt: '' };
+          // Try new v2 endpoint first
+          const resV2 = await fetch(`/api/referrals/listing-code?location_id=${encodeURIComponent(listing.id)}`);
+          if (resV2.ok) {
+            const dataV2 = (await resV2.json()) as { code?: string; error?: string } | null;
+            if (dataV2?.code) {
+              return { locationId: listing.id, locationName: listing.name, code: dataV2.code, expiresAt: '' };
+            }
+          }
+
+          // Fallback to legacy auto promo codes
+          const resLegacy = await fetch(`/api/promo/auto?location_id=${encodeURIComponent(listing.id)}`);
+          if (resLegacy.ok) {
+            const dataLegacy = (await resLegacy.json()) as { code?: string; error?: string } | null;
+            if (dataLegacy?.code) {
+              return { locationId: listing.id, locationName: listing.name, code: dataLegacy.code, expiresAt: '' };
             }
           }
         } catch {}
@@ -2906,45 +2958,133 @@ export default function MembersPage() {
             <p className="text-sm text-black/70">{membersT('Share referral codes & earn 10% commission.', locale)}</p>
           </div>
 
+          {/* Listing Referral Codes */}
           {referralCodesLoading ? (
             <div className="rounded-xl border border-black/10 bg-white p-4">
-              <p className="text-sm text-black/50">Loading codes...</p>
+              <p className="text-sm text-black/50">Loading listing codes...</p>
             </div>
           ) : referralCodes.length === 0 ? (
             <div className="rounded-xl border border-black/10 bg-white p-4">
-              <p className="text-sm text-black/80">No listings yet. Create one to get a shareable code.</p>
+              <p className="text-sm text-black/80">No listings with active codes yet.</p>
+              <p className="text-xs text-black/60 mt-2">Listing codes are generated when your listing is approved by admin.</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {referralCodes.map((rc) => (
-                <div key={rc.locationId} className="rounded-xl border border-[#0F6E56]/30 bg-white overflow-hidden">
-                  <div className="bg-gradient-to-r from-[#0F6E56] to-[#1a9d7f] px-4 py-3">
-                    <p className="text-white font-semibold text-sm">{rc.locationName}</p>
-                  </div>
-                  <div className="p-4 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        readOnly
-                        value={rc.code}
-                        className="flex-1 px-3 py-2 rounded-lg bg-[#E1F5EE] border border-[#0F6E56]/30 text-center font-mono font-bold text-[#0F6E56] text-sm"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(rc.code);
-                          setCopiedCode(rc.code);
-                          setTimeout(() => setCopiedCode(null), 1500);
-                        }}
-                        className="px-3 py-2 rounded-lg bg-[#0F6E56] text-white text-xs font-semibold hover:bg-[#0a5241] transition-colors"
-                      >
-                        {copiedCode === rc.code ? '✓' : membersT('Copy', locale)}
-                      </button>
+              {referralCodes.map((rc) => {
+                const referralLink = `payparq.com/search?ref=${rc.code}`;
+                const fullUrl = `https://${referralLink}`;
+                const isApproved = rc.approvalStatus === 'approved';
+                return (
+                  <div key={rc.locationId} className={`rounded-xl border overflow-hidden ${isApproved ? 'border-[#0F6E56]/30 bg-white' : 'border-amber-300/50 bg-amber-50'}`}>
+                    <div className={`px-4 py-3 ${isApproved ? 'bg-gradient-to-r from-[#0F6E56] to-[#1a9d7f]' : 'bg-amber-100'}`}>
+                      <div className="flex items-center justify-between">
+                        <p className={`font-semibold text-sm ${isApproved ? 'text-white' : 'text-amber-900'}`}>{rc.locationName}</p>
+                        <span className={`text-xs px-2 py-1 rounded-full font-semibold ${isApproved ? 'bg-white/20 text-white' : 'bg-amber-200 text-amber-900'}`}>
+                          {isApproved ? '✓ Active' : '⏳ Pending'}
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-xs text-[#0F6E56]/70">10% off next stay • 10% commission</p>
+                    <div className="p-4 space-y-3">
+                      {isApproved ? (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              readOnly
+                              value={rc.code}
+                              className="flex-1 px-3 py-2 rounded-lg bg-[#E1F5EE] border border-[#0F6E56]/30 text-center font-mono font-bold text-[#0F6E56] text-sm"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(rc.code);
+                                setCopiedCode(rc.code);
+                                setTimeout(() => setCopiedCode(null), 1500);
+                              }}
+                              className="px-3 py-2 rounded-lg bg-[#0F6E56] text-white text-xs font-semibold hover:bg-[#0a5241] transition-colors whitespace-nowrap"
+                            >
+                              {copiedCode === rc.code ? '✓' : membersT('Copy', locale)}
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-xs text-[#0F6E56]/70">10% off for guests • 10% earning for you</p>
+                            <div className="flex items-center gap-2 p-2 bg-black/5 rounded-lg">
+                              <input
+                                type="text"
+                                readOnly
+                                value={referralLink}
+                                className="flex-1 text-xs text-black/70 bg-transparent border-0"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(fullUrl);
+                                  setCopiedLink(rc.code);
+                                  setTimeout(() => setCopiedLink(null), 1500);
+                                }}
+                                className="px-2 py-1 rounded bg-[#0F6E56] text-white text-xs font-semibold hover:bg-[#0a5241] transition-colors whitespace-nowrap"
+                              >
+                                {copiedLink === rc.code ? '✓' : membersT('Copy Link', locale)}
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const qrDiv = qrRefs.current.get(rc.code);
+                                if (qrDiv) {
+                                  const canvas = qrDiv.querySelector('canvas');
+                                  if (canvas) {
+                                    canvas.toBlob((blob) => {
+                                      if (blob) {
+                                        const url = URL.createObjectURL(blob);
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.download = `${rc.code}-qr.png`;
+                                        link.click();
+                                        URL.revokeObjectURL(url);
+                                      }
+                                    });
+                                  }
+                                }
+                              }}
+                              className="w-full px-3 py-2 rounded-lg bg-[#0F6E56]/10 text-[#0F6E56] text-xs font-semibold hover:bg-[#0F6E56]/20 transition-colors border border-[#0F6E56]/30"
+                            >
+                              {membersT('Download QR', locale)}
+                            </button>
+                          </div>
+                          <div className="flex justify-center p-3 bg-black/5 rounded-lg">
+                            <div ref={(el) => { if (el) qrRefs.current.set(rc.code, el); }}>
+                              <QRCode
+                                value={fullUrl}
+                                size={150}
+                                level="H"
+                                includeMargin={true}
+                                quietZone={10}
+                              />
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="p-3 rounded-lg bg-amber-100 border border-amber-300">
+                            <p className="text-xs text-amber-900 font-semibold">⏳ Waiting for admin approval</p>
+                            <p className="text-xs text-amber-800 mt-1">Your referral code will be active once verified by our admin team.</p>
+                          </div>
+                          <div className="text-center">
+                            <input
+                              type="text"
+                              readOnly
+                              value={rc.code}
+                              className="w-full px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-center font-mono font-bold text-amber-900 text-sm"
+                            />
+                          </div>
+                          <p className="text-xs text-amber-700/70">You'll be able to share this code once approved</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

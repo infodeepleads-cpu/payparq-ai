@@ -1438,6 +1438,32 @@ export async function POST(req: Request) {
 
     console.log('✨ Successfully inserted parking session from PaymentIntent!');
 
+    // V2 Referral System — runs after session insert
+    const piReferralCode = (meta.referral_code ?? '').toString().trim();
+    const piReferrerId = (meta.referrer_id ?? '').toString().trim();
+    if (piReferralCode && piReferrerId) {
+      const isV2 = /^USER-[A-Z0-9]{6}$/.test(piReferralCode) || /^[A-Z]{3}-[A-Z]{3}-[A-Z0-9]{3}$/.test(piReferralCode);
+      if (isV2) {
+        const travelerDiscountCents = Math.round(amountCents * 0.1);
+        const referrerEarningCents = Math.round(amountCents * 0.1);
+        try {
+          const { error: refErr } = await client.from('booking_referral_codes').insert({
+            booking_id: paymentIntent.id,
+            referral_code: piReferralCode,
+            referrer_id: piReferrerId,
+            referrer_earning_cents: referrerEarningCents,
+            traveler_discount_cents: travelerDiscountCents,
+            booking_status: 'completed',
+            completed_at: new Date().toISOString(),
+          });
+          if (refErr) console.warn('[webhook] Failed to create booking_referral_codes:', refErr);
+          else console.log('[webhook] V2 Referral created:', piReferralCode, 'earning:', referrerEarningCents);
+        } catch (refEx) {
+          console.warn('[webhook] Exception creating booking_referral_codes:', refEx);
+        }
+      }
+    }
+
     // Send parking pass email
     const reservationCode = deriveReservationCode(paymentIntent.id);
     let locationName: string | null = null;

@@ -23,50 +23,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 500 });
     }
 
-    // Get existing auto code
-    const { data: existingCode, error: fetchError } = await supabaseAdmin
-      .from('auto_promo_codes')
-      .select('*')
+    // Check for approved referral code (CITY-TYPE-ID format)
+    const { data: referralCode } = await supabaseAdmin
+      .from('referral_codes_listing')
+      .select('code')
       .eq('location_id', locationId)
-      .single();
+      .eq('approval_status', 'approved')
+      .maybeSingle();
 
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      throw fetchError;
+    if (referralCode?.code) {
+      return NextResponse.json({ code: referralCode.code, type: 'referral' });
     }
 
-    // If exists and not expired, return it
-    if (existingCode) {
-      const expiresAt = new Date(existingCode.expires_at);
-      if (expiresAt > new Date()) {
-        return NextResponse.json({ code: existingCode.code });
-      }
-    }
-
-    // Generate new code
-    const newCode = generateCode();
-    const createdAt = new Date();
-    const expiresAt = new Date(createdAt.getTime() + 15 * 24 * 60 * 60 * 1000); // 15 days
-
-    if (existingCode) {
-      // Update existing record
-      const { error: updateError } = await supabaseAdmin
-        .from('auto_promo_codes')
-        .update({ code: newCode, created_at: createdAt, expires_at: expiresAt })
-        .eq('id', existingCode.id);
-
-      if (updateError) throw updateError;
-    } else {
-      // Create new record
-      const { error: insertError } = await supabaseAdmin
-        .from('auto_promo_codes')
-        .insert([{ location_id: locationId, code: newCode, created_at: createdAt, expires_at: expiresAt }]);
-
-      if (insertError) throw insertError;
-    }
-
-    return NextResponse.json({ code: newCode });
+    // Fallback: return universal PAYPARQ code
+    return NextResponse.json({ code: 'PAYPARQ', type: 'universal' });
   } catch (error) {
     console.error('Error getting auto promo code:', error);
-    return NextResponse.json({ error: 'Failed to get promo code' }, { status: 500 });
+    return NextResponse.json({ code: 'PAYPARQ', type: 'universal' }, { status: 200 });
   }
 }

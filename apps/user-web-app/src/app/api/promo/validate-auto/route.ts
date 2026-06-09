@@ -12,11 +12,14 @@ function generateCode(): string {
   return code;
 }
 
+// V2 listing referral code pattern: CITY-TYPE-ID (e.g. DBK-CAR-482)
+const V2_LISTING_PATTERN = /^[A-Z]{3}-[A-Z]{3}-[A-Z0-9]{3}$/;
+
 export async function POST(req: NextRequest) {
   try {
-    const { code, location_id } = await req.json();
+    const { code, location_id, user_id } = await req.json();
 
-    if (!code || !location_id) {
+    if (!code) {
       return NextResponse.json({ valid: false, error: 'Missing parameters' }, { status: 400 });
     }
 
@@ -25,6 +28,49 @@ export async function POST(req: NextRequest) {
     }
 
     const upperCode = String(code).toUpperCase().trim();
+
+    // Check for universal PAYPARQ code
+    if (upperCode === 'PAYPARQ') {
+      return NextResponse.json({
+        valid: true,
+        discount_percent: 10,
+        promo_code_id: null,
+        is_referral_v2: true,
+        referrer_id: null,
+        referral_code: 'PAYPARQ',
+      });
+    }
+
+    // Check V2 listing referral code format (CITY-TYPE-ID)
+    if (V2_LISTING_PATTERN.test(upperCode)) {
+      const { data: listingCode } = await supabaseAdmin
+        .from('referral_codes_listing')
+        .select('location_id, owner_id, approval_status')
+        .eq('code', upperCode)
+        .maybeSingle();
+
+      if (!listingCode?.location_id) {
+        return NextResponse.json({ valid: false, error: 'Referral code not found' });
+      }
+
+      if (listingCode.approval_status !== 'approved') {
+        return NextResponse.json({ valid: false, error: 'Referral code is not yet active' });
+      }
+
+      return NextResponse.json({
+        valid: true,
+        discount_percent: 10,
+        promo_code_id: null,
+        is_referral_v2: true,
+        referrer_id: listingCode.owner_id || null,
+        referral_code: upperCode,
+      });
+    }
+
+    // Legacy auto_promo_codes lookup requires location_id
+    if (!location_id) {
+      return NextResponse.json({ valid: false, error: 'Missing parameters' }, { status: 400 });
+    }
 
     // Find the promo code
     const { data: promoCode, error: fetchError } = await supabaseAdmin
