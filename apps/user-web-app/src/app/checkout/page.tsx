@@ -723,9 +723,9 @@ function PaidCheckoutForm({
   }, [checkOut, displayAmountCents, clientSecret]);
 
   const applyPromo = async (codeOverride?: string) => {
-    const code = (codeOverride !== undefined ? codeOverride : promoInput).trim();
+    const code = (codeOverride !== undefined ? codeOverride : promoInput).trim().toUpperCase();
     if (!code) return;
-    if (codeOverride) setPromoInput(codeOverride);
+    if (codeOverride) setPromoInput(code);
     setPromoStatus('loading');
     setPromoError(null);
     try {
@@ -735,18 +735,17 @@ function PaidCheckoutForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, location_id: locationId }),
       });
-      const data = await res.json();
-      if (data.valid) {
-        const discountCents = Math.round(originalAmountCents * (data.discount_percent / 100));
+      const data = (await res.json()) as any;
+      if (data?.valid) {
+        const discountCents = Math.round(originalAmountCents * ((data.discount_percent || 0) / 100));
         const finalAmountCents = originalAmountCents - discountCents;
         setPromoDiscountCents(discountCents);
-        setPromoDiscountPercent(data.discount_percent);
-        setPromoCodeId(data.promo_code_id);
+        setPromoDiscountPercent(data.discount_percent || 0);
+        setPromoCodeId(data.promo_code_id || null);
         if (data.is_referral_v2 && data.referrer_id) {
           setReferrerId(data.referrer_id);
           setReferralCodeV2(code);
         }
-        await new Promise(resolve => setTimeout(resolve, 100)); // Wait for createIntent
         onAmountChange(finalAmountCents, code);
         setPromoStatus('valid');
         return;
@@ -758,22 +757,21 @@ function PaidCheckoutForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, location_id: locationId, amount_cents: originalAmountCents }),
       });
-      const stripeData = await stripeRes.json();
-      if (stripeData.valid) {
-        setPromoDiscountCents(stripeData.discount_cents);
-        setPromoDiscountPercent(stripeData.discount_percent);
-        await new Promise(resolve => setTimeout(resolve, 100)); // Wait for createIntent
-        onAmountChange(stripeData.final_amount_cents, code);
+      const stripeData = (await stripeRes.json()) as any;
+      if (stripeData?.valid) {
+        setPromoDiscountCents(stripeData.discount_cents || 0);
+        setPromoDiscountPercent(stripeData.discount_percent || 0);
+        onAmountChange(stripeData.final_amount_cents || originalAmountCents, code);
         setPromoStatus('valid');
         return;
       }
 
       // Both failed
       setPromoStatus('invalid');
-      setPromoError(stripeData.error || data.error || 'Invalid promo code');
-    } catch {
+      setPromoError((stripeData?.error || data?.error || 'Invalid promo code').substring(0, 100));
+    } catch (e) {
       setPromoStatus('invalid');
-      setPromoError('Error. Please try again.');
+      setPromoError('Error applying code.');
     }
   };
 

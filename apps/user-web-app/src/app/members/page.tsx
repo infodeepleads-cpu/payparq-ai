@@ -2991,7 +2991,7 @@ export default function MembersPage() {
               {referralCodes.map((rc) => {
                 const referralLink = `payparq.com/search?ref=${rc.code}`;
                 const fullUrl = `https://${referralLink}`;
-                const isApproved = rc.approvalStatus === 'approved';
+                const isApproved = rc.approvalStatus === 'approved' || rc.approvalStatus === 'active';
                 return (
                   <div key={rc.locationId} className={`rounded-xl border overflow-hidden ${isApproved ? 'border-[#0F6E56]/30 bg-white' : 'border-amber-300/50 bg-amber-50'}`}>
                     <div className={`px-4 py-3 ${isApproved ? 'bg-gradient-to-r from-[#0F6E56] to-[#1a9d7f]' : 'bg-amber-100'}`}>
@@ -3832,7 +3832,7 @@ export default function MembersPage() {
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                           P
                         </span>
-                        <span>Permits & Subs</span>
+                        <span>{membersT('Permits & Subs', locale)}</span>
                       </button>
                       <button
                         type="button"
