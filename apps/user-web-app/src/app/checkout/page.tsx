@@ -447,7 +447,7 @@ function SummaryPanel({
             ) : (
               <div className="flex gap-2">
                 <input autoFocus type="text" value={promoInput} onChange={(e) => onInputChange(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), onApplyPromo())} placeholder={checkoutT('Unesite kod', locale)} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-600" />
-                <button type="button" onClick={onApplyPromo} disabled={!promoInput.trim() || promoStatus === 'loading'} className="px-3 py-2 rounded-lg text-xs font-semibold text-white bg-gray-900 hover:bg-gray-800 disabled:opacity-40">
+                <button type="button" onClick={() => onApplyPromo()} disabled={!promoInput.trim() || promoStatus === 'loading'} className="px-3 py-2 rounded-lg text-xs font-semibold text-white bg-gray-900 hover:bg-gray-800 disabled:opacity-40">
                   {promoStatus === 'loading' ? '...' : checkoutT('Primijeni', locale)}
                 </button>
               </div>
