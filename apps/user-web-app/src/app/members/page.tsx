@@ -2624,7 +2624,7 @@ export default function MembersPage() {
                   formatCroatianDateTime(row.end_time),
                 ].join(" — ");
                 const statusValue = (row.status ?? "active").toString().trim().toUpperCase();
-                const statusDisplay = statusValue === "PROĆE" || statusValue === "VALID" ? membersT('VALIDNO', locale) : statusValue === "ACTIVE" ? membersT('ACTIVE', locale) : statusValue;
+                const statusDisplay = statusValue === "PROLAZ" || statusValue === "VALID" ? membersT('VALIDNO', locale) : statusValue === "ACTIVE" ? membersT('ACTIVE', locale) : statusValue;
                 return (
                   <div key={row.id} className="rounded-lg border border-black/10 px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
