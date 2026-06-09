@@ -746,7 +746,8 @@ function PaidCheckoutForm({
           setReferrerId(data.referrer_id);
           setReferralCodeV2(code);
         }
-        onAmountChange(finalAmountCents, code);
+        setDisplayAmountCents(finalAmountCents);
+        updatePIAmount(finalAmountCents);
         setPromoStatus('valid');
         return;
       }
@@ -759,9 +760,11 @@ function PaidCheckoutForm({
       });
       const stripeData = (await stripeRes.json()) as any;
       if (stripeData?.valid) {
+        const finalCents = stripeData.final_amount_cents || originalAmountCents;
         setPromoDiscountCents(stripeData.discount_cents || 0);
         setPromoDiscountPercent(stripeData.discount_percent || 0);
-        onAmountChange(stripeData.final_amount_cents || originalAmountCents, code);
+        setDisplayAmountCents(finalCents);
+        updatePIAmount(finalCents);
         setPromoStatus('valid');
         return;
       }
