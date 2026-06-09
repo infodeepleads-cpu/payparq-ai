@@ -760,11 +760,16 @@ function PaidCheckoutForm({
       });
       const stripeData = (await stripeRes.json()) as any;
       if (stripeData?.valid) {
-        const finalCents = stripeData.final_amount_cents || originalAmountCents;
+        const finalCents = stripeData.final_amount_cents ?? 0;
         setPromoDiscountCents(stripeData.discount_cents || 0);
         setPromoDiscountPercent(stripeData.discount_percent || 0);
-        setDisplayAmountCents(finalCents);
-        updatePIAmount(finalCents);
+        if (stripeData.discount_percent === 100) {
+          // 100% free — trigger isFree flow via parent so CTA shows "Potvrdi - Besplatno"
+          onAmountChange(0, code);
+        } else {
+          setDisplayAmountCents(finalCents);
+          updatePIAmount(finalCents);
+        }
         setPromoStatus('valid');
         return;
       }
