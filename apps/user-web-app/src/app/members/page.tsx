@@ -481,6 +481,8 @@ const MEMBERS_TRANSLATIONS = {
   'Unknown location': { en: 'Unknown location', hr: 'Nepoznata lokacija' },
   'Member permit': { en: 'Member permit', hr: 'Članska dozvola' },
   'Vrijedi': { en: 'Valid', hr: 'Vrijedi' },
+  'proći': { en: 'Pass', hr: 'Prolaz' },
+  'permit': { en: 'Permit', hr: 'Dozvola' },
   // Activity
   'Activity': { en: 'Activity', hr: 'Aktivnost' },
   'A timeline of upcoming, active, and expired parking sessions.': { en: 'A timeline of upcoming, active, and expired parking sessions.', hr: 'Pregled nadolazećih, aktivnih i isteklih parkirnih sesija.' },
@@ -2634,7 +2636,7 @@ export default function MembersPage() {
                       <p className="text-[11px] text-black/60">{statusDisplay}</p>
                     </div>
                     <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
-                      <span>{sourceType}</span>
+                      <span>{membersT(sourceType, locale)}</span>
                       <span>{row.contact_name || row.contact_email || membersT('Member permit', locale)}</span>
                     </div>
                     <div className="mt-1 text-[11px] text-black/70">
