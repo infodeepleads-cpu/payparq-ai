@@ -3,7 +3,7 @@
 import { useEffect, useState, FormEvent, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import QRCodeCanvas from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FooterBrand } from "@/components/FooterBrand";
 import { OperationsPanel } from "@/components/OperationsPanel";
