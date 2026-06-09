@@ -161,7 +161,7 @@ export function ScrollableDateTimePicker({
           <div className="text-center text-3xl md:text-4xl font-bold text-black tabular-nums mb-3">
             {String(selectedDate.getHours()).padStart(2, '0')}:{String(selectedDate.getMinutes()).padStart(2, '0')}
           </div>
-          <div className="grid grid-cols-4 gap-2 overflow-y-auto pr-2" style={{ maxHeight: "108px", WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+          <div data-scrollable className="grid grid-cols-4 gap-2 overflow-y-auto pr-2" style={{ maxHeight: "108px", WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
             {Array.from({ length: 48 }, (_, i) => {
               const totalMinutes = (i * 30 + 6 * 60) % (24 * 60);
               const hour = Math.floor(totalMinutes / 60);
