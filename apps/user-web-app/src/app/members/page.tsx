@@ -545,7 +545,7 @@ const MEMBERS_TRANSLATIONS = {
   'Copy': { en: 'Copy', hr: 'Kopirati' },
   'Copy Link': { en: 'Copy Link', hr: 'Kopiraj Poveznicu' },
   'Download QR': { en: 'Download QR', hr: 'Preuzmi QR' },
-  'Share referral codes & earn 10% commission.': { en: 'Share referral codes & earn 10% commission.', hr: 'Dijeli referral kodove i inoltre 10% provizije.' },
+  'Share referral codes & earn 10% commission.': { en: 'Share referral codes & earn 10% commission.', hr: 'Dijeli referral kodove i ostvari 10% provizije.' },
   'Croatian': { en: 'Croatian', hr: 'Hrvatski' },
   'Quick overview and actions': { en: 'Quick overview and actions.', hr: 'Brzi pregled i akcije.' },
   'Insurance': { en: 'Insurance', hr: 'Osiguranje' },
@@ -1522,6 +1522,16 @@ export default function MembersPage() {
       });
   }, [user, supabase]);
 
+  // Generate deterministic referral code for a listing (same algorithm as backend)
+  const generateListingCode = (name: string, id: string, type: string, address: string): string => {
+    const parts = [
+      (name || '').split(' ')[0]?.slice(0, 3) || 'LOC',
+      (type || '').split('_')[0]?.slice(0, 3) || 'SPT',
+      id.slice(-3)
+    ].map(p => p.toUpperCase());
+    return parts.join('-');
+  };
+
   // Fetch referral codes for all owner listings (both new v2 and legacy)
   useEffect(() => {
     if (ownerListings.length === 0) {
@@ -1533,6 +1543,8 @@ export default function MembersPage() {
     Promise.all(
       ownerListings.map(async (listing) => {
         try {
+          const isVerified = listing.verification_status === 'verified';
+
           // Try new v2 endpoint first
           const resV2 = await fetch(`/api/referrals/listing-code?location_id=${encodeURIComponent(listing.id)}`);
           if (resV2.ok) {
@@ -1540,6 +1552,12 @@ export default function MembersPage() {
             if (dataV2?.code) {
               return { locationId: listing.id, locationName: listing.name, code: dataV2.code, expiresAt: '', approvalStatus: 'active' };
             }
+          }
+
+          // For verified listings, generate universal code even if not in DB yet
+          if (isVerified) {
+            const universalCode = generateListingCode(listing.name, listing.id, listing.display_id || '', '');
+            return { locationId: listing.id, locationName: listing.name, code: universalCode, expiresAt: '', approvalStatus: 'active' };
           }
 
           // Fallback to legacy auto promo codes

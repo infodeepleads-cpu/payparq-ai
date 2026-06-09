@@ -739,7 +739,6 @@ function PaidCheckoutForm({
       if (data.valid) {
         const discountCents = Math.round(originalAmountCents * (data.discount_percent / 100));
         const finalAmountCents = originalAmountCents - discountCents;
-        setPromoStatus('valid');
         setPromoDiscountCents(discountCents);
         setPromoDiscountPercent(data.discount_percent);
         setPromoCodeId(data.promo_code_id);
@@ -747,7 +746,9 @@ function PaidCheckoutForm({
           setReferrerId(data.referrer_id);
           setReferralCodeV2(code);
         }
+        await new Promise(resolve => setTimeout(resolve, 100)); // Wait for createIntent
         onAmountChange(finalAmountCents, code);
+        setPromoStatus('valid');
         return;
       }
 
@@ -759,10 +760,11 @@ function PaidCheckoutForm({
       });
       const stripeData = await stripeRes.json();
       if (stripeData.valid) {
-        setPromoStatus('valid');
         setPromoDiscountCents(stripeData.discount_cents);
         setPromoDiscountPercent(stripeData.discount_percent);
+        await new Promise(resolve => setTimeout(resolve, 100)); // Wait for createIntent
         onAmountChange(stripeData.final_amount_cents, code);
+        setPromoStatus('valid');
         return;
       }
 
