@@ -3,7 +3,7 @@
 import { useEffect, useState, FormEvent, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import QRCode from "qrcode.react";
+import QRCodeCanvas from "qrcode.react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FooterBrand } from "@/components/FooterBrand";
 import { OperationsPanel } from "@/components/OperationsPanel";
@@ -3054,7 +3054,7 @@ export default function MembersPage() {
                           </div>
                           <div className="flex justify-center p-3 bg-black/5 rounded-lg">
                             <div ref={(el) => { if (el) qrRefs.current.set(rc.code, el); }}>
-                              <QRCode
+                              <QRCodeCanvas
                                 value={fullUrl}
                                 size={150}
                                 level="H"
