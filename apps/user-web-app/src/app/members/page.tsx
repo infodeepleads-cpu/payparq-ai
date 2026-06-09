@@ -3059,7 +3059,6 @@ export default function MembersPage() {
                                 size={150}
                                 level="H"
                                 includeMargin={true}
-                                quietZone={10}
                               />
                             </div>
                           </div>
