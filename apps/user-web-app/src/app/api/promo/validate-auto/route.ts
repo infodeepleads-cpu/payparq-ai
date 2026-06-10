@@ -41,20 +41,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Check for universal 100% free codes (FREE100, FREE50, etc)
-    const freeCodeMatch = upperCode.match(/^FREE(\d+)$/);
-    if (freeCodeMatch) {
-      const discountPercent = parseInt(freeCodeMatch[1], 10);
-      if (discountPercent > 0 && discountPercent <= 100) {
-        return NextResponse.json({
-          valid: true,
-          discount_percent: discountPercent,
-          promo_code_id: `universal-${upperCode}`,
-          is_referral_v2: false,
-        });
-      }
-    }
-
     // Check V2 listing referral code format (CITY-TYPE-ID)
     if (V2_LISTING_PATTERN.test(upperCode)) {
       const { data: listingCode } = await supabaseAdmin
@@ -81,52 +67,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Legacy auto_promo_codes lookup requires location_id
-    if (!location_id) {
-      return NextResponse.json({ valid: false, error: 'Missing parameters' }, { status: 400 });
-    }
-
-    // Find the promo code
-    const { data: promoCode, error: fetchError } = await supabaseAdmin
-      .from('auto_promo_codes')
-      .select('*')
-      .eq('code', upperCode)
-      .eq('location_id', location_id)
-      .single();
-
-    if (fetchError || !promoCode) {
-      return NextResponse.json({ valid: false, error: 'Invalid promo code' }, { status: 400 });
-    }
-
-    const expiresAt = new Date(promoCode.expires_at);
-    const now = new Date();
-
-    // Check if expired
-    if (expiresAt <= now) {
-      // Lazy regenerate
-      const newCode = generateCode();
-      const newCreatedAt = new Date();
-      const newExpiresAt = new Date(newCreatedAt.getTime() + 15 * 24 * 60 * 60 * 1000);
-
-      await supabaseAdmin
-        .from('auto_promo_codes')
-        .update({ code: newCode, created_at: newCreatedAt, expires_at: newExpiresAt })
-        .eq('id', promoCode.id);
-
-      return NextResponse.json({
-        valid: true,
-        discount_percent: 10,
-        referral_percent: 10,
-        promo_code_id: promoCode.id
-      });
-    }
-
-    return NextResponse.json({
-      valid: true,
-      discount_percent: 10,
-      referral_percent: 10,
-      promo_code_id: promoCode.id
-    });
+    // For any other code format, return invalid to let checkout fall back to validate-promo
+    // This allows validate-promo (which has location metadata validation) to handle them
+    return NextResponse.json({ valid: false, error: 'Use validate-promo endpoint' });
   } catch (error) {
     console.error('Error validating promo code:', error);
     return NextResponse.json({ valid: false, error: 'Failed to validate code' }, { status: 500 });
