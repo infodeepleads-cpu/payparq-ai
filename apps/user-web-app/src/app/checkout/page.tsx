@@ -621,6 +621,14 @@ function PaidCheckoutForm({
   const [checkOut, setCheckOut] = useState(initialCheckOut);
   const [displayAmountCents, setDisplayAmountCents] = useState(originalAmountCents);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [promoStatus, setPromoStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle');
+  const [promoInput, setPromoInput] = useState('');
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoDiscountCents, setPromoDiscountCents] = useState(0);
+  const [promoDiscountPercent, setPromoDiscountPercent] = useState(0);
+  const [promoCodeId, setPromoCodeId] = useState<string | null>(null);
+  const [referrerId, setReferrerId] = useState<string | null>(null);
+  const [referralCodeV2, setReferralCodeV2] = useState<string | null>(null);
 
   // For free bookings, no PaymentElement loads — signal ready immediately
   useEffect(() => {
@@ -639,15 +647,6 @@ function PaidCheckoutForm({
     const monthly = (pmCents && durationHours >= 24 * 28) ? pmCents : Infinity;
     return Math.max(100, Math.round(Math.min(hourly, daily, monthly)));
   }
-
-  const [promoStatus, setPromoStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle');
-  const [promoInput, setPromoInput] = useState('');
-  const [promoError, setPromoError] = useState<string | null>(null);
-  const [promoDiscountCents, setPromoDiscountCents] = useState(0);
-  const [promoDiscountPercent, setPromoDiscountPercent] = useState(0);
-  const [promoCodeId, setPromoCodeId] = useState<string | null>(null);
-  const [referrerId, setReferrerId] = useState<string | null>(null);
-  const [referralCodeV2, setReferralCodeV2] = useState<string | null>(null);
 
   // Auto-apply referral code from URL ?ref= param
   // eslint-disable-next-line react-hooks/exhaustive-deps
