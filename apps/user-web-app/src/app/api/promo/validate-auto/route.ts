@@ -41,6 +41,20 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Check for universal 100% free codes (FREE100, FREE50, etc)
+    const freeCodeMatch = upperCode.match(/^FREE(\d+)$/);
+    if (freeCodeMatch) {
+      const discountPercent = parseInt(freeCodeMatch[1], 10);
+      if (discountPercent > 0 && discountPercent <= 100) {
+        return NextResponse.json({
+          valid: true,
+          discount_percent: discountPercent,
+          promo_code_id: `universal-${upperCode}`,
+          is_referral_v2: false,
+        });
+      }
+    }
+
     // Check V2 listing referral code format (CITY-TYPE-ID)
     if (V2_LISTING_PATTERN.test(upperCode)) {
       const { data: listingCode } = await supabaseAdmin

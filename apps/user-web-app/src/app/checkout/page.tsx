@@ -628,8 +628,8 @@ function PaidCheckoutForm({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFree]);
 
-  // Service fee: 0.99€ + 10% of parking price
-  const serviceFeeEurCents = Math.min(199, Math.round(99 + (displayAmountCents * 0.10)));
+  // Service fee: 0.99€ + 10% of parking price (no fee if 100% discount)
+  const serviceFeeEurCents = promoDiscountPercent === 100 ? 0 : Math.min(199, Math.round(99 + (displayAmountCents * 0.10)));
   const totalWithFeeEurCents = displayAmountCents + serviceFeeEurCents;
 
   function calcAmountCents(durationHours: number): number {
@@ -687,9 +687,8 @@ function PaidCheckoutForm({
     if (!clientSecret || clientSecret === 'free') return;
     const piId = clientSecret.split('_secret_')[0];
     if (!piId?.startsWith('pi_')) return;
-    const addOnsCents = totalAmountCents - originalAmountCents;
-    const fee = Math.round(99 + (originalAmountCents * 0.10));
-    const finalAmount = originalAmountCents + fee + addOnsCents;
+    const fee = Math.round(99 + (totalAmountCents * 0.10));
+    const finalAmount = totalAmountCents + fee;
     fetch('/api/stripe/payment-intent', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
