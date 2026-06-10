@@ -2537,7 +2537,7 @@ export function SearchPage() {
 
         {/* Vehicle Modal - Centered Overlay */}
         {/* Map 65% RIGHT (normal) or flex-1 RIGHT (details) */}
-        <div className={`bg-gray-100 ${showDetailsView ? 'flex-1' : 'w-[65%]'} h-screen pr-2`}>
+        <div className={`bg-gray-100 ${showDetailsView ? 'flex-1' : 'w-[65%]'} pr-2`} style={{ height: 'calc(100vh - 80px)' }}>
           {!isLoaded ? (
             <div className="w-full h-full flex items-center justify-center">
               <div className="relative flex items-center justify-center w-14 h-14">
@@ -2557,7 +2557,7 @@ export function SearchPage() {
             }}
             options={{
               mapTypeControl: false,
-              zoomControl: false,
+              zoomControl: true,
               fullscreenControl: false,
               streetViewControl: false,
               rotateControl: false,
@@ -2712,7 +2712,7 @@ export function SearchPage() {
               <GoogleMap
                 zoom={12}
                 center={searchLocationPin || mapCenter}
-                mapContainerStyle={{ width: '100%', height: '100%' }}
+                mapContainerStyle={{ width: '100%', height: '100%', minHeight: 'calc(100vh - 200px)' }}
                 options={{
                   mapTypeControl: false,
                   streetViewControl: false,
