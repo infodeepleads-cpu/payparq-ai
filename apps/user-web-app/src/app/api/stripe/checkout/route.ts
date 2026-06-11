@@ -16,7 +16,7 @@ import {
   resolveSplitExpenseRate,
   resolveSplitFixedExpenseCents,
   resolveSplitTaxRate,
-} from "../../../../../../shared/stripeSplit";
+} from "../../../../../shared/stripeSplit";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
