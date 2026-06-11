@@ -23,23 +23,23 @@ export function CityWhatYouShouldKnow({ cityName }: CityWhatYouShouldKnowProps) 
       faqs: [
         {
           q: `Zašto rezervirati parkiranje unaprijed u ${cityName}?`,
-          a: 'Rezervacijom unaprijed osiguravate najbolje cijene, garantirano slobodno mjesto i mogućnost odabira između različitih parkirnih opcija.',
+          a: `Rezervacijom unaprijed osiguravate najbolje cijene, garantirano slobodno mjesto i mogućnost odabira između različitih parkirnih opcija u ${cityName}.`,
         },
         {
           q: `Nudi li PayParq sigurno parkiranje u ${cityName}?`,
-          a: 'Da, naša parkirna mjesta u ${cityName} uključuju CCTV nadzor, osvjetljenje i osigurane objekte za maksimalnu sigurnost vašeg vozila.',
+          a: `Da, naša parkirna mjesta u ${cityName} uključuju CCTV nadzor, osvjetljenje i osigurane objekte za maksimalnu sigurnost vašeg vozila.`,
         },
         {
           q: `Koliko košta parkiranje u ${cityName}?`,
-          a: 'Cijene parkiranje u ${cityName} variraju ovisno o lokaciji i tipu parkinga. Koristite našu aplikaciju za usporedbu cijena u realnom vremenu.',
+          a: `Cijene parkiranja u ${cityName} variraju ovisno o lokaciji i tipu parkinga. Koristite našu aplikaciju za usporedbu cijena u realnom vremenu.`,
         },
         {
           q: `Koje opcije parkinga PayParq nudi u ${cityName}?`,
-          a: 'Nudi ćemo natkriveno parkiranje, privatna dvorišta, osigurane objekte i parkirišta na javnim mjestima diljem ${cityName}.',
+          a: `Nudimo natkriveno parkiranje, privatna dvorišta, osigurane objekte i parkirišta na javnim mjestima diljem ${cityName}.`,
         },
         {
           q: `Ima li pristupačnog parkinga u ${cityName}?`,
-          a: 'Da, imamo parkirna mjesta s pristupom za osobe s invaliditetom na pojedinim lokacijama u ${cityName}.',
+          a: `Da, imamo parkirna mjesta s pristupom za osobe s invaliditetom na pojedinim lokacijama u ${cityName}.`,
         },
       ],
     },
@@ -56,23 +56,23 @@ export function CityWhatYouShouldKnow({ cityName }: CityWhatYouShouldKnowProps) 
       faqs: [
         {
           q: `Why book parking in advance in ${cityName}?`,
-          a: 'Booking in advance guarantees the best prices, a reserved spot, and the ability to choose from different parking options.',
+          a: `Booking in advance guarantees the best prices, a reserved spot, and the ability to choose from different parking options in ${cityName}.`,
         },
         {
           q: `Does PayParq offer secure parking in ${cityName}?`,
-          a: 'Yes, our parking spots in ${cityName} feature CCTV surveillance, lighting, and secured facilities for maximum vehicle security.',
+          a: `Yes, our parking spots in ${cityName} feature CCTV surveillance, lighting, and secured facilities for maximum vehicle security.`,
         },
         {
           q: `How much does parking cost in ${cityName}?`,
-          a: 'Parking prices in ${cityName} vary by location and type. Use our app to compare real-time pricing.',
+          a: `Parking prices in ${cityName} vary by location and type. Use our app to compare real-time pricing.`,
         },
         {
           q: `What parking options does PayParq offer in ${cityName}?`,
-          a: 'We offer covered parking, private courtyards, secured facilities, and street parking throughout ${cityName}.',
+          a: `We offer covered parking, private courtyards, secured facilities, and street parking throughout ${cityName}.`,
         },
         {
           q: `Is accessible parking available in ${cityName}?`,
-          a: 'Yes, we have accessible parking spaces at select locations in ${cityName}.',
+          a: `Yes, we have accessible parking spaces at select locations in ${cityName}.`,
         },
       ],
     },
