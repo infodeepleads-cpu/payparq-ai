@@ -110,9 +110,12 @@ export function CityWhatYouShouldKnow({ cityName }: CityWhatYouShouldKnowProps) 
                   onClick={() => setOpenFAQ(openFAQ === idx ? null : idx)}
                   className="w-full flex items-center justify-between p-4 hover:bg-black/5 transition text-left"
                 >
-                  <h4 className="font-semibold text-black text-sm pr-4">
-                    {faq.q}
-                  </h4>
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-0.5" />
+                    <h4 className="font-semibold text-black text-sm">
+                      {faq.q}
+                    </h4>
+                  </div>
                   <ChevronDown
                     size={20}
                     className={`flex-shrink-0 text-black/60 transition-transform ${
