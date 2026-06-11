@@ -52,7 +52,7 @@ jobs:
           security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
-          security import /tmp/payparq_distribution.p12 -k build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          security import /tmp/payparq_distribution.p12 -k build.keychain -P "" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool,apple:,codesign -s -k "" build.keychain
 
       - name: Build IPA
@@ -65,7 +65,8 @@ jobs:
             -archivePath ./build/App.xcarchive \
             -allowProvisioningUpdates \
             CODE_SIGN_IDENTITY="iPhone Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="PayParq App Store"
+            PROVISIONING_PROFILE_SPECIFIER="payparq-provisioning-profile" \
+            DEVELOPMENT_TEAM="T254J772YJ"
 
       - name: Export IPA
         run: |
