@@ -43,10 +43,12 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync ios
 
-      - name: Install iOS dependencies
+      - name: Resolve Swift Package dependencies
         run: |
           cd ios/App
-          pod install --repo-update
+          xcodebuild -resolvePackageDependencies \
+            -workspace App.xcworkspace \
+            -scheme App
 
       - name: Decode signing certificate
         run: |
