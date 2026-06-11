@@ -12,7 +12,7 @@ interface Review {
 }
 
 interface AirportReviewsProps {
-  airport: 'split' | 'zadar' | 'zagreb' | 'dubrovnik';
+  airport: string;
   locationName: string;
 }
 

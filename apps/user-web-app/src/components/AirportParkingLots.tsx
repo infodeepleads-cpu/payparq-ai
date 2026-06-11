@@ -21,7 +21,7 @@ interface ParkingLot {
 }
 
 interface AirportParkingLotsProps {
-  airport: 'split' | 'zadar' | 'zagreb' | 'dubrovnik';
+  airport: string;
   lat: number;
   lng: number;
   airportName: string;
