@@ -53,10 +53,10 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
         </section>
 
         {/* Reviews Section */}
-        <AirportReviews airport="split" locationName={city.name} />
+        <AirportReviews airport={slug} locationName={city.name} />
 
         {/* Parking Lots Section */}
-        <AirportParkingLots airport="split" lat={city.lat} lng={city.lng} airportName={city.name} />
+        <AirportParkingLots airport={slug} lat={city.lat} lng={city.lng} airportName={city.name} />
 
         {/* SEO Section */}
         <AirportSEOSection
