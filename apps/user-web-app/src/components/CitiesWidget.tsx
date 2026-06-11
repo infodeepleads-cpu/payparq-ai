@@ -12,16 +12,14 @@ export function CitiesWidget() {
       <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-4">
         {locale === 'en' ? 'Explore Parking in Croatian Cities' : 'Pronađite Parking u Hrvatskim Gradovima'}
       </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="flex flex-wrap gap-3">
         {cities.map((city) => (
           <a
             key={city.id}
             href={`/city/${city.id}`}
-            className="group block p-4 rounded-xl border border-white/10 hover:border-white/30 bg-white/5 hover:bg-white/10 transition-all"
+            className="text-xs text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-full px-4 py-2 transition-all"
           >
-            <h3 className="text-sm font-semibold text-white group-hover:text-blue-400">
-              {city.name}
-            </h3>
+            {city.name}
           </a>
         ))}
       </div>

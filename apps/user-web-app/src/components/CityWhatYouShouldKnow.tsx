@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { useLocale } from '@/components/LocaleProvider';
 
 interface CityWhatYouShouldKnowProps {
@@ -8,6 +10,7 @@ interface CityWhatYouShouldKnowProps {
 
 export function CityWhatYouShouldKnow({ cityName }: CityWhatYouShouldKnowProps) {
   const { locale } = useLocale();
+  const [openFAQ, setOpenFAQ] = useState<number | null>(null);
 
   const content = {
     hr: {
@@ -100,15 +103,31 @@ export function CityWhatYouShouldKnow({ cityName }: CityWhatYouShouldKnowProps) 
             {texts.faqTitle}
           </h3>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             {texts.faqs.map((faq, idx) => (
-              <div key={idx} className="border-l-4 border-blue-500 pl-6">
-                <h4 className="font-semibold text-black mb-2">
-                  {faq.q}
-                </h4>
-                <p className="text-black/70 text-sm leading-relaxed">
-                  {faq.a}
-                </p>
+              <div key={idx} className="border border-black/10 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setOpenFAQ(openFAQ === idx ? null : idx)}
+                  className="w-full flex items-center justify-between p-4 hover:bg-black/5 transition text-left"
+                >
+                  <h4 className="font-semibold text-black text-sm pr-4">
+                    {faq.q}
+                  </h4>
+                  <ChevronDown
+                    size={20}
+                    className={`flex-shrink-0 text-black/60 transition-transform ${
+                      openFAQ === idx ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {openFAQ === idx && (
+                  <div className="px-4 py-4 border-t border-black/10 bg-black/2">
+                    <p className="text-sm text-black/65 leading-relaxed">
+                      {faq.a}
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
