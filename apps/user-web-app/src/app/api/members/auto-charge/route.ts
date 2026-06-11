@@ -12,7 +12,7 @@ import {
   resolveSplitExpenseRate,
   resolveSplitFixedExpenseCents,
   resolveSplitTaxRate,
-} from "../../../../shared/stripeSplit";
+} from "@/lib/stripeSplit";
 
 type PricingType = "hourly" | "daily" | "monthly";
 
