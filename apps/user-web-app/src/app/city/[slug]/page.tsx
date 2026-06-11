@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
     `parking near ${city.name}`,
   ];
 
-  return generateSEOMetadata({
+  const metadata = generateSEOMetadata({
     title,
     description,
     keywords,
@@ -35,6 +35,16 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
     ogImage: 'https://www.payparq.com/og-parking.jpg',
     ogType: 'website',
   });
+
+  return {
+    ...metadata,
+    other: {
+      'geo.region': 'HR',
+      'geo.placename': city.name,
+      'geo.position': `${city.lat};${city.lng}`,
+      'ICBM': `${city.lat}, ${city.lng}`,
+    },
+  };
 }
 
 export async function generateStaticParams() {
@@ -62,7 +72,7 @@ export default async function CityPage({ params }: CityPageProps) {
     );
   }
 
-  const citySchema = generateCitySchema({ ...city, slug });
+  const citySchema = generateCitySchema({ ...city, slug, region: city.region });
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: 'Home', url: 'https://www.payparq.com' },
     { name: 'Parking Locations', url: 'https://www.payparq.com/locations' },

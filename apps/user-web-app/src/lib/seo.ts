@@ -105,11 +105,12 @@ export function generateCitySchema(city: {
   lng: number;
   slug: string;
   description?: string;
+  region?: string;
 }) {
   return {
     '@context': 'https://schema.org',
-    '@type': 'City',
-    name: city.name,
+    '@type': ['LocalBusiness', 'ParkingFacility'],
+    name: `PayParq Parking ${city.name}`,
     description: city.description || `Parking services in ${city.name}`,
     url: `https://www.payparq.com/city/${city.slug}`,
     geo: {
@@ -117,10 +118,24 @@ export function generateCitySchema(city: {
       latitude: city.lat,
       longitude: city.lng,
     },
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: city.name,
+      addressCountry: 'HR',
+      ...(city.region && { addressRegion: city.region }),
+    },
     areaServed: {
       '@type': 'City',
       name: city.name,
     },
+    openingHoursSpecification: {
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      opens: '00:00',
+      closes: '23:59',
+    },
+    currenciesAccepted: 'EUR',
+    paymentAccepted: 'Credit Card, Debit Card',
   };
 }
 
