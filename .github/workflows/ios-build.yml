@@ -33,22 +33,8 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: npm run build
 
-      - name: Generate iOS project
-        run: |
-          cp ios/App/ExportOptions.plist /tmp/ExportOptions.plist
-          rm -rf ios
-          npx cap add ios
-          cp /tmp/ExportOptions.plist ios/App/ExportOptions.plist
-
       - name: Sync Capacitor
         run: npx cap sync ios
-
-      - name: Resolve Swift Package dependencies
-        run: |
-          cd ios/App
-          xcodebuild -resolvePackageDependencies \
-            -workspace App.xcworkspace \
-            -scheme App
 
       - name: Decode signing certificate
         run: |
@@ -69,13 +55,13 @@ jobs:
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
           security import /tmp/payparq_distribution.p12 -k build.keychain -P "" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool,apple:,codesign -s -k "" build.keychain
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
 
       - name: Build IPA
         run: |
           cd ios/App
           xcodebuild archive \
-            -workspace App.xcworkspace \
+            -project App.xcodeproj \
             -scheme App \
             -configuration Release \
             -archivePath ./build/App.xcarchive \
