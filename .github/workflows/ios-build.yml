@@ -40,9 +40,10 @@ jobs:
         run: |
           echo "${{ secrets.IOS_DISTRIBUTION_CERT_B64 }}" | base64 --decode > /tmp/original.p12
           OPENSSL=$(brew --prefix openssl@3)/bin/openssl
-          $OPENSSL pkcs12 -in /tmp/original.p12 -out /tmp/cert.pem -passin pass: -nodes 2>/dev/null || \
+          echo "OpenSSL version: $($OPENSSL version)"
+          $OPENSSL pkcs12 -in /tmp/original.p12 -out /tmp/cert.pem -passin pass: -nodes || \
           $OPENSSL pkcs12 -legacy -in /tmp/original.p12 -out /tmp/cert.pem -passin pass: -nodes
-          $OPENSSL pkcs12 -export -in /tmp/cert.pem -out /tmp/payparq_distribution.p12 -passout pass:buildci
+          $OPENSSL pkcs12 -export -legacy -in /tmp/cert.pem -out /tmp/payparq_distribution.p12 -passout pass:buildci
 
       - name: Decode provisioning profile
         run: |
