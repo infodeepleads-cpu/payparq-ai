@@ -7,7 +7,6 @@ import { FooterBrand } from '@/components/FooterBrand';
 import { AirportBookingFlow } from '@/components/AirportBookingFlow';
 import { AirportReviews } from '@/components/AirportReviews';
 import { AirportParkingLots } from '@/components/AirportParkingLots';
-import { AirportSEOSection } from '@/components/AirportSEOSection';
 import { NearbyPlaces } from '@/components/NearbyPlaces';
 import { HowItWorks } from '@/components/HowItWorks';
 import { WhyPayParq } from '@/components/WhyPayParq';
@@ -57,15 +56,6 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
 
         {/* Parking Lots Section */}
         <AirportParkingLots airport={slug} lat={city.lat} lng={city.lng} airportName={city.name} />
-
-        {/* SEO Section */}
-        <AirportSEOSection
-          location={slug}
-          locationName={city.name}
-          city={city.name}
-          region={city.region}
-          nearbyAreas={[`${city.name} Center`, 'City Area']}
-        />
 
         {/* Nearby Places Section */}
         <NearbyPlaces locationName={city.name} locationKey={slug} />

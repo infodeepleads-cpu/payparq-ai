@@ -137,6 +137,43 @@ export const NEARBY_PLACES: Record<string, NearbyPlace[]> = {
     { name: 'Kravice Waterfalls', distance: 40.0, lat: 43.155, lng: 17.608, type: 'Waterfall', image: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&h=300&fit=crop&auto=format&q=80' },
   ],
 
+  rijeka: [
+    { name: 'Rijeka City Center', distance: 0.3, lat: 45.3271, lng: 14.4422, type: 'City Center', image: 'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Trsat Castle', distance: 2.5, lat: 45.3338, lng: 14.4500, type: 'Castle', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Korzo Promenade', distance: 0.4, lat: 45.3261, lng: 14.4414, type: 'Promenade', image: 'https://images.unsplash.com/photo-1473116763249-2faaef81ccda?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Rijeka Harbor', distance: 0.5, lat: 45.3255, lng: 14.4380, type: 'Harbor', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Natural History Museum', distance: 1.0, lat: 45.3290, lng: 14.4460, type: 'Museum', image: 'https://images.unsplash.com/photo-1532619927891-8a373008e6f3?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Opatija', distance: 15.0, lat: 45.3378, lng: 14.3050, type: 'Riviera Town', image: 'https://images.unsplash.com/photo-1493857671505-72967e2e2760?w=400&h=300&fit=crop&auto=format&q=80' },
+  ],
+  porec: [
+    { name: 'Euphrasian Basilica (UNESCO)', distance: 0.3, lat: 45.2272, lng: 13.5943, type: 'UNESCO Site', image: 'https://images.unsplash.com/photo-1464207687429-7505649dae38?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Poreč Old Town', distance: 0.2, lat: 45.2268, lng: 13.5942, type: 'City Center', image: 'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Zelena Laguna Beach', distance: 4.5, lat: 45.2000, lng: 13.5700, type: 'Beach', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Rovinj', distance: 40.0, lat: 45.0808, lng: 13.6360, type: 'Town', image: 'https://images.unsplash.com/photo-1473116763249-2faaef81ccda?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Vrsar', distance: 12.0, lat: 45.1500, lng: 13.6000, type: 'Town', image: 'https://images.unsplash.com/photo-1493857671505-72967e2e2760?w=400&h=300&fit=crop&auto=format&q=80' },
+  ],
+  rovinj: [
+    { name: 'Rovinj Old Town', distance: 0.2, lat: 45.0808, lng: 13.6390, type: 'City Center', image: 'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: "St. Euphemia's Church", distance: 0.5, lat: 45.0815, lng: 13.6385, type: 'Church', image: 'https://images.unsplash.com/photo-1464207687429-7505649dae38?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Golden Cape Forest Park', distance: 1.5, lat: 45.0650, lng: 13.6300, type: 'Nature Park', image: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Rovinj Archipelago', distance: 2.0, lat: 45.0700, lng: 13.6200, type: 'Islands', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Poreč', distance: 40.0, lat: 45.2208, lng: 13.5960, type: 'Town', image: 'https://images.unsplash.com/photo-1473116763249-2faaef81ccda?w=400&h=300&fit=crop&auto=format&q=80' },
+  ],
+  pula: [
+    { name: 'Pula Arena (Roman Amphitheatre)', distance: 0.3, lat: 44.8732, lng: 13.8497, type: 'Landmark', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Temple of Augustus', distance: 0.5, lat: 44.8685, lng: 13.8482, type: 'Landmark', image: 'https://images.unsplash.com/photo-1464207687429-7505649dae38?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Pula City Center', distance: 0.4, lat: 44.8683, lng: 13.8481, type: 'City Center', image: 'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Verudela Beach', distance: 4.0, lat: 44.8400, lng: 13.8500, type: 'Beach', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Rovinj', distance: 38.0, lat: 45.0808, lng: 13.6360, type: 'Town', image: 'https://images.unsplash.com/photo-1473116763249-2faaef81ccda?w=400&h=300&fit=crop&auto=format&q=80' },
+  ],
+  osijek: [
+    { name: 'Osijek Tvrđa (Fortress)', distance: 0.4, lat: 45.5570, lng: 18.6950, type: 'Fortress', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Osijek City Center', distance: 0.3, lat: 45.5550, lng: 18.6940, type: 'City Center', image: 'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Copacabana Beach', distance: 3.0, lat: 45.5700, lng: 18.7100, type: 'Beach', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Zoo Osijek', distance: 2.5, lat: 45.5600, lng: 18.7200, type: 'Zoo', image: 'https://images.unsplash.com/photo-1469022563149-aa64dbd37dae?w=400&h=300&fit=crop&auto=format&q=80' },
+    { name: 'Drava River Promenade', distance: 0.8, lat: 45.5620, lng: 18.6980, type: 'Promenade', image: 'https://images.unsplash.com/photo-1473116763249-2faaef81ccda?w=400&h=300&fit=crop&auto=format&q=80' },
+  ],
+
   // Venues
   poljud: [
     { name: 'Marjan Hill Park', distance: 1.5, lat: 43.517, lng: 16.433, type: 'Park', image: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=400&h=300&fit=crop&auto=format&q=80' },
