@@ -38,11 +38,14 @@ jobs:
 
       - name: Decode signing certificate
         run: |
-          echo "${{ secrets.IOS_DISTRIBUTION_CERT_B64 }}" | base64 -D > /tmp/payparq_distribution.p12
+          echo "${{ secrets.IOS_DISTRIBUTION_CERT_B64 }}" | base64 --decode > /tmp/original.p12
+          openssl pkcs12 -in /tmp/original.p12 -out /tmp/cert.pem -passin pass: -passout pass:buildci 2>/dev/null || \
+          openssl pkcs12 -legacy -in /tmp/original.p12 -out /tmp/cert.pem -passin pass: -passout pass:buildci
+          openssl pkcs12 -export -in /tmp/cert.pem -out /tmp/payparq_distribution.p12 -passout pass:buildci
 
       - name: Decode provisioning profile
         run: |
-          echo "${{ secrets.IOS_PROVISIONING_PROFILE_B64 }}" | base64 -D > /tmp/payparq.mobileprovision
+          echo "${{ secrets.IOS_PROVISIONING_PROFILE_B64 }}" | base64 --decode > /tmp/payparq.mobileprovision
 
       - name: Install provisioning profile
         run: |
@@ -54,7 +57,7 @@ jobs:
           security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
-          security import /tmp/payparq_distribution.p12 -k build.keychain -P "" -T /usr/bin/codesign
+          security import /tmp/payparq_distribution.p12 -k build.keychain -P "buildci" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
 
       - name: Build IPA
