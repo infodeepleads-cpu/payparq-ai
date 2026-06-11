@@ -19,15 +19,9 @@ export function CitiesWidget() {
             href={`/city/${city.id}`}
             className="group block p-4 rounded-xl border border-white/10 hover:border-white/30 bg-white/5 hover:bg-white/10 transition-all"
           >
-            <h3 className="text-sm font-semibold text-white group-hover:text-blue-400 mb-2">
+            <h3 className="text-sm font-semibold text-white group-hover:text-blue-400">
               {city.name}
             </h3>
-            <p className="text-xs text-white/60 line-clamp-2">
-              {city.description}
-            </p>
-            <p className="text-[11px] text-white/40 mt-2">
-              {city.region}
-            </p>
           </a>
         ))}
       </div>

@@ -36,8 +36,8 @@ export const CITIES: Record<string, City> = {
     id: 'zadar',
     name: 'Zadar',
     region: 'Dalmatia',
-    lat: 23.8865,
-    lng: 15.2314,
+    lat: 43.1328,
+    lng: 23.8217,
     description: 'Find parking in Zadar with 120+ reservable spaces. Reserve affordable parking in Zadar\'s historic center. Easy access to the Old Town and seaside.',
   },
   dubrovnik: {
