@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   buildStripeSplitPlan,
   buildStripeSplitPaymentIntentData,
-} from "@shared/stripeSplit";
+} from "@shared/stripeSplit.ts";
 
 function toCents(value: number): number {
   if (!Number.isFinite(value)) return 0;
