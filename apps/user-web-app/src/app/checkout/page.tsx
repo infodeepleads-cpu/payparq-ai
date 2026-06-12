@@ -470,12 +470,16 @@ function SummaryPanel({
               </div>
               <p className="text-xs text-gray-600 ml-6">{locale === 'en' ? 'Full parking price will be paid when you exit' : 'Cijela cijena parkinga će biti plaćena pri izlasku'}</p>
             </>
-          ) : freeCancellationEnabled && !freeCancellationDays && (
+          ) : freeCancellationEnabled && (
             <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
               <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
                 <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
               </span>
-              <span>{checkoutT('Otkaži besplatno do vremena početka', locale)}</span>
+              <span>
+                {freeCancellationDays > 0
+                  ? (locale === 'en' ? `Free cancellation up to ${freeCancellationDays} day${freeCancellationDays > 1 ? 's' : ''} before check-in` : `Besplatno otkazivanje do ${freeCancellationDays} dan${freeCancellationDays > 1 ? 'a' : ''} prije`)
+                  : checkoutT('Otkaži besplatno do vremena početka', locale)}
+              </span>
             </div>
           )}
           <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
