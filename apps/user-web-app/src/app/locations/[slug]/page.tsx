@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { generateMetadata as generateSEOMetadata, generateLocationSchema, generateBreadcrumbSchema } from '@/lib/seo';
 import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 import LocationPageClient from './LocationPageClient';
@@ -27,8 +28,9 @@ interface LocationPageProps {
 
 async function fetchLocationData(slug: string): Promise<HubData | null> {
   try {
-    if (!supabase) return null;
-    const { data } = await supabase
+    const client = supabaseAdmin ?? supabase;
+    if (!client) return null;
+    const { data } = await client
       .from('locations')
       .select('*')
       .eq('canonical_slug', slug)
