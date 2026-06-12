@@ -476,8 +476,8 @@ function SummaryPanel({
                 <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
               </span>
               <span>
-                {freeCancellationDays > 0
-                  ? (locale === 'en' ? `Free cancellation up to ${freeCancellationDays} day${freeCancellationDays > 1 ? 's' : ''} before check-in` : `Besplatno otkazivanje do ${freeCancellationDays} dan${freeCancellationDays > 1 ? 'a' : ''} prije`)
+                {(freeCancellationDays ?? 0) > 0
+                  ? (locale === 'en' ? `Free cancellation up to ${freeCancellationDays} day${(freeCancellationDays ?? 0) > 1 ? 's' : ''} before check-in` : `Besplatno otkazivanje do ${freeCancellationDays} dan${(freeCancellationDays ?? 0) > 1 ? 'a' : ''} prije`)
                   : checkoutT('Otkaži besplatno do vremena početka', locale)}
               </span>
             </div>
