@@ -589,6 +589,7 @@ function PaidCheckoutForm({
   amountEur, locationName, checkIn: initialCheckIn, checkOut: initialCheckOut,
   locationId, displayId, originalAmountCents, onAmountChange, isFree, address, clientSecret,
   phCents = 0, pdCents = 0, pmCents = 0, checkoutSlots, onPaymentReady, initialRefCode,
+  ticketingOnlyEnabled, freeCancellationEnabled, freeCancellationDays,
 }: {
   amountEur: number;
   locationName: string;
@@ -607,6 +608,9 @@ function PaidCheckoutForm({
   checkoutSlots?: CheckoutSlot[];
   onPaymentReady?: () => void;
   initialRefCode?: string;
+  ticketingOnlyEnabled?: boolean;
+  freeCancellationEnabled?: boolean;
+  freeCancellationDays?: number;
 }) {
   const { locale } = useLocale();
   const stripe = useStripe();
@@ -1358,6 +1362,9 @@ function CheckoutInner() {
         checkoutSlots={checkoutSlots}
         onPaymentReady={() => setPaymentReady(true)}
         initialRefCode={refCode || undefined}
+        ticketingOnlyEnabled={ticketingOnlyEnabled}
+        freeCancellationEnabled={freeCancellationEnabled}
+        freeCancellationDays={freeCancellationDays}
       />
     </Elements>
       </div>
