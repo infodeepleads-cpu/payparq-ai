@@ -112,6 +112,14 @@ const HOST_TRANSLATIONS = {
   'e.g. Parking Center': { en: 'e.g. Parking Center Zagreb', hr: 'npr. Parking Centar Zagreb' },
   'PayParq fee explanation': { en: 'PayParq adds a marginal service fee to your price, paid by the customer, which includes: Space guarantee, Priority support, SOS spot replacement.', hr: 'PayParq na Vašu cijenu dodaje marginalnu naknadu za uslugu koju plaća kupac koja uključuje: Zajamčeno mjesto, Prioritetnu podršku, SOS poziv za zamjenu mjesta.' },
   'Remote lot surcharge': { en: 'For remote lots — empty parcels without supervision near airports, events, and beaches — an additional surcharge is added.', hr: 'Za udaljene lotove — prazne parcele bez nadzora uz zračne luke, događaje i plaže — dodaje se dodatna naknada.' },
+  'Personal branding': { en: 'Enable personal branding', hr: 'Omogući osobno branding' },
+  'Brand name': { en: 'Brand name', hr: 'Naziv brenda' },
+  'Enter your brand name': { en: 'Enter your brand name', hr: 'Unesite naziv vašeg brenda' },
+  'Shuttle/Valet service information': { en: 'Shuttle/Valet service information', hr: 'Informacije o Shuttle/Valet uslugama' },
+  'Enter instructions or details for your shuttle/valet service': { en: 'Enter instructions or details for your shuttle/valet service', hr: 'Unesite upute ili detalje o vašoj shuttle/valet usluzi' },
+  'Free cancellation policy': { en: 'Enable custom free cancellation', hr: 'Omogući prilagođenu besplatnu otkaznu politiku' },
+  'Days before arrival': { en: 'Days before arrival', hr: 'Dana prije dolaska' },
+  'Allow free cancellation up to X days before arrival': { en: 'Allow free cancellation up to X days before arrival', hr: 'Dozvoli besplatnu otkaznu do X dana prije dolaska' },
 } as const;
 
 const hostT = (key: string, locale: string): string => {
@@ -758,6 +766,17 @@ export default function HostPage() {
   const [tieredDailyRates, setTieredDailyRates] = useState<string[]>(['', '']);
   const [tieredDailyIncrement, setTieredDailyIncrement] = useState('');
 
+  // Feature 1: Personal Branding
+  const [personalBrandingEnabled, setPersonalBrandingEnabled] = useState(false);
+  const [personalBrandName, setPersonalBrandName] = useState('');
+
+  // Feature 2: Shuttle/Valet Info
+  const [shuttleValetInfo, setShuttleValetInfo] = useState('');
+
+  // Feature 3: Free Cancellation
+  const [freeCancellationEnabled, setFreeCancellationEnabled] = useState(false);
+  const [freeCancellationDays, setFreeCancellationDays] = useState('');
+
   // Photos
   const [photos, setPhotos] = useState<File[]>([]);
 
@@ -850,6 +869,14 @@ export default function HostPage() {
     fd.append('tieredDailyEnabled', String(tieredDailyEnabled));
     fd.append('tieredDailyRates', JSON.stringify(tieredDailyRates.map((r) => parseFloat(r) || 0)));
     fd.append('tieredDailyIncrement', tieredDailyIncrement);
+    // Feature 1: Personal Branding
+    fd.append('personalBrandingEnabled', String(personalBrandingEnabled));
+    fd.append('personalBrandName', personalBrandName);
+    // Feature 2: Shuttle/Valet Info
+    fd.append('shuttleValetInfo', shuttleValetInfo);
+    // Feature 3: Free Cancellation
+    fd.append('freeCancellationEnabled', String(freeCancellationEnabled));
+    fd.append('freeCancellationDays', freeCancellationDays);
     // Partnership toggles
     fd.append('wantPartnership', String(wantPartnership));
     fd.append('wantQR', String(wantQR));
@@ -977,6 +1004,15 @@ export default function HostPage() {
                   <label className={labelClass}>{hostT('Address', locale)}</label>
                   <AddressMapField address={address} onAddressChange={setAddress} pin={pin} onPinChange={setPin} onRegionDetect={(r) => r && setRegion(r)} isLoaded={isLoaded} locale={locale} />
                 </div>
+                <div className="pt-2 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className={labelClass}>{hostT('Personal branding', locale)}</label>
+                    <Toggle checked={personalBrandingEnabled} onChange={setPersonalBrandingEnabled} />
+                  </div>
+                  {personalBrandingEnabled && (
+                    <input type="text" placeholder={hostT('Enter your brand name', locale)} value={personalBrandName} onChange={(e) => setPersonalBrandName(e.target.value)} className={inputClass} />
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1080,6 +1116,19 @@ export default function HostPage() {
                     </button>
                   ))}
                 </div>
+
+                {(addons.includes(hostT('Shuttle', locale)) || addons.includes(hostT('Valet', locale))) && (
+                  <div className="pt-3 border-t border-gray-200 mt-3">
+                    <label className={labelClass}>{hostT('Shuttle/Valet service information', locale)}</label>
+                    <textarea
+                      placeholder={hostT('Enter instructions or details for your shuttle/valet service', locale)}
+                      value={shuttleValetInfo}
+                      onChange={(e) => setShuttleValetInfo(e.target.value)}
+                      className={`${inputClass} resize-none`}
+                      rows={3}
+                    />
+                  </div>
+                )}
               </CollapsibleSection>
 
               {/* 3.3 Radno Vrijeme */}
@@ -1234,6 +1283,30 @@ export default function HostPage() {
                           className={inputClass}
                         />
                       </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Free Cancellation */}
+                <div className="space-y-3 pt-4 border-t border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-800">{hostT('Free cancellation policy', locale)}</p>
+                      <p className="text-xs text-gray-400">{hostT('Allow free cancellation up to X days before arrival', locale)}</p>
+                    </div>
+                    <Toggle checked={freeCancellationEnabled} onChange={setFreeCancellationEnabled} />
+                  </div>
+                  {freeCancellationEnabled && (
+                    <div>
+                      <label className={labelClass}>{hostT('Days before arrival', locale)}</label>
+                      <input
+                        type="number"
+                        placeholder="7"
+                        min="0"
+                        value={freeCancellationDays}
+                        onChange={(e) => setFreeCancellationDays(e.target.value)}
+                        className={inputClass}
+                      />
                     </div>
                   )}
                 </div>

@@ -311,6 +311,17 @@ export default function EditListingPage() {
   const [tieredDailyRates, setTieredDailyRates] = useState<string[]>(['', '']);
   const [tieredDailyIncrement, setTieredDailyIncrement] = useState('');
 
+  // Feature 1: Personal Branding
+  const [personalBrandingEnabled, setPersonalBrandingEnabled] = useState(false);
+  const [personalBrandName, setPersonalBrandName] = useState('');
+
+  // Feature 2: Shuttle/Valet Info
+  const [shuttleValetInfo, setShuttleValetInfo] = useState('');
+
+  // Feature 3: Free Cancellation
+  const [freeCancellationEnabled, setFreeCancellationEnabled] = useState(false);
+  const [freeCancellationDays, setFreeCancellationDays] = useState('');
+
   const [photos, setPhotos] = useState<File[]>([]);
   const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
 
@@ -389,6 +400,17 @@ export default function EditListingPage() {
       const savedRates = Array.isArray(meta.tiered_daily_rates) ? (meta.tiered_daily_rates as number[]).map(String) : ['', ''];
       setTieredDailyRates(savedRates.length >= 2 ? savedRates : ['', '']);
       setTieredDailyIncrement(meta.tiered_daily_increment ? String(meta.tiered_daily_increment) : '');
+
+      // Feature 1: Personal Branding
+      setPersonalBrandingEnabled(meta.personal_branding_enabled ?? false);
+      setPersonalBrandName(meta.personal_brand_name ?? '');
+
+      // Feature 2: Shuttle/Valet Info
+      setShuttleValetInfo(meta.shuttle_valet_info ?? '');
+
+      // Feature 3: Free Cancellation
+      setFreeCancellationEnabled(meta.free_cancellation_enabled ?? false);
+      setFreeCancellationDays(meta.free_cancellation_days ? String(meta.free_cancellation_days) : '');
 
       setExistingPhotos(data.verification_photos || []);
       setCheckoutSlots(meta.checkoutSlots || [
@@ -481,6 +503,14 @@ export default function EditListingPage() {
             tiered_daily_enabled: tieredDailyEnabled,
             tiered_daily_rates: tieredDailyEnabled ? tieredDailyRates.map((r) => parseFloat(r) || 0) : null,
             tiered_daily_increment: tieredDailyEnabled ? (tieredDailyIncrement ? parseFloat(tieredDailyIncrement) : null) : null,
+            // Feature 1: Personal Branding
+            personal_branding_enabled: personalBrandingEnabled,
+            personal_brand_name: personalBrandingEnabled ? personalBrandName : null,
+            // Feature 2: Shuttle/Valet Info
+            shuttle_valet_info: shuttleValetInfo || null,
+            // Feature 3: Free Cancellation
+            free_cancellation_enabled: freeCancellationEnabled,
+            free_cancellation_days: freeCancellationEnabled ? (freeCancellationDays ? parseFloat(freeCancellationDays) : null) : null,
           },
         }),
       });
@@ -539,6 +569,15 @@ export default function EditListingPage() {
               <div>
                 <label className={labelClass}>{et('Address', locale)}</label>
                 <AddressMapField address={address} onAddressChange={setAddress} pin={pin} onPinChange={setPin} onRegionDetect={(r) => r && setRegion(r)} isLoaded={isLoaded} />
+              </div>
+              <div className="pt-2 border-t border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <label className={labelClass}>{locale === 'en' ? 'Personal branding' : 'Osobno branding'}</label>
+                  <Toggle checked={personalBrandingEnabled} onChange={setPersonalBrandingEnabled} />
+                </div>
+                {personalBrandingEnabled && (
+                  <input type="text" placeholder={locale === 'en' ? 'Enter your brand name' : 'Unesite naziv vašeg brenda'} value={personalBrandName} onChange={(e) => setPersonalBrandName(e.target.value)} className={inputClass} />
+                )}
               </div>
             </div>
           </div>
@@ -622,6 +661,18 @@ export default function EditListingPage() {
                   </button>
                 ))}
               </div>
+              {(addons.includes('Shuttle') || addons.includes('Valet')) && (
+                <div className="pt-3 border-t border-gray-200 mt-3">
+                  <label className={labelClass}>{locale === 'en' ? 'Shuttle/Valet service information' : 'Informacije o Shuttle/Valet uslugama'}</label>
+                  <textarea
+                    placeholder={locale === 'en' ? 'Enter instructions or details for your shuttle/valet service' : 'Unesite upute ili detalje o vašoj shuttle/valet usluzi'}
+                    value={shuttleValetInfo}
+                    onChange={(e) => setShuttleValetInfo(e.target.value)}
+                    className={`${inputClass} resize-none`}
+                    rows={3}
+                  />
+                </div>
+              )}
             </CollapsibleSection>
 
             <CollapsibleSection title={et('Working hours (Access hours)', locale)} defaultOpen={false}>
@@ -755,6 +806,30 @@ export default function EditListingPage() {
                         className={inputClass}
                       />
                     </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Feature 3: Free Cancellation */}
+              <div className="space-y-3 pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800">{locale === 'en' ? 'Free cancellation policy' : 'Politika besplatnog otkazivanja'}</p>
+                    <p className="text-xs text-gray-400">{locale === 'en' ? 'Allow free cancellation up to X days before arrival' : 'Dozvoli besplatnu otkaznu do X dana prije dolaska'}</p>
+                  </div>
+                  <Toggle checked={freeCancellationEnabled} onChange={setFreeCancellationEnabled} />
+                </div>
+                {freeCancellationEnabled && (
+                  <div>
+                    <label className={labelClass}>{locale === 'en' ? 'Days before arrival' : 'Dana prije dolaska'}</label>
+                    <input
+                      type="number"
+                      placeholder="7"
+                      min="0"
+                      value={freeCancellationDays}
+                      onChange={(e) => setFreeCancellationDays(e.target.value)}
+                      className={inputClass}
+                    />
                   </div>
                 )}
               </div>

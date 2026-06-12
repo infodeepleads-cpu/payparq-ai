@@ -90,6 +90,17 @@ export async function POST(req: NextRequest) {
     const tieredDailyRates     = JSON.parse((formData.get('tieredDailyRates') as string) || '[]') as number[];
     const tieredDailyIncrement = parseFloat((formData.get('tieredDailyIncrement') as string) || '0');
 
+    // Feature 1: Personal Branding
+    const personalBrandingEnabled = formData.get('personalBrandingEnabled') === 'true';
+    const personalBrandName       = (formData.get('personalBrandName') as string) || '';
+
+    // Feature 2: Shuttle/Valet Info
+    const shuttleValetInfo        = (formData.get('shuttleValetInfo') as string) || '';
+
+    // Feature 3: Free Cancellation
+    const freeCancellationEnabled = formData.get('freeCancellationEnabled') === 'true';
+    const freeCancellationDays    = parseFloat((formData.get('freeCancellationDays') as string) || '0');
+
     // Partnership toggles
     const wantPartnership      = formData.get('wantPartnership') === 'true';
     const wantQR               = formData.get('wantQR') === 'true';
@@ -180,6 +191,14 @@ export async function POST(req: NextRequest) {
           tiered_daily_enabled: tieredDailyEnabled,
           tiered_daily_rates: tieredDailyEnabled ? tieredDailyRates : null,
           tiered_daily_increment: tieredDailyEnabled ? tieredDailyIncrement : null,
+          // Feature 1: Personal Branding
+          personal_branding_enabled: personalBrandingEnabled,
+          personal_brand_name: personalBrandingEnabled ? personalBrandName : null,
+          // Feature 2: Shuttle/Valet Info
+          shuttle_valet_info: shuttleValetInfo || null,
+          // Feature 3: Free Cancellation
+          free_cancellation_enabled: freeCancellationEnabled,
+          free_cancellation_days: freeCancellationEnabled ? freeCancellationDays : null,
           // Partnership toggles
           want_partnership: wantPartnership,
           want_qr_pay: wantQR,
