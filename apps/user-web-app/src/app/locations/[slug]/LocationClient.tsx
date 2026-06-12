@@ -1706,47 +1706,6 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     ) : null}
                   </div>
 
-                  {hubEnabled && <div className="rounded-2xl border border-black/10 bg-white text-black overflow-hidden">
-                    <button
-                      type="button"
-                      className="w-full flex items-center justify-between gap-3 px-4 md:px-6 py-4 text-left"
-                      aria-expanded={openSections.distance}
-                      onClick={() => setOpenSections((prev) => ({ ...prev, distance: !prev.distance }))}
-                    >
-                      <span className="inline-flex items-center gap-3">
-                        <Route className="w-5 h-5 text-[#5F3DFC] shrink-0" />
-                        <span className="text-sm md:text-base font-semibold">Distance</span>
-                      </span>
-                      {openSections.distance ? (
-                        <Minus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
-                      ) : (
-                        <Plus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
-                      )}
-                    </button>
-                    {openSections.distance ? (
-                      <div className="px-4 md:px-6 pb-4 md:pb-6">
-                        <div className="rounded-2xl border border-black/10 bg-white text-black p-4 md:p-6">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="px-2 py-2">
-                              <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
-                              <p className="text-sm font-semibold">{referencePoints.airport.name}</p>
-                              <p className="text-xs text-black/70">{distAirportDisplay}</p>
-                            </div>
-                            <div className="px-2 py-2">
-                              <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
-                              <p className="text-sm font-semibold">{referencePoints.trogir.name}</p>
-                              <p className="text-xs text-black/70">{distTrogirDisplay}</p>
-                            </div>
-                            <div className="px-2 py-2">
-                              <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
-                              <p className="text-sm font-semibold">{referencePoints.marina.name}</p>
-                              <p className="text-xs text-black/70">{distMarinaDisplay}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>}
 
                   <div className="rounded-2xl border border-black/10 bg-white text-black overflow-hidden">
                     <button
@@ -1772,9 +1731,6 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                           {[
                             { q: locale === 'hr' ? 'Grad' : 'City', a: cityName },
                             { q: locale === 'hr' ? 'Koordinate' : 'Coordinates', a: typeof hub.latitude === "number" && typeof hub.longitude === "number" ? `${hub.latitude.toFixed(5)}, ${hub.longitude.toFixed(5)}` : "N/A" },
-                            { q: locale === 'hr' ? `Udaljenost do ${referencePoints.airport.name}` : `Distance to ${referencePoints.airport.name}`, a: distAirportDisplay },
-                            { q: locale === 'hr' ? `Udaljenost do ${referencePoints.trogir.name}` : `Distance to ${referencePoints.trogir.name}`, a: distTrogirDisplay },
-                            { q: locale === 'hr' ? `Udaljenost do ${referencePoints.marina.name}` : `Distance to ${referencePoints.marina.name}`, a: distMarinaDisplay },
                             { q: locale === 'hr' ? 'Vrijeme putovanja' : 'Typical transfer time', a: travelTime },
                             { q: locale === 'hr' ? 'Vrste parkinga' : 'Parking types', a: locale === 'hr' ? 'Otvorena i pokrivena mjesta' : 'Open‑air and covered bays' },
                             { q: locale === 'hr' ? 'Sati' : 'Hours', a: locale === 'hr' ? '24/7 operacije' : '24/7 operations' },
