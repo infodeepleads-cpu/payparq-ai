@@ -46,7 +46,7 @@ interface Parking {
   availability: boolean;
   features: string[];
   type: 'self-park' | 'garage' | 'valet' | 'lot';
-  verification_metadata?: Record<string, unknown> | null;
+  verification_metadata?: Record<string, unknown>;
 }
 
 interface ListingCardProps {
