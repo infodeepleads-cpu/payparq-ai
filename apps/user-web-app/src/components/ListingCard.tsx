@@ -2,6 +2,7 @@
 
 import { useLocale } from './LocaleProvider';
 import Image from 'next/image';
+import { getTieredDailyConfig, calculateTieredDailyPrice } from '@/lib/locationPricing';
 import {
   MapPin,
   Star,
@@ -45,6 +46,7 @@ interface Parking {
   availability: boolean;
   features: string[];
   type: 'self-park' | 'garage' | 'valet' | 'lot';
+  verification_metadata?: Record<string, unknown> | null;
 }
 
 interface ListingCardProps {
@@ -75,10 +77,15 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
       return list.pricePerMonth || list.pricePerHour;
     }
     const hourlyTotal = list.pricePerHour * duration;
+    const days = Math.ceil(duration / 24);
+    if (duration >= 8 && list.verification_metadata) {
+      const tiered = getTieredDailyConfig({ verification_metadata: list.verification_metadata });
+      if (tiered) return calculateTieredDailyPrice(tiered, days);
+    }
     if (!list.pricePerDay) return hourlyTotal;
     const fullDays = Math.floor(duration / 24);
     const remainingHours = duration % 24;
-    const ceilDaysTotal = list.pricePerDay * Math.ceil(duration / 24);
+    const ceilDaysTotal = list.pricePerDay * days;
     const mixedTotal = fullDays > 0
       ? list.pricePerDay * fullDays + list.pricePerHour * remainingHours
       : hourlyTotal;

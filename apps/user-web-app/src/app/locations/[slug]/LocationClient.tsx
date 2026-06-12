@@ -10,7 +10,7 @@ import { useLocale } from "@/components/LocaleProvider";
 const LotMap = lazy(() => import('@/components/LotMap'));
 import { FooterBrand } from "@/components/FooterBrand";
 import { SiteHeader } from "@/components/SiteHeader";
-import { normalizeLocationName, resolveParkTaxiPriceEuro, resolveScannerTruthPriceEuro } from "@/lib/locationPricing";
+import { normalizeLocationName, resolveParkTaxiPriceEuro, resolveScannerTruthPriceEuro, getTieredDailyConfig, calculateTieredDailyPrice } from "@/lib/locationPricing";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 type HubData = {
@@ -299,14 +299,20 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const allHourly = totalHours * hourlyPrice;
   const ceilDaysTotal = totalDays * dailyPrice;
   const mixedTotal = fullDays > 0 ? fullDays * dailyPrice + remainingHours * hourlyPrice : allHourly;
-  const reserveSubtotal = dailyPrice > 0 ? Math.min(allHourly, ceilDaysTotal, mixedTotal) : allHourly;
-  const reserveUsesDailyPricing = dailyPrice > 0 && reserveSubtotal < allHourly;
+  const tieredConfig = totalHours >= 8 ? getTieredDailyConfig(hub) : null;
+  const tieredSubtotal = tieredConfig ? calculateTieredDailyPrice(tieredConfig, totalDays) : null;
+  const reserveSubtotal = tieredSubtotal !== null
+    ? tieredSubtotal
+    : (dailyPrice > 0 ? Math.min(allHourly, ceilDaysTotal, mixedTotal) : allHourly);
+  const reserveUsesDailyPricing = tieredSubtotal !== null || (dailyPrice > 0 && reserveSubtotal < allHourly);
   const reserveServiceFee = Math.min(1.99, +(0.99 + reserveSubtotal * 0.10).toFixed(2));
   const reserveTotalAmount = reserveSubtotal + reserveServiceFee;
   const reserveTotalPriceLabel = `€${reserveSubtotal.toFixed(2)}`;
-  const reserveDurationLabel = reserveUsesDailyPricing
-    ? `${totalDays} days (${formatEur(dailyPrice)}/day)`
-    : `${totalHours} hours (${formatEur(hourlyPrice)}/hr)`;
+  const reserveDurationLabel = tieredSubtotal !== null
+    ? `${totalDays} days (tiered pricing)`
+    : reserveUsesDailyPricing
+      ? `${totalDays} days (${formatEur(dailyPrice)}/day)`
+      : `${totalHours} hours (${formatEur(hourlyPrice)}/hr)`;
   const parkTaxiSubtotal = parkTaxiUnitPrice + (totalDays - 1) * dailyPrice;
   const parkTaxiServiceFee = Math.min(1.99, +(0.99 + parkTaxiSubtotal * 0.10).toFixed(2));
   const parkTaxiTotal = parkTaxiSubtotal + parkTaxiServiceFee;
