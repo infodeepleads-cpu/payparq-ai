@@ -474,7 +474,7 @@ export function SearchPage() {
 
   const subtotal = selectedListing ? (() => {
     const rates = resolveRatesForDate(selectedListing, startTime);
-    const liveListing = { ...selectedListing, pricePerHour: rates.hourly, pricePerDay: rates.daily };
+    const liveListing = { ...selectedListing, pricePerHour: rates.hourly, pricePerDay: rates.daily, verification_metadata: selectedListing.verification_metadata };
     return parseFloat(getDisplayPrice(liveListing, durationHours, reservationType).toFixed(2));
   })() : 0;
   const serviceFee = Math.min(1.99, parseFloat((0.99 + subtotal * 0.10).toFixed(2)));
@@ -517,7 +517,7 @@ export function SearchPage() {
 
   const buildCheckoutUrl = (listing: Parking) => {
     const rates = resolveRatesForDate(listing, startTime);
-    const checkoutListing = { ...listing, pricePerHour: rates.hourly, pricePerDay: rates.daily };
+    const checkoutListing = { ...listing, pricePerHour: rates.hourly, pricePerDay: rates.daily, verification_metadata: listing.verification_metadata };
     const totalPrice = getDisplayPrice(checkoutListing, durationHours, reservationType);
     const sub = parseFloat(totalPrice.toFixed(2));
     const total = sub; // Always pass base price; checkout adds fee itself

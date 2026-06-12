@@ -507,7 +507,7 @@ export default function EditListingPage() {
             useAIDynamicPricing,
             checkoutSlots,
             tiered_daily_enabled: tieredDailyEnabled,
-            tiered_daily_rates: tieredDailyEnabled ? tieredDailyRates.map((r) => parseFloat(r) || 0) : null,
+            tiered_daily_rates: tieredDailyEnabled ? tieredDailyRates.map((r) => parseFloat(r)).filter((v) => v > 0) : null,
             tiered_daily_increment: tieredDailyEnabled ? (tieredDailyIncrement ? parseFloat(tieredDailyIncrement) : null) : null,
             // Feature 1: Personal Branding
             personal_branding_enabled: personalBrandingEnabled,
