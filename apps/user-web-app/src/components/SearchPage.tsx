@@ -228,6 +228,7 @@ interface Parking {
   thingsToKnow?: string;
   gettingThere?: string;
   verification_metadata?: Record<string, unknown>;
+  ticketingOnlyEnabled?: boolean;
   howItWorks?: string;
   spots?: number;
   baseHourlyRate?: number;
@@ -809,6 +810,7 @@ export function SearchPage() {
               baseDailyRate: pricePerDay,
               dateConfigs: metadata?.dateConfigs || {},
               verification_metadata: loc.verification_metadata,
+              ticketingOnlyEnabled: loc.verification_metadata?.ticketing_only_enabled === true,
             };
           });
 
@@ -2078,6 +2080,14 @@ export function SearchPage() {
                                     {lot.pricePerHour?.toFixed(2)}/h
                                   </span>
                                 </div>
+                                {lot.ticketingOnlyEnabled && (
+                                  <div className="flex items-center gap-1 mt-2 text-xs text-green-700 font-medium">
+                                    <span className="flex-shrink-0 w-3.5 h-3.5 rounded-full bg-green-700 flex items-center justify-center">
+                                      <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                    </span>
+                                    <span>{locale === 'en' ? 'Pay on spot' : 'Plaćanje na mjestu'}</span>
+                                  </div>
+                                )}
                               </button>
                             ))}
                           </div>
@@ -2850,6 +2860,14 @@ export function SearchPage() {
                                     {lot.pricePerHour?.toFixed(2)}/h
                                   </span>
                                 </div>
+                                {lot.ticketingOnlyEnabled && (
+                                  <div className="flex items-center gap-1 mt-2 text-xs text-green-700 font-medium">
+                                    <span className="flex-shrink-0 w-3.5 h-3.5 rounded-full bg-green-700 flex items-center justify-center">
+                                      <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                    </span>
+                                    <span>{locale === 'en' ? 'Pay on spot' : 'Plaćanje na mjestu'}</span>
+                                  </div>
+                                )}
                               </button>
                             ))}
                           </div>

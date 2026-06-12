@@ -101,6 +101,9 @@ export async function POST(req: NextRequest) {
     const freeCancellationEnabled = formData.get('freeCancellationEnabled') === 'true';
     const freeCancellationDays    = parseFloat((formData.get('freeCancellationDays') as string) || '0');
 
+    // Feature 4: Ticketing Only
+    const ticketingOnlyEnabled    = formData.get('ticketingOnlyEnabled') === 'true';
+
     // Partnership toggles
     const wantPartnership      = formData.get('wantPartnership') === 'true';
     const wantQR               = formData.get('wantQR') === 'true';
@@ -199,6 +202,8 @@ export async function POST(req: NextRequest) {
           // Feature 3: Free Cancellation
           free_cancellation_enabled: freeCancellationEnabled,
           free_cancellation_days: freeCancellationEnabled ? freeCancellationDays : null,
+          // Feature 4: Ticketing Only
+          ticketing_only_enabled: ticketingOnlyEnabled,
           // Partnership toggles
           want_partnership: wantPartnership,
           want_qr_pay: wantQR,

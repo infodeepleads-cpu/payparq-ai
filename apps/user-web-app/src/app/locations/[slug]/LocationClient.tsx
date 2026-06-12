@@ -517,6 +517,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const personalBrandingEnabled = hub.verification_metadata?.personal_branding_enabled === true;
   const personalBrandName = hub.verification_metadata?.personal_brand_name as string | undefined;
   const shuttleValetInfo = hub.verification_metadata?.shuttle_valet_info as string | undefined;
+  const ticketingOnlyEnabled = hub.verification_metadata?.ticketing_only_enabled === true;
 
   const serviceWidgets = [
     {
@@ -584,6 +585,18 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
           <path d="M19 17h2c.55 0 1-.45 1-1v-3c0-.55-.45-1-1-1h-.23l-.98-2.95A2 2 0 0 0 16.04 8h-8.08a2 2 0 0 0-1.9 1.05L5.23 12H5c-.55 0-1 .45-1 1v3c0 .55.45 1 1 1h2m6-6V7c0-1.66 1.34-3 3-3s3 1.34 3 3" />
           <circle cx="6.5" cy="17.5" r="2.5" />
           <circle cx="17.5" cy="17.5" r="2.5" />
+        </svg>
+      ),
+    }] : []),
+    ...(ticketingOnlyEnabled ? [{
+      id: "ticketing" as SectionKey,
+      title: locale === 'en' ? "Ticketing" : "Karte",
+      value: locale === 'en' ? "Pay on spot" : "Plaćanje na mjestu",
+      description: locale === 'en' ? "Take a ticket when you arrive and pay on spot" : "Uzmite kartu kada stignete i platite na mjestu",
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="4" y="5" width="16" height="14" rx="2" />
+          <path d="M8 10h8M8 14h8" />
         </svg>
       ),
     }] : []),

@@ -322,6 +322,9 @@ export default function EditListingPage() {
   const [freeCancellationEnabled, setFreeCancellationEnabled] = useState(false);
   const [freeCancellationDays, setFreeCancellationDays] = useState('');
 
+  // Feature 4: Ticketing Only
+  const [ticketingOnlyEnabled, setTicketingOnlyEnabled] = useState(false);
+
   const [photos, setPhotos] = useState<File[]>([]);
   const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
 
@@ -411,6 +414,9 @@ export default function EditListingPage() {
       // Feature 3: Free Cancellation
       setFreeCancellationEnabled(meta.free_cancellation_enabled ?? false);
       setFreeCancellationDays(meta.free_cancellation_days ? String(meta.free_cancellation_days) : '');
+
+      // Feature 4: Ticketing Only
+      setTicketingOnlyEnabled(meta.ticketing_only_enabled ?? false);
 
       setExistingPhotos(data.verification_photos || []);
       setCheckoutSlots(meta.checkoutSlots || [
@@ -511,6 +517,8 @@ export default function EditListingPage() {
             // Feature 3: Free Cancellation
             free_cancellation_enabled: freeCancellationEnabled,
             free_cancellation_days: freeCancellationEnabled ? (freeCancellationDays ? parseFloat(freeCancellationDays) : null) : null,
+            // Feature 4: Ticketing Only
+            ticketing_only_enabled: ticketingOnlyEnabled,
           },
         }),
       });
@@ -832,6 +840,17 @@ export default function EditListingPage() {
                     />
                   </div>
                 )}
+              </div>
+
+              {/* Feature 4: Ticketing Only */}
+              <div className="space-y-3 pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800">{locale === 'en' ? 'Ticketing Only' : 'Samo karte'}</p>
+                    <p className="text-xs text-gray-400">{locale === 'en' ? 'Customers pay only service fee at checkout' : 'Kupci plaćaju samo naknadu za uslugu pri kupnji'}</p>
+                  </div>
+                  <Toggle checked={ticketingOnlyEnabled} onChange={setTicketingOnlyEnabled} />
+                </div>
               </div>
 
               <div className="space-y-4 pt-2 border-t border-gray-100">

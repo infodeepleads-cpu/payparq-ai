@@ -457,7 +457,14 @@ function SummaryPanel({
         </div>
 
         <div className="flex flex-col gap-1 mb-4">
-          {freeCancellationEnabled && !freeCancellationDays && (
+          {ticketingOnlyEnabled ? (
+            <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
+              <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
+                <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+              </span>
+              <span>{locale === 'en' ? 'Take a ticket when you arrive and pay on spot' : 'Uzmite kartu kada stignete i platite na mjestu'}</span>
+            </div>
+          ) : freeCancellationEnabled && !freeCancellationDays && (
             <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
               <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
                 <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
@@ -507,10 +514,12 @@ function SummaryPanel({
           <div className="border-t border-gray-100 pt-4 hidden lg:block">
             <p className="text-xs font-bold text-gray-900 mb-3">{checkoutT('Raščlamba cijena', locale)}</p>
             <div className="space-y-2 text-xs">
-              <div className="flex justify-between text-gray-700">
-                <span>{checkoutT('Subtotal', locale)}</span>
-                <span className="font-medium">€{subtotalEur.toFixed(2)}</span>
-              </div>
+              {!ticketingOnlyEnabled && (
+                <div className="flex justify-between text-gray-700">
+                  <span>{checkoutT('Subtotal', locale)}</span>
+                  <span className="font-medium">€{subtotalEur.toFixed(2)}</span>
+                </div>
+              )}
               {promoDiscountCents > 0 && (
                 <div className="flex justify-between text-green-600 font-semibold">
                   <span>{checkoutT('Promo Discount', locale)} (-{promoDiscountPercent}%)</span>
@@ -1110,6 +1119,7 @@ function CheckoutInner() {
   const [paymentReady, setPaymentReady] = useState(false);
   const [freeCancellationEnabled, setFreeCancellationEnabled] = useState(false);
   const [freeCancellationDays, setFreeCancellationDays] = useState(0);
+  const [ticketingOnlyEnabled, setTicketingOnlyEnabled] = useState(false);
 
   useEffect(() => {
     if (!locId) return;
@@ -1143,6 +1153,10 @@ function CheckoutInner() {
           if (data?.verification_metadata?.free_cancellation_enabled) {
             setFreeCancellationEnabled(true);
             setFreeCancellationDays(data.verification_metadata.free_cancellation_days || 0);
+          }
+          // Feature 4: Ticketing Only
+          if (data?.verification_metadata?.ticketing_only_enabled) {
+            setTicketingOnlyEnabled(true);
           }
           const liveHourly = resolveScannerTruthPriceEuro(data, 'hourly');
           const liveDaily = resolveScannerTruthPriceEuro(data, 'daily');
@@ -1186,6 +1200,10 @@ function CheckoutInner() {
         if (data?.verification_metadata?.free_cancellation_enabled) {
           setFreeCancellationEnabled(true);
           setFreeCancellationDays(data.verification_metadata.free_cancellation_days || 0);
+        }
+        // Feature 4: Ticketing Only
+        if (data?.verification_metadata?.ticketing_only_enabled) {
+          setTicketingOnlyEnabled(true);
         }
       });
   }, [locId]);

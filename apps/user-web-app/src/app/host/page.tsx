@@ -120,6 +120,7 @@ const HOST_TRANSLATIONS = {
   'Free cancellation policy': { en: 'Enable custom free cancellation', hr: 'Omogući prilagođenu besplatnu otkaznu politiku' },
   'Days before arrival': { en: 'Days before arrival', hr: 'Dana prije dolaska' },
   'Allow free cancellation up to X days before arrival': { en: 'Allow free cancellation up to X days before arrival', hr: 'Dozvoli besplatnu otkaznu do X dana prije dolaska' },
+  'Ticketing Only': { en: 'Ticketing Only', hr: 'Samo karte' },
 } as const;
 
 const hostT = (key: string, locale: string): string => {
@@ -777,6 +778,9 @@ export default function HostPage() {
   const [freeCancellationEnabled, setFreeCancellationEnabled] = useState(false);
   const [freeCancellationDays, setFreeCancellationDays] = useState('');
 
+  // Feature 4: Ticketing Only
+  const [ticketingOnlyEnabled, setTicketingOnlyEnabled] = useState(false);
+
   // Photos
   const [photos, setPhotos] = useState<File[]>([]);
 
@@ -877,6 +881,8 @@ export default function HostPage() {
     // Feature 3: Free Cancellation
     fd.append('freeCancellationEnabled', String(freeCancellationEnabled));
     fd.append('freeCancellationDays', freeCancellationDays);
+    // Feature 4: Ticketing Only
+    fd.append('ticketingOnlyEnabled', String(ticketingOnlyEnabled));
     // Partnership toggles
     fd.append('wantPartnership', String(wantPartnership));
     fd.append('wantQR', String(wantQR));
@@ -1309,6 +1315,17 @@ export default function HostPage() {
                       />
                     </div>
                   )}
+                </div>
+
+                {/* Feature 4: Ticketing Only */}
+                <div className="space-y-3 pt-4 border-t border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-800">{hostT('Ticketing Only', locale)}</p>
+                      <p className="text-xs text-gray-400">{locale === 'en' ? 'Customers pay only service fee at checkout' : 'Kupci plaćaju samo naknadu za uslugu pri kupnji'}</p>
+                    </div>
+                    <Toggle checked={ticketingOnlyEnabled} onChange={setTicketingOnlyEnabled} />
+                  </div>
                 </div>
 
                 {true && (
