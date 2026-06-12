@@ -461,12 +461,15 @@ function SummaryPanel({
 
         <div className="flex flex-col gap-1 mb-4">
           {ticketingOnlyEnabled ? (
-            <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
-              <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
-                <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-              </span>
-              <span>{locale === 'en' ? 'Take a ticket when you arrive and pay on spot' : 'Uzmite kartu kada stignete i platite na mjestu'}</span>
-            </div>
+            <>
+              <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
+                <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
+                  <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                </span>
+                <span>{locale === 'en' ? 'Take a ticket when you arrive and pay on spot' : 'Uzmite kartu kada stignete i platite na mjestu'}</span>
+              </div>
+              <p className="text-xs text-gray-600 ml-6">{locale === 'en' ? 'Full parking price will be paid when you exit' : 'Cijela cijena parkinga će biti plaćena pri izlasku'}</p>
+            </>
           ) : freeCancellationEnabled && !freeCancellationDays && (
             <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
               <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">

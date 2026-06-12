@@ -533,7 +533,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
         </svg>
       ),
     },
-    {
+    ...(hubEnabled ? [{
       id: "extras" as SectionKey,
       title: "Available extras",
       value: "Parq vožnja",
@@ -546,7 +546,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
           <path d="m18 6-12 12" />
         </svg>
       ),
-    },
+    }] : []),
     {
       id: "space" as SectionKey,
       title: "Space",
@@ -1391,7 +1391,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       <span className="absolute -bottom-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#5F3DFC] px-1 text-[8px] font-semibold text-white">★</span>
                     </div>
                     <div>
-                      <p className="text-[13px] font-semibold text-black">{locale === 'en' ? 'Host is Ivo' : 'Domaćin je Ivo'}</p>
+                      <p className="text-[13px] font-semibold text-black">{locale === 'en' ? (hubEnabled ? 'Host is Ivo' : 'Agent is Ivo') : (hubEnabled ? 'Domaćin je Ivo' : 'Agent je Ivo')}</p>
                       <p className="text-[10px] text-black/60 leading-snug">{locale === 'en' ? 'Send message now! Responds in less than 5 minutes.' : 'Pošaljite poruku sada! Odgovara u manje od 5 minuta.'}</p>
                     </div>
                   </div>
@@ -1406,7 +1406,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                 </div>
               </div>
 
-              <div data-no-translate="true" className="w-full rounded-2xl border border-black/10 bg-white p-3 md:p-4">
+              {hubEnabled && <div data-no-translate="true" className="w-full rounded-2xl border border-black/10 bg-white p-3 md:p-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                   <div className="rounded-xl border border-[#5F3DFC]/20 bg-[#F8F6FF] p-3">
                     <p className="text-[11px] uppercase tracking-[0.16em] text-[#5F3DFC] font-semibold">{locale === 'en' ? 'PayParq Pricing' : 'PayParq cjenik'}</p>
@@ -1425,7 +1425,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </div>
                   </div>
                 </div>
-              </div>
+              </div>}
               
               <div className="w-full rounded-2xl border border-black/10 bg-white p-3 md:p-4">
                 <div className="flex items-center gap-2">
