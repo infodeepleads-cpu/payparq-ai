@@ -457,12 +457,14 @@ function SummaryPanel({
         </div>
 
         <div className="flex flex-col gap-1 mb-4">
-          <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
-            <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
-              <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-            </span>
-            <span>{checkoutT('Otkaži besplatno do vremena početka', locale)}</span>
-          </div>
+          {freeCancellationEnabled && !freeCancellationDays && (
+            <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
+              <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
+                <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+              </span>
+              <span>{checkoutT('Otkaži besplatno do vremena početka', locale)}</span>
+            </div>
+          )}
           <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
             <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
               <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
@@ -1106,6 +1108,8 @@ function CheckoutInner() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [checkoutSlots, setCheckoutSlots] = useState<CheckoutSlot[] | undefined>(undefined);
   const [paymentReady, setPaymentReady] = useState(false);
+  const [freeCancellationEnabled, setFreeCancellationEnabled] = useState(false);
+  const [freeCancellationDays, setFreeCancellationDays] = useState(0);
 
   useEffect(() => {
     if (!locId) return;
@@ -1134,6 +1138,11 @@ function CheckoutInner() {
           }
           if (data?.verification_metadata?.checkoutSlots) {
             setCheckoutSlots(data.verification_metadata.checkoutSlots);
+          }
+          // Feature 3: Free Cancellation
+          if (data?.verification_metadata?.free_cancellation_enabled) {
+            setFreeCancellationEnabled(true);
+            setFreeCancellationDays(data.verification_metadata.free_cancellation_days || 0);
           }
           const liveHourly = resolveScannerTruthPriceEuro(data, 'hourly');
           const liveDaily = resolveScannerTruthPriceEuro(data, 'daily');
@@ -1172,6 +1181,11 @@ function CheckoutInner() {
       .then(({ data }) => {
         if (data?.verification_metadata?.checkoutSlots) {
           setCheckoutSlots(data.verification_metadata.checkoutSlots);
+        }
+        // Feature 3: Free Cancellation
+        if (data?.verification_metadata?.free_cancellation_enabled) {
+          setFreeCancellationEnabled(true);
+          setFreeCancellationDays(data.verification_metadata.free_cancellation_days || 0);
         }
       });
   }, [locId]);

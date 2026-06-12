@@ -511,6 +511,13 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     },
   ];
 
+  // Extract Feature metadata from verification_metadata
+  const freeCancellationEnabled = hub.verification_metadata?.free_cancellation_enabled === true;
+  const freeCancellationDays = hub.verification_metadata?.free_cancellation_days as number | undefined;
+  const personalBrandingEnabled = hub.verification_metadata?.personal_branding_enabled === true;
+  const personalBrandName = hub.verification_metadata?.personal_brand_name as string | undefined;
+  const shuttleValetInfo = hub.verification_metadata?.shuttle_valet_info as string | undefined;
+
   const serviceWidgets = [
     {
       id: "hours" as SectionKey,
@@ -550,11 +557,15 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
         </svg>
       ),
     },
-    {
+    ...(freeCancellationEnabled ? [{
       id: "cancellation" as SectionKey,
-      title: "Cancellation policy",
-      value: locale === 'en' ? "Free cancellation + reservation guarantee" : "Besplatno otkazivanje + garancija rezervacije",
-      description: locale === 'en' ? "Cancellation is free within 60 minutes before arrival, and your reservation is guaranteed after confirmation." : "Otkazivanje je besplatno unutar 60 minuta prije dolaska, a rezervacija je garantirana nakon potvrde.",
+      title: locale === 'en' ? "Free Cancellation Policy" : "Politika besplatnog otkazivanja",
+      value: locale === 'en'
+        ? `Free cancellation up to ${freeCancellationDays || 0} days before arrival`
+        : `Besplatna otkazna do ${freeCancellationDays || 0} dana prije dolaska`,
+      description: locale === 'en'
+        ? `You can cancel your reservation for a full refund up to ${freeCancellationDays || 0} days before your arrival.`
+        : `Možete otkazati vašu rezervaciju za puni povrat novca do ${freeCancellationDays || 0} dana prije vašeg dolaska.`,
       icon: (
         <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <rect x="4" y="5" width="16" height="16" rx="2" />
@@ -562,7 +573,20 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
           <path d="m9 16 6-6" />
         </svg>
       ),
-    },
+    }] : []),
+    ...(shuttleValetInfo ? [{
+      id: "shuttle_valet" as SectionKey,
+      title: locale === 'en' ? "Shuttle/Valet Service" : "Shuttle/Valet Usluga",
+      value: locale === 'en' ? "Service Information" : "Informacije o Usluzi",
+      description: shuttleValetInfo,
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M19 17h2c.55 0 1-.45 1-1v-3c0-.55-.45-1-1-1h-.23l-.98-2.95A2 2 0 0 0 16.04 8h-8.08a2 2 0 0 0-1.9 1.05L5.23 12H5c-.55 0-1 .45-1 1v3c0 .55.45 1 1 1h2m6-6V7c0-1.66 1.34-3 3-3s3 1.34 3 3" />
+          <circle cx="6.5" cy="17.5" r="2.5" />
+          <circle cx="17.5" cy="17.5" r="2.5" />
+        </svg>
+      ),
+    }] : []),
     {
       id: "report" as SectionKey,
       title: "Report a problem",
@@ -2050,7 +2074,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     <div className="space-y-4">
                       <p className="text-[11px] uppercase tracking-[0.24em] text-black/60">About the location</p>
                       <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">{locationName}</h2>
-                      <p className="text-sm md:text-base text-black/75">{hub.address || ""}</p>
+                      <p className="text-sm md:text-base text-black/75">{personalBrandingEnabled && personalBrandName ? personalBrandName : (hub.address || "")}</p>
                     </div>
                     <div>
                       <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">FAQ</p>
