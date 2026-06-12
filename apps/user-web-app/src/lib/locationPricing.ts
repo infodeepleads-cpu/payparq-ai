@@ -36,9 +36,11 @@ export function getTieredDailyConfig(source: PricingSource): TieredDailyConfig |
 
 export function calculateTieredDailyPrice(config: TieredDailyConfig, days: number): number {
   if (days <= 0) return 0;
-  if (days <= config.rates.length) return config.rates[days - 1];
-  const lastRate = config.rates[config.rates.length - 1];
-  return lastRate + (days - config.rates.length) * config.increment;
+  let total = 0;
+  for (let i = 0; i < days; i++) {
+    total += i < config.rates.length ? config.rates[i] : config.increment;
+  }
+  return total;
 }
 
 function toFiniteMetadataNumber(value: unknown): number {
