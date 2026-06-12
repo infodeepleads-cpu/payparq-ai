@@ -129,7 +129,7 @@ function SummaryPanel({
   promoStatus, promoInput, promoError, promoDiscountCents, promoDiscountPercent,
   onApplyPromo, onRemovePromo, onInputChange,
   onCheckInChange, onCheckOutChange, onDatePickerToggle, onAddHours, hourlyRateCents,
-  checkoutSlots, locale,
+  checkoutSlots, locale, ticketingOnlyEnabled, freeCancellationEnabled, freeCancellationDays,
 }: {
   locationName: string;
   locationId: string;
@@ -154,6 +154,9 @@ function SummaryPanel({
   hourlyRateCents?: number;
   checkoutSlots?: CheckoutSlot[];
   locale: 'en' | 'hr';
+  ticketingOnlyEnabled?: boolean;
+  freeCancellationEnabled?: boolean;
+  freeCancellationDays?: number;
 }) {
   const subtotalEur = originalAmountCents / 100;
   const serviceFeeEurCents = promoDiscountPercent === 100 ? 0 : Math.min(199, Math.round(99 + (originalAmountCents * 0.10)));
@@ -950,6 +953,9 @@ function PaidCheckoutForm({
             hourlyRateCents={phCents || undefined}
             checkoutSlots={checkoutSlots}
             locale={locale}
+            ticketingOnlyEnabled={ticketingOnlyEnabled}
+            freeCancellationEnabled={freeCancellationEnabled}
+            freeCancellationDays={freeCancellationDays}
           />
 
           {/* ── Right: form ── */}
