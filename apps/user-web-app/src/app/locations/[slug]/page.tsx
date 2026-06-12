@@ -32,7 +32,6 @@ async function fetchLocationData(slug: string): Promise<HubData | null> {
       .from('locations')
       .select('*')
       .eq('canonical_slug', slug)
-      .eq('verification_metadata->>hub_enabled', 'true')
       .limit(1)
       .single();
     return data as HubData | null;
