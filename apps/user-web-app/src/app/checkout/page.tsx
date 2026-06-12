@@ -641,6 +641,7 @@ function PaidCheckoutForm({
   const [checkIn, setCheckIn] = useState(initialCheckIn);
   const [checkOut, setCheckOut] = useState(initialCheckOut);
   const [displayAmountCents, setDisplayAmountCents] = useState(originalAmountCents);
+  const [parkingAmountCents, setParkingAmountCents] = useState(originalAmountCents); // Tracks parking price before promo discount
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [promoStatus, setPromoStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle');
   const [promoInput, setPromoInput] = useState('');
@@ -722,25 +723,38 @@ function PaidCheckoutForm({
     const newDurationHours = Math.max(0.5, (new Date(checkOut).getTime() - new Date(newCheckIn).getTime()) / (1000 * 60 * 60));
     const newAmountCents = calcAmountCents(newDurationHours);
     setDisplayAmountCents(newAmountCents);
+    setParkingAmountCents(newAmountCents); // Update base parking price
     updatePIAmount(newAmountCents);
-  }, [checkOut, clientSecret, phCents, pdCents, pmCents]);
+    if (ticketingOnlyEnabled) {
+      sessionStorage.setItem('payparq_ticketing_only', JSON.stringify({ enabled: true, full_parking_cents: newAmountCents }));
+    }
+  }, [checkOut, clientSecret, phCents, pdCents, pmCents, ticketingOnlyEnabled]);
 
   const handleCheckOutChange = useCallback((newCheckOut: string) => {
     setCheckOut(newCheckOut);
     const newDurationHours = Math.max(0.5, (new Date(newCheckOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60));
     const newAmountCents = calcAmountCents(newDurationHours);
     setDisplayAmountCents(newAmountCents);
+    setParkingAmountCents(newAmountCents); // Update base parking price
     updatePIAmount(newAmountCents);
-  }, [checkIn, clientSecret, phCents, pdCents, pmCents]);
+    if (ticketingOnlyEnabled) {
+      sessionStorage.setItem('payparq_ticketing_only', JSON.stringify({ enabled: true, full_parking_cents: newAmountCents }));
+    }
+  }, [checkIn, clientSecret, phCents, pdCents, pmCents, ticketingOnlyEnabled]);
 
   const handleAddHours = useCallback((hours: number, addCents: number) => {
     const newCheckOut = new Date(checkOut);
     newCheckOut.setHours(newCheckOut.getHours() + hours);
     setCheckOut(newCheckOut.toISOString());
-    const newAmountCents = displayAmountCents + addCents;
+    const newAmountCents = parkingAmountCents + addCents; // Use parking price, not discounted amount
     setDisplayAmountCents(newAmountCents);
+    setParkingAmountCents(newAmountCents); // Update base parking price
     updatePIAmount(newAmountCents);
-  }, [checkOut, displayAmountCents, clientSecret]);
+    // Update sessionStorage for parking pass
+    if (ticketingOnlyEnabled) {
+      sessionStorage.setItem('payparq_ticketing_only', JSON.stringify({ enabled: true, full_parking_cents: newAmountCents }));
+    }
+  }, [checkOut, parkingAmountCents, clientSecret, ticketingOnlyEnabled]);
 
   const applyPromo = async (codeOverride?: string) => {
     const code = (codeOverride !== undefined ? codeOverride : promoInput).trim().toUpperCase();
@@ -812,7 +826,9 @@ function PaidCheckoutForm({
     setPromoCodeId(null);
     setReferrerId(null);
     setReferralCodeV2(null);
-    onAmountChange(originalAmountCents);
+    setDisplayAmountCents(parkingAmountCents); // Reset to current parking price (may have been adjusted by adding hours)
+    updatePIAmount(parkingAmountCents);
+    onAmountChange(parkingAmountCents);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -848,7 +864,7 @@ function PaidCheckoutForm({
       // Save user data for sidebar prefill
       localStorage.setItem('payparq_user_data', JSON.stringify({ email, phone, plate }));
       if (ticketingOnlyEnabled) {
-        sessionStorage.setItem('payparq_ticketing_only', JSON.stringify({ enabled: true, full_parking_cents: originalAmountCents }));
+        sessionStorage.setItem('payparq_ticketing_only', JSON.stringify({ enabled: true, full_parking_cents: parkingAmountCents }));
       } else {
         sessionStorage.removeItem('payparq_ticketing_only');
       }
@@ -892,7 +908,7 @@ function PaidCheckoutForm({
     if (ticketingOnlyEnabled) {
       sessionStorage.setItem('payparq_ticketing_only', JSON.stringify({
         enabled: true,
-        full_parking_cents: originalAmountCents,
+        full_parking_cents: parkingAmountCents,
       }));
     } else {
       sessionStorage.removeItem('payparq_ticketing_only');
