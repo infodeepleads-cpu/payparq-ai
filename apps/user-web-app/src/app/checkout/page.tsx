@@ -659,7 +659,8 @@ function PaidCheckoutForm({
 
   // Service fee: 0.99€ + 10% of parking price (no fee if 100% discount)
   const serviceFeeEurCents = promoDiscountPercent === 100 ? 0 : Math.min(199, Math.round(99 + (displayAmountCents * 0.10)));
-  const totalWithFeeEurCents = displayAmountCents + serviceFeeEurCents;
+  // For ticketing-only lots, charge only service fee; otherwise charge parking + service fee
+  const totalWithFeeEurCents = ticketingOnlyEnabled ? serviceFeeEurCents : (displayAmountCents + serviceFeeEurCents);
 
   function calcAmountCents(durationHours: number): number {
     const ph = phCents || (originalAmountCents / Math.max(0.5, (new Date(initialCheckOut).getTime() - new Date(initialCheckIn).getTime()) / (1000 * 60 * 60)));
@@ -708,7 +709,7 @@ function PaidCheckoutForm({
     const piId = clientSecret.split('_secret_')[0];
     if (!piId?.startsWith('pi_')) return;
     const fee = Math.round(99 + (totalAmountCents * 0.10));
-    const finalAmount = totalAmountCents + fee;
+    const finalAmount = ticketingOnlyEnabled ? fee : (totalAmountCents + fee);
     fetch('/api/stripe/payment-intent', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
