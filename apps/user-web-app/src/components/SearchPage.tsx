@@ -15,7 +15,7 @@ import { ScrollableDateTimePicker } from './ScrollableDateTimePicker';
 import { HomeBookingFlow } from './HomeBookingFlow';
 import { useLocale } from './LocaleProvider';
 import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle, List, DollarSign, Globe } from 'lucide-react';
-import { resolveScannerTruthPriceEuro, getViablePrice } from '@/lib/locationPricing';
+import { resolveScannerTruthPriceEuro, getViablePrice, getTieredDailyConfig, calculateTieredDailyPrice } from '@/lib/locationPricing';
 import { AMENITIES_LIST, normalizeAmenityLabels } from '@/lib/amenities';
 import { LOCALE_COOKIE_NAME } from '@/lib/locale';
 import { AmenitiesChips } from './AmenitiesChips';
@@ -452,10 +452,20 @@ export function SearchPage() {
       return listing.pricePerMonth || listing.pricePerHour;
     }
     const hourlyTotal = listing.pricePerHour * duration;
+    const days = Math.ceil(duration / 24);
+
+    // Check tiered daily pricing first
+    if (duration >= 8 && listing.verification_metadata) {
+      const tiered = getTieredDailyConfig({ verification_metadata: listing.verification_metadata });
+      if (tiered) {
+        return calculateTieredDailyPrice(tiered, days);
+      }
+    }
+
     if (!listing.pricePerDay) return hourlyTotal;
     const fullDays = Math.floor(duration / 24);
     const remainingHours = duration % 24;
-    const ceilDaysTotal = listing.pricePerDay * Math.ceil(duration / 24);
+    const ceilDaysTotal = listing.pricePerDay * days;
     const mixedTotal = fullDays > 0
       ? listing.pricePerDay * fullDays + listing.pricePerHour * remainingHours
       : hourlyTotal;

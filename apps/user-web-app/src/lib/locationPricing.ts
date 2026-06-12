@@ -135,7 +135,8 @@ export function getViablePrice(
   }
 
   const hourlyTotal = resolveScannerTruthPriceEuro(source, 'hourly') * durationHours;
-  const dailyTotal = resolveScannerTruthPriceEuro(source, 'daily');
+  const dailyRate = resolveScannerTruthPriceEuro(source, 'daily');
+  const dailyTotal = dailyRate * days;
   return Math.min(hourlyTotal, dailyTotal);
 }
 
