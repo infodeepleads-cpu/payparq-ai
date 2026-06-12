@@ -307,6 +307,10 @@ export default function EditListingPage() {
   const [minPriceMonthly, setMinPriceMonthly] = useState('');
   const [useAIDynamicPricing, setUseAIDynamicPricing] = useState(true);
 
+  const [tieredDailyEnabled, setTieredDailyEnabled] = useState(false);
+  const [tieredDailyRates, setTieredDailyRates] = useState<string[]>(['', '']);
+  const [tieredDailyIncrement, setTieredDailyIncrement] = useState('');
+
   const [photos, setPhotos] = useState<File[]>([]);
   const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
 
@@ -380,6 +384,11 @@ export default function EditListingPage() {
       setMinPriceDaily(meta.minPriceDaily ? String(meta.minPriceDaily) : '');
       setMinPriceMonthly(meta.minPriceMonthly ? String(meta.minPriceMonthly) : '');
       setUseAIDynamicPricing(meta.useAIDynamicPricing ?? true);
+
+      setTieredDailyEnabled(meta.tiered_daily_enabled ?? false);
+      const savedRates = Array.isArray(meta.tiered_daily_rates) ? (meta.tiered_daily_rates as number[]).map(String) : ['', ''];
+      setTieredDailyRates(savedRates.length >= 2 ? savedRates : ['', '']);
+      setTieredDailyIncrement(meta.tiered_daily_increment ? String(meta.tiered_daily_increment) : '');
 
       setExistingPhotos(data.verification_photos || []);
       setCheckoutSlots(meta.checkoutSlots || [
@@ -471,6 +480,9 @@ export default function EditListingPage() {
             minPriceMonthly,
             useAIDynamicPricing,
             checkoutSlots,
+            tiered_daily_enabled: tieredDailyEnabled,
+            tiered_daily_rates: tieredDailyEnabled ? tieredDailyRates.map((r) => parseFloat(r) || 0) : null,
+            tiered_daily_increment: tieredDailyEnabled ? (tieredDailyIncrement ? parseFloat(tieredDailyIncrement) : null) : null,
           },
         })
         .eq('id', id);
@@ -687,6 +699,63 @@ export default function EditListingPage() {
                     <input type="number" placeholder="300.00" min="0" step="10" value={standardMonthlyPrice} onChange={(e) => setStandardMonthlyPrice(e.target.value)} className={inputClass} />
                   </div>
                 </div>
+              </div>
+
+              {/* Tiered Daily Pricing */}
+              <div className="space-y-4 py-4 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">{locale === 'en' ? 'Tiered Daily Pricing' : 'Višerazinska dnevna cijena'}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{locale === 'en' ? 'Set a price for each day, then a fixed increment after' : 'Postavite cijenu za svaki dan, zatim fiksni prirast'}</p>
+                  </div>
+                  <Toggle checked={tieredDailyEnabled} onChange={setTieredDailyEnabled} />
+                </div>
+                {tieredDailyEnabled && (
+                  <div className="space-y-2">
+                    {tieredDailyRates.map((rate, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 w-14 flex-shrink-0">{locale === 'en' ? `Day ${i + 1}` : `${i + 1}. dan`}</span>
+                        <input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          step="0.50"
+                          value={rate}
+                          onChange={(e) => {
+                            const updated = [...tieredDailyRates];
+                            updated[i] = e.target.value;
+                            setTieredDailyRates(updated);
+                          }}
+                          className={inputClass}
+                        />
+                        {tieredDailyRates.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setTieredDailyRates(tieredDailyRates.filter((_, idx) => idx !== i))}
+                            className="text-gray-400 hover:text-red-500 text-lg leading-none flex-shrink-0"
+                          >×</button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setTieredDailyRates([...tieredDailyRates, ''])}
+                      className="text-xs text-black font-medium hover:underline mt-1"
+                    >+ {locale === 'en' ? 'Add day' : 'Dodaj dan'}</button>
+                    <div className="flex items-center gap-2 pt-2 border-t border-gray-100 mt-2">
+                      <span className="text-xs text-gray-500 w-14 flex-shrink-0">{locale === 'en' ? 'Each day after' : 'Svaki sljedeći'}</span>
+                      <input
+                        type="number"
+                        placeholder="5"
+                        min="0"
+                        step="0.50"
+                        value={tieredDailyIncrement}
+                        onChange={(e) => setTieredDailyIncrement(e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4 pt-2 border-t border-gray-100">

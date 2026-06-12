@@ -86,6 +86,9 @@ export async function POST(req: NextRequest) {
     const minPriceHourly       = parseFloat((formData.get('minPriceHourly') as string) || '0');
     const minPriceDaily        = parseFloat((formData.get('minPriceDaily') as string) || '0');
     const minPriceMonthly      = parseFloat((formData.get('minPriceMonthly') as string) || '0');
+    const tieredDailyEnabled   = formData.get('tieredDailyEnabled') === 'true';
+    const tieredDailyRates     = JSON.parse((formData.get('tieredDailyRates') as string) || '[]') as number[];
+    const tieredDailyIncrement = parseFloat((formData.get('tieredDailyIncrement') as string) || '0');
 
     // Partnership toggles
     const wantPartnership      = formData.get('wantPartnership') === 'true';
@@ -174,6 +177,9 @@ export async function POST(req: NextRequest) {
           // Pricing
           smart_pricing: useDynamicPrice,
           dynamic_pricing: useDynamicPrice ? { min_hourly: minPriceHourly, min_daily: minPriceDaily, min_monthly: minPriceMonthly } : null,
+          tiered_daily_enabled: tieredDailyEnabled,
+          tiered_daily_rates: tieredDailyEnabled ? tieredDailyRates : null,
+          tiered_daily_increment: tieredDailyEnabled ? tieredDailyIncrement : null,
           // Partnership toggles
           want_partnership: wantPartnership,
           want_qr_pay: wantQR,

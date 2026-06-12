@@ -16,6 +16,31 @@ type PricingSource = {
   verification_metadata?: Record<string, unknown> | null;
 };
 
+export type TieredDailyConfig = {
+  rates: number[];   // rates[0] = day 1, rates[1] = day 2, etc.
+  increment: number; // added per day beyond the defined rates
+};
+
+export function getTieredDailyConfig(source: PricingSource): TieredDailyConfig | null {
+  const meta = source.verification_metadata;
+  if (!meta || typeof meta !== 'object') return null;
+  if (!meta['tiered_daily_enabled']) return null;
+  const raw = meta['tiered_daily_rates'];
+  const rates = Array.isArray(raw)
+    ? (raw as unknown[]).map((v) => toPositiveNumber(v, 0)).filter((v) => v > 0)
+    : [];
+  if (rates.length === 0) return null;
+  const increment = toPositiveNumber(meta['tiered_daily_increment'], 0);
+  return { rates, increment };
+}
+
+export function calculateTieredDailyPrice(config: TieredDailyConfig, days: number): number {
+  if (days <= 0) return 0;
+  if (days <= config.rates.length) return config.rates[days - 1];
+  const lastRate = config.rates[config.rates.length - 1];
+  return lastRate + (days - config.rates.length) * config.increment;
+}
+
 function toFiniteMetadataNumber(value: unknown): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return 0;
@@ -101,6 +126,12 @@ export function getViablePrice(
 
   if (durationHours < 8) {
     return resolveScannerTruthPriceEuro(source, 'hourly');
+  }
+
+  const days = Math.ceil(durationHours / 24);
+  const tiered = getTieredDailyConfig(source);
+  if (tiered) {
+    return calculateTieredDailyPrice(tiered, days);
   }
 
   const hourlyTotal = resolveScannerTruthPriceEuro(source, 'hourly') * durationHours;
