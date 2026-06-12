@@ -27,6 +27,56 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   }
 }
 
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const client = supabaseAdmin;
+    if (!client) {
+      return NextResponse.json({ error: 'supabase_not_configured' }, { status: 500 });
+    }
+
+    const body = await req.json();
+    const { verification_metadata: incomingMeta, ...topLevelFields } = body;
+
+    // Read existing metadata via supabaseAdmin (bypasses RLS)
+    const { data: existing, error: fetchErr } = await client
+      .from('locations')
+      .select('verification_metadata')
+      .eq('id', id)
+      .single();
+
+    if (fetchErr) {
+      return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    }
+
+    const existingMeta = existing?.verification_metadata || {};
+
+    // Merge incoming metadata over existing — this preserves dateConfigs and other keys
+    // not explicitly sent by the caller (e.g. calendar overrides)
+    const mergedMeta = incomingMeta
+      ? { ...existingMeta, ...incomingMeta }
+      : existingMeta;
+
+    const updatePayload: Record<string, unknown> = {
+      ...topLevelFields,
+      verification_metadata: mergedMeta,
+    };
+
+    const { error: updateErr } = await client
+      .from('locations')
+      .update(updatePayload)
+      .eq('id', id);
+
+    if (updateErr) {
+      return NextResponse.json({ error: updateErr.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return NextResponse.json({ error: 'internal_error' }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;

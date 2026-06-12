@@ -89,10 +89,12 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
         } else {
           setDateConfigs({});
         }
-        // Store live base prices from DB
-        setLiveBaseHourly(resolveScannerTruthPriceEuro(location, 'hourly'));
-        setLiveBaseDaily(resolveScannerTruthPriceEuro(location, 'daily'));
-        setLiveBaseMonthly(resolveScannerTruthPriceEuro(location, 'monthly'));
+        // Store live base prices from DB — guard against null location to prevent TypeError
+        if (location) {
+          setLiveBaseHourly(resolveScannerTruthPriceEuro(location, 'hourly') || null);
+          setLiveBaseDaily(resolveScannerTruthPriceEuro(location, 'daily') || null);
+          setLiveBaseMonthly(resolveScannerTruthPriceEuro(location, 'monthly') || null);
+        }
       } catch (err: any) {
         console.error('Failed to load lot data:', err.message);
       } finally {
@@ -312,9 +314,13 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
                         <span className="hidden lg:inline">{config ? (config.isOpen ? `${config.openTime} - ${config.closeTime}` : t('Closed', locale)) : '00:00 - 24:00'}</span>
                       </div>
                       {config ? (
-                        <p className="text-[8px] md:text-[10px] text-green-700 font-semibold mt-0.5 md:mt-1">✓ {config.priceMode === 'auto' ? `€${liveBaseHourly}/h` : `€${config.priceHourly ?? liveBaseHourly}/h`}</p>
+                        <p className="text-[8px] md:text-[10px] text-green-700 font-semibold mt-0.5 md:mt-1">
+                          ✓ {config.priceMode === 'auto'
+                            ? liveBaseHourly != null ? `€${liveBaseHourly}/h` : ''
+                            : `€${config.priceHourly ?? liveBaseHourly ?? '—'}/h`}
+                        </p>
                       ) : (
-                        <p className="text-[8px] md:text-[10px] text-blue-600 font-semibold mt-0.5 md:mt-1">€{liveBaseHourly}/h</p>
+                        liveBaseHourly != null && <p className="text-[8px] md:text-[10px] text-blue-600 font-semibold mt-0.5 md:mt-1">€{liveBaseHourly}/h</p>
                       )}
                     </>
                   )}

@@ -405,51 +405,49 @@ export default function EditListingPage() {
   };
 
   const handleSave = async () => {
-    if (!supabase) return;
     setSaving(true);
     try {
-      const { data: existing } = await supabase
-        .from('locations')
-        .select('verification_photos, verification_metadata')
-        .eq('id', id)
-        .single();
-
-      const meta = existing?.verification_metadata || {};
       const photoUrls: string[] = [...existingPhotos];
 
-      // Upload new photos
-      for (const photo of photos) {
-        if (photo instanceof File) {
-          const fileName = `${id}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
-          const { error: uploadError } = await supabase.storage
-            .from('locations')
-            .upload(fileName, photo);
-
-          if (!uploadError) {
-            const { data: { publicUrl } } = supabase.storage
+      // Upload new photos via supabase storage (needs browser client)
+      if (supabase) {
+        for (const photo of photos) {
+          if (photo instanceof File) {
+            const fileName = `${id}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
+            const { error: uploadError } = await supabase.storage
               .from('locations')
-              .getPublicUrl(fileName);
-            photoUrls.push(publicUrl);
+              .upload(fileName, photo);
+
+            if (!uploadError) {
+              const { data: { publicUrl } } = supabase.storage
+                .from('locations')
+                .getPublicUrl(fileName);
+              photoUrls.push(publicUrl);
+            }
           }
         }
       }
 
-      // Save with host form schema
+      // Save via PATCH API (uses supabaseAdmin server-side so RLS cannot block the read
+      // of existing verification_metadata — this ensures dateConfigs and other calendar
+      // overrides stored there are preserved in the merge)
       const reverseMapping: Record<string, string> = { 'Monday': 'Pon', 'Tuesday': 'Uto', 'Wednesday': 'Sri', 'Thursday': 'Čet', 'Friday': 'Pet', 'Saturday': 'Sub', 'Sunday': 'Ned' };
       const abbreviatedDays = openDays.map(d => reverseMapping[d] || d);
-      const { error } = await supabase
-        .from('locations')
-        .update({
+
+      const res = await fetch(`/api/listings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: lotName,
-          address: address,
+          address,
           latitude: pin ? pin.lat : null,
           longitude: pin ? pin.lng : null,
           base_price_hourly: standardHourlyPrice ? parseFloat(standardHourlyPrice) : null,
           base_price_daily: standardDailyPrice ? parseFloat(standardDailyPrice) : null,
           base_price_monthly: standardMonthlyPrice ? parseFloat(standardMonthlyPrice) : null,
+          rate_per_hour: standardHourlyPrice ? parseFloat(standardHourlyPrice) : null,
           verification_photos: photoUrls.length > 0 ? photoUrls : null,
           verification_metadata: {
-            ...meta,
             region,
             type: parkingType,
             accessType,
@@ -484,10 +482,13 @@ export default function EditListingPage() {
             tiered_daily_rates: tieredDailyEnabled ? tieredDailyRates.map((r) => parseFloat(r) || 0) : null,
             tiered_daily_increment: tieredDailyEnabled ? (tieredDailyIncrement ? parseFloat(tieredDailyIncrement) : null) : null,
           },
-        })
-        .eq('id', id);
+        }),
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(error);
+      }
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
