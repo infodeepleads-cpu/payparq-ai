@@ -819,8 +819,8 @@ export function SearchPage() {
               baseHourlyRate: pricePerHour,
               baseDailyRate: pricePerDay,
               dateConfigs: metadata?.dateConfigs || {},
-              verification_metadata: loc.verification_metadata,
-              ticketingOnlyEnabled: loc.verification_metadata?.ticketing_only_enabled === true,
+              verification_metadata: metadata,
+              ticketingOnlyEnabled: metadata?.ticketing_only_enabled === true,
             };
           });
 
