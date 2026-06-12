@@ -81,7 +81,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
   useEffect(() => {
     const loadData = async () => {
       try {
-        const res = await fetch(`/api/listings/${lotId}`);
+        const res = await fetch(`/api/listings/${lotId}`, { cache: 'no-store' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const { location } = await res.json();
         if (location?.verification_metadata?.dateConfigs) {

@@ -34,7 +34,7 @@ export default function CalendarPage() {
 
   const loadListing = async () => {
     try {
-      const res = await fetch(`/api/listings/${id}`);
+      const res = await fetch(`/api/listings/${id}`, { cache: 'no-store' });
       if (!res.ok) {
         setLoading(false);
         return;
