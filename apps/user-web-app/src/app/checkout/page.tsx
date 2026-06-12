@@ -847,6 +847,11 @@ function PaidCheckoutForm({
       }
       // Save user data for sidebar prefill
       localStorage.setItem('payparq_user_data', JSON.stringify({ email, phone, plate }));
+      if (ticketingOnlyEnabled) {
+        sessionStorage.setItem('payparq_ticketing_only', JSON.stringify({ enabled: true, full_parking_cents: originalAmountCents }));
+      } else {
+        sessionStorage.removeItem('payparq_ticketing_only');
+      }
       router.push('/success');
       return;
     }
@@ -883,6 +888,15 @@ function PaidCheckoutForm({
 
     // Store PI ID in sessionStorage so success page can find it even if URL params are lost
     if (piId) sessionStorage.setItem('last_payment_intent', piId);
+    // Store ticketing-only data so success page can show full parking price on pass
+    if (ticketingOnlyEnabled) {
+      sessionStorage.setItem('payparq_ticketing_only', JSON.stringify({
+        enabled: true,
+        full_parking_cents: originalAmountCents,
+      }));
+    } else {
+      sessionStorage.removeItem('payparq_ticketing_only');
+    }
 
     const { error: confirmErr, paymentIntent } = await stripe.confirmPayment({
       elements,

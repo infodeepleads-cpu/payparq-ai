@@ -58,6 +58,8 @@ const SUCCESS_TRANSLATIONS = {
   'Izlaz': { en: 'Check-out', hr: 'Izlaz' },
   'Scan / Prikaži': { en: 'Scan / Show', hr: 'Scan / Prikaži' },
   'Ukupno plaćeno': { en: 'Total Paid', hr: 'Ukupno plaćeno' },
+  'Naknada za uslugu': { en: 'Service Fee', hr: 'Naknada za uslugu' },
+  'Plaćanje na mjestu': { en: 'Pay on-site', hr: 'Plaćanje na mjestu' },
   'VRIJEDI': { en: 'VALID', hr: 'VRIJEDI' },
   'Kako doći': { en: 'How to get there', hr: 'Kako doći' },
   'Ulaz parkinga': { en: 'Parking entrance', hr: 'Ulaz parkinga' },
@@ -447,6 +449,8 @@ function SuccessContent() {
   const [autoPromoLoading, setAutoPromoLoading] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
+  const [ticketingOnly, setTicketingOnly] = useState<{ enabled: boolean; full_parking_cents: number } | null>(null);
+
   useEffect(() => {
     const stored = sessionStorage.getItem('last_payment_intent');
     if (stored) setStoredPiId(stored);
@@ -456,6 +460,10 @@ function SuccessContent() {
     }
     const photo = sessionStorage.getItem('payparq_cover_photo');
     if (photo) setStoredCoverPhoto(photo);
+    const ticketing = sessionStorage.getItem('payparq_ticketing_only');
+    if (ticketing) {
+      try { setTicketingOnly(JSON.parse(ticketing)); } catch {}
+    }
   }, []);
 
   const sessionId = searchParams.get('session_id') || searchParams.get('payment_intent') || storedPiId;
@@ -1219,10 +1227,24 @@ function SuccessContent() {
             {/* Price footer */}
             <div className="px-5 py-3 flex items-center justify-between" style={{ borderTop: '1px solid #CBD5E1' }}>
               <div>
-                <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>{successT('Ukupno plaćeno', locale)}</p>
-                <p className="text-[24px] font-black leading-none" style={{ color: '#1A3A6B' }}>
-                  {formatAmount(summary?.amount_total ?? storedBooking?.amountCents ?? 0, summary?.currency ?? 'EUR')}
-                </p>
+                {ticketingOnly?.enabled ? (
+                  <>
+                    <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>{locale === 'en' ? 'Service Fee Paid' : 'Naknada plaćena'}</p>
+                    <p className="text-[24px] font-black leading-none" style={{ color: '#1A3A6B' }}>
+                      {formatAmount(summary?.amount_total ?? storedBooking?.amountCents ?? 0, summary?.currency ?? 'EUR')}
+                    </p>
+                    <p className="text-[10px] font-semibold mt-1" style={{ color: '#e05c00' }}>
+                      {locale === 'en' ? 'Pay on-site' : 'Plaćanje na mjestu'}: {formatAmount(ticketingOnly.full_parking_cents, summary?.currency ?? 'EUR')}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>{successT('Ukupno plaćeno', locale)}</p>
+                    <p className="text-[24px] font-black leading-none" style={{ color: '#1A3A6B' }}>
+                      {formatAmount(summary?.amount_total ?? storedBooking?.amountCents ?? 0, summary?.currency ?? 'EUR')}
+                    </p>
+                  </>
+                )}
               </div>
               <div className="text-right">
                 {summary?.email && (
