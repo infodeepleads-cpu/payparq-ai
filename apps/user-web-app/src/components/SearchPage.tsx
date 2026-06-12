@@ -2070,7 +2070,7 @@ export function SearchPage() {
                                 className="w-full text-left px-3 py-2 border border-black/20 hover:border-black/40 rounded-lg transition-colors"
                               >
                                 <div className="text-sm font-semibold text-gray-900">{lot.name}</div>
-                                <div className="text-xs text-gray-500">{lot.verification_metadata?.personal_branding_enabled ? (lot.verification_metadata?.personal_brand_name || lot.address) : lot.address}</div>
+                                <div className="text-xs text-gray-500">{lot.verification_metadata?.personal_branding_enabled ? ((lot.verification_metadata?.personal_brand_name as string) || lot.address) : lot.address}</div>
                                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
                                   <span className="flex items-center gap-1">
                                     {lot.distance.toFixed(1)} km
@@ -2850,7 +2850,7 @@ export function SearchPage() {
                                 className="w-full text-left px-3 py-2 border border-black/20 hover:border-black/40 rounded-lg transition-colors"
                               >
                                 <div className="text-sm font-semibold text-gray-900">{lot.name}</div>
-                                <div className="text-xs text-gray-500">{lot.verification_metadata?.personal_branding_enabled ? (lot.verification_metadata?.personal_brand_name || lot.address) : lot.address}</div>
+                                <div className="text-xs text-gray-500">{lot.verification_metadata?.personal_branding_enabled ? ((lot.verification_metadata?.personal_brand_name as string) || lot.address) : lot.address}</div>
                                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
                                   <span className="flex items-center gap-1">
                                     {lot.distance.toFixed(1)} km
