@@ -1123,7 +1123,7 @@ function PaidCheckoutForm({
 
       {/* Footer */}
       <footer className="bg-white border-t border-gray-100 mt-0">
-        <div className="max-w-4xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between text-xs text-gray-400">
+        <div className="max-w-4xl mx-auto px-4 md:px-6 py-5 flex items-center justify-between text-xs text-gray-400">
           <div className="flex items-center gap-3">
             <span>© 2026 PayParq</span>
             <div className="flex items-center gap-1.5">
