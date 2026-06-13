@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useLocale } from '@/components/LocaleProvider';
+import { MapPin, LayoutDashboard, Home, HelpCircle, MessageSquare, Mail, Phone, Scale, type LucideIcon } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -10,6 +11,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [localUserData, setLocalUserData] = useState<{ plate?: string; phone?: string } | null>(null);
   const [showDashboard, setShowDashboard] = useState(false);
+  const [showContact, setShowContact] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const { locale } = useLocale();
 
   useEffect(() => {
@@ -41,6 +44,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
         window.history.replaceState({}, '', newUrl);
       }
+      const ua = navigator.userAgent;
+      setIsIOS(/iPad|iPhone|iPod/.test(ua));
     }
   }, []);
 
@@ -143,32 +148,93 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <button onClick={close} className="text-black/40 hover:text-black text-xl leading-none shrink-0">✕</button>
         </div>
 
-        <nav className="flex-1 flex flex-col px-3 py-4 gap-1">
-          <a href="/app" onClick={close} className="px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black text-center">
-            {locale === 'en' ? 'Find Parking' : 'Pronađi parking'}
-          </a>
+        <nav className="flex-1 overflow-y-auto flex flex-col px-3 py-4 gap-6">
+          {/* Main Selector */}
+          <div>
+            <p className="text-[10px] font-bold text-black/40 uppercase tracking-wide px-4 mb-2">{locale === 'en' ? 'Main Selector' : 'Glavni Izbor'}</p>
+            <div className="space-y-1">
+              <a href="/app" onClick={close} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">
+                <MapPin className="w-4 h-4 text-black shrink-0" />
+                {locale === 'en' ? 'Find Parking' : 'Pronađi parking'}
+              </a>
+              {user ? (
+                <button onClick={handleDashboard} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black text-left">
+                  <LayoutDashboard className="w-4 h-4 text-black shrink-0" />
+                  {locale === 'en' ? 'Admin Dashboard' : 'Upravljačka Ploča'}
+                </button>
+              ) : (
+                <button onClick={handleGoogleSignIn} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black text-left">
+                  <LayoutDashboard className="w-4 h-4 text-black shrink-0" />
+                  {locale === 'en' ? 'Admin Dashboard' : 'Upravljačka Ploča'}
+                </button>
+              )}
+            </div>
+          </div>
 
-          {user ? (
-            <button
-              onClick={handleDashboard}
-              className="px-4 py-3 rounded-xl text-sm font-medium text-center w-full hover:bg-black/5 text-black"
-            >
-              {locale === 'en' ? 'Dashboard' : 'Upravljačka Ploča'}
-            </button>
-          ) : (
-            <button
-              onClick={handleGoogleSignIn}
-              className="px-4 py-3 rounded-xl text-sm font-medium text-center w-full hover:bg-black/5 text-black"
-            >
-              {locale === 'en' ? 'Dashboard' : 'Upravljačka Ploča'}
-            </button>
-          )}
+          {/* Hosting */}
+          <div>
+            <p className="text-[10px] font-bold text-black/40 uppercase tracking-wide px-4 mb-2">{locale === 'en' ? 'Hosting' : 'Domaćinstvo'}</p>
+            <a href="/host" onClick={close} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">
+              <Home className="w-4 h-4 text-black shrink-0" />
+              {locale === 'en' ? 'Instant Listing' : 'Trenutna Ponuda'}
+            </a>
+          </div>
 
+          {/* Support */}
+          <div>
+            <p className="text-[10px] font-bold text-black/40 uppercase tracking-wide px-4 mb-2">{locale === 'en' ? 'Support' : 'Podrška'}</p>
+            <div className="space-y-1">
+              <a href="https://help.payparq.com" target="_blank" rel="noopener noreferrer" onClick={close} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">
+                <HelpCircle className="w-4 h-4 text-black shrink-0" />
+                {locale === 'en' ? 'Help Centre' : 'Centar Pomoći'}
+              </a>
+              <a href={isIOS ? "https://apps.apple.com/app/payparq/id1234567890" : "https://play.google.com/store/apps/details?id=com.payparq.app"} target="_blank" rel="noopener noreferrer" onClick={close} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">
+                <MessageSquare className="w-4 h-4 text-black shrink-0" />
+                {locale === 'en' ? 'App Feedback' : 'Povratna Informacija'}
+              </a>
+            </div>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <p className="text-[10px] font-bold text-black/40 uppercase tracking-wide px-4 mb-2">{locale === 'en' ? 'Contact' : 'Kontakt'}</p>
+            <button onClick={() => setShowContact(!showContact)} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black text-left">
+              <Mail className="w-4 h-4 text-black shrink-0" />
+              {locale === 'en' ? 'Priority Support' : 'Prioritetna Podrška'}
+            </button>
+            {showContact && (
+              <div className="space-y-2 px-4 py-3 rounded-xl bg-black/5">
+                <a href="mailto:payparq@outlook.com" className="block text-sm text-black hover:text-black/70 font-medium">
+                  payparq@outlook.com
+                </a>
+                <a href="tel:+385915963139" className="block text-sm text-black hover:text-black/70 font-medium">
+                  +385 91 596 3139
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Legal */}
+          <div>
+            <p className="text-[10px] font-bold text-black/40 uppercase tracking-wide px-4 mb-2">{locale === 'en' ? 'Legal' : 'Pravno'}</p>
+            <div className="space-y-1">
+              <a href="/terms" target="_blank" onClick={close} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">
+                <Scale className="w-4 h-4 text-black shrink-0" />
+                {locale === 'en' ? 'Terms of Use' : 'Uvjeti Korištenja'}
+              </a>
+              <a href="/privacy" target="_blank" onClick={close} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">
+                <Scale className="w-4 h-4 text-black shrink-0" />
+                {locale === 'en' ? 'Privacy Policy' : 'Politika Privatnosti'}
+              </a>
+            </div>
+          </div>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Sign out */}
           {user && (
-            <button
-              onClick={async () => { if (supabase) { await supabase.auth.signOut(); close(); } }}
-              className="px-4 py-3 rounded-xl text-sm font-medium text-black/50 text-center hover:bg-black/5 w-full"
-            >
+            <button onClick={async () => { if (supabase) { await supabase.auth.signOut(); close(); } }} className="px-4 py-3 rounded-xl text-sm font-medium text-black/50 text-center hover:bg-black/5 w-full">
               {locale === 'en' ? 'Sign out' : 'Odjava'}
             </button>
           )}
