@@ -2332,7 +2332,7 @@ export function SearchPage() {
                     </p>
                   </div>
                   <div className="text-right flex flex-col items-end">
-                    <p className="text-2xl font-bold text-gray-900">€{totalPrice.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-gray-900">€{subtotal.toFixed(2)}</p>
                     <span className="text-sm text-gray-500 border-b border-gray-400 pb-0.5 -mt-1">{t('Ukupno', locale)}</span>
                   </div>
                 </button>
@@ -2359,7 +2359,7 @@ export function SearchPage() {
                   href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
                   className="inline-block px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  {t('Rezervirajte sada', locale)} — €{totalPrice.toFixed(2)}
+                  {t('Rezervirajte sada', locale)} — €{subtotal.toFixed(2)}
                 </a>
 
                 {/* Green Box */}
@@ -3147,7 +3147,7 @@ export function SearchPage() {
                       </p>
                     </div>
                     <div className="text-right flex flex-col items-end ml-2">
-                      <p className="text-xl font-bold text-gray-900">€{totalPrice.toFixed(2)}</p>
+                      <p className="text-xl font-bold text-gray-900">€{subtotal.toFixed(2)}</p>
                       <span className="text-xs text-gray-500 border-b border-gray-400 pb-0.5 -mt-1">Ukupno</span>
                     </div>
                   </button>
@@ -3357,7 +3357,7 @@ export function SearchPage() {
                 href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
                 className="block w-full px-5 py-5 bg-blue-500 text-white text-base font-bold rounded-lg hover:bg-blue-700 transition-colors text-center"
               >
-                {t('Rezervirajte sada', locale)} — €{totalPrice.toFixed(2)}
+                {t('Rezervirajte sada', locale)} — €{subtotal.toFixed(2)}
               </a>
             </div>
           </div>

@@ -1135,7 +1135,7 @@ function SuccessContent() {
         <SiteHeader hideAnnouncementBar />
       </div>
 
-      <main className="flex-1 pt-24 pb-16">
+      <main className="flex-1 pb-16">
         <div className="max-w-md mx-auto px-4 space-y-3">
 
           {/* ══════════════════════════════════════
