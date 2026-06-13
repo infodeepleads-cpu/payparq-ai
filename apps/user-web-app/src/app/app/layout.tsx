@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useLocale } from '@/components/LocaleProvider';
-import { MapPin, LayoutDashboard, Home, HelpCircle, MessageSquare, Mail, Phone, Scale, type LucideIcon } from 'lucide-react';
+import { MapPin, LayoutDashboard, Home, HelpCircle, MessageSquare, Mail, FileText, Lock, type LucideIcon } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -145,7 +145,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <p className="text-[10px] text-black/50">{localUserData.phone}</p>
             )}
           </div>
-          <button onClick={close} className="text-black/40 hover:text-black text-xl leading-none shrink-0">✕</button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => document.cookie = `NEXT_LOCALE=${locale === 'en' ? 'hr' : 'en'};path=/`; window.location.reload()} className="text-xs font-bold text-black/70 hover:text-black px-2 py-1 rounded border border-black/10">
+              {locale === 'en' ? 'CRO' : 'ENG'}
+            </button>
+            <button onClick={close} className="text-black/40 hover:text-black text-xl leading-none">✕</button>
+          </div>
         </div>
 
         <nav className="flex-1 overflow-y-auto flex flex-col px-3 py-4 gap-6">
@@ -168,16 +173,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   {locale === 'en' ? 'Admin Dashboard' : 'Upravljačka Ploča'}
                 </button>
               )}
+              <a href="/host" onClick={close} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">
+                <Home className="w-4 h-4 text-black shrink-0" />
+                {locale === 'en' ? 'Instant Listing' : 'Objavi Svoj Prostor'}
+              </a>
             </div>
-          </div>
-
-          {/* Hosting */}
-          <div>
-            <p className="text-[10px] font-bold text-black/40 uppercase tracking-wide px-4 mb-2">{locale === 'en' ? 'Hosting' : 'Domaćinstvo'}</p>
-            <a href="/host" onClick={close} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">
-              <Home className="w-4 h-4 text-black shrink-0" />
-              {locale === 'en' ? 'Instant Listing' : 'Trenutna Ponuda'}
-            </a>
           </div>
 
           {/* Support */}
@@ -192,38 +192,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <MessageSquare className="w-4 h-4 text-black shrink-0" />
                 {locale === 'en' ? 'App Feedback' : 'Povratna Informacija'}
               </a>
-            </div>
-          </div>
-
-          {/* Contact */}
-          <div>
-            <p className="text-[10px] font-bold text-black/40 uppercase tracking-wide px-4 mb-2">{locale === 'en' ? 'Contact' : 'Kontakt'}</p>
-            <button onClick={() => setShowContact(!showContact)} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black text-left">
-              <Mail className="w-4 h-4 text-black shrink-0" />
-              {locale === 'en' ? 'Priority Support' : 'Prioritetna Podrška'}
-            </button>
-            {showContact && (
-              <div className="space-y-2 px-4 py-3 rounded-xl bg-black/5">
-                <a href="mailto:payparq@outlook.com" className="block text-sm text-black hover:text-black/70 font-medium">
-                  payparq@outlook.com
-                </a>
-                <a href="tel:+385915963139" className="block text-sm text-black hover:text-black/70 font-medium">
-                  +385 91 596 3139
-                </a>
-              </div>
-            )}
-          </div>
-
-          {/* Legal */}
-          <div>
-            <p className="text-[10px] font-bold text-black/40 uppercase tracking-wide px-4 mb-2">{locale === 'en' ? 'Legal' : 'Pravno'}</p>
-            <div className="space-y-1">
+              <button onClick={() => setShowContact(!showContact)} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black text-left">
+                <Mail className="w-4 h-4 text-black shrink-0" />
+                {locale === 'en' ? 'Priority Support' : 'Prioritetna Podrška'}
+              </button>
+              {showContact && (
+                <div className="space-y-2 px-4 py-3 rounded-xl bg-black/5 ml-2">
+                  <a href="mailto:payparq@outlook.com" className="block text-sm text-black hover:text-black/70 font-medium">
+                    payparq@outlook.com
+                  </a>
+                  <a href="tel:+385915963139" className="block text-sm text-black hover:text-black/70 font-medium">
+                    +385 91 596 3139
+                  </a>
+                </div>
+              )}
               <a href="/terms" target="_blank" onClick={close} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">
-                <Scale className="w-4 h-4 text-black shrink-0" />
+                <FileText className="w-4 h-4 text-black shrink-0" />
                 {locale === 'en' ? 'Terms of Use' : 'Uvjeti Korištenja'}
               </a>
               <a href="/privacy" target="_blank" onClick={close} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">
-                <Scale className="w-4 h-4 text-black shrink-0" />
+                <Lock className="w-4 h-4 text-black shrink-0" />
                 {locale === 'en' ? 'Privacy Policy' : 'Politika Privatnosti'}
               </a>
             </div>
