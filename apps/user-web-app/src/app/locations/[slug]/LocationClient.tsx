@@ -1593,8 +1593,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                           {item.id === 'space' && (item as any).addons && (item as any).addons.length > 0 && (
                             <div className="space-y-2">
                               {(item as any).addons.map((addon: any, idx: number) => (
-                                <div key={idx} className="rounded-xl border border-[#5F3DFC]/20 bg-[#F5F2FF] p-3">
-                                  <span className="text-xs font-semibold text-[#5F3DFC]">{addon.label}</span>
+                                <div key={idx} className="rounded-xl border border-black bg-white p-3 notranslate">
+                                  <span className="text-xs font-semibold text-black">{addon.label}</span>
                                 </div>
                               ))}
                             </div>
