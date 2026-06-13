@@ -140,7 +140,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         style={{ transform: menuOpen ? 'translateX(0)' : 'translateX(100%)' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 h-14 border-b border-black/10 shrink-0 gap-3 pt-1">
+        <div className="flex items-center justify-between px-5 border-b border-black/10 shrink-0 gap-3 pt-3 pb-3">
           <div className="flex-1 min-w-0">
             <span className="text-sm font-bold block">PayParq</span>
             {user && <p className="text-[10px] text-black/50 truncate">{user.email}</p>}
