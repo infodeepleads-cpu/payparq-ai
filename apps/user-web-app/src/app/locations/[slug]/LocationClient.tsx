@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown, Car, Camera, MessageCircle, CreditCard, Plus, Minus, ChevronLeft, ChevronRight, MapPin, Route, Info } from "lucide-react";
+import { ChevronDown, Car, Camera, MessageCircle, CreditCard, Plus, Minus, ChevronLeft, ChevronRight, MapPin, Route, Info, X } from "lucide-react";
 import { useLocale } from "@/components/LocaleProvider";
 
 const LotMap = lazy(() => import('@/components/LotMap'));
@@ -1187,6 +1187,15 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     unoptimized={currentPhotoIsSupabase}
                     className="object-cover"
                   />
+                  {/* Close Button */}
+                  <button
+                    onClick={() => router.back()}
+                    className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 text-white rounded-full p-2 backdrop-blur-sm transition-all z-10"
+                    aria-label="Close details"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+
                   {/* Photo Navigation */}
                   {photos.length > 1 && (
                     <>
