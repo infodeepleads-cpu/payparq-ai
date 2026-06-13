@@ -13,8 +13,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [showDashboard, setShowDashboard] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const [signInEmail, setSignInEmail] = useState('');
   const [signInPassword, setSignInPassword] = useState('');
+  const [authError, setAuthError] = useState('');
   const [isIOS, setIsIOS] = useState(false);
   const { locale } = useLocale();
 
@@ -82,23 +84,44 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setShowDashboard(true);
   };
 
-  const handleSignIn = async () => {
+  const handleAuth = async () => {
     if (!supabase) return;
+    setAuthError('');
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: signInEmail,
-        password: signInPassword
-      });
-      if (error) {
-        console.error('Sign in error:', error);
-        alert(locale === 'en' ? 'Sign in failed: ' + error.message : 'Prijava neuspješna: ' + error.message);
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({
+          email: signInEmail,
+          password: signInPassword
+        });
+        if (error) {
+          console.error('Sign up error:', error);
+          setAuthError(error.message || (locale === 'en' ? 'Sign up failed' : 'Registracija neuspješna'));
+        } else {
+          setAuthError(locale === 'en' ? 'Check your email to confirm your account' : 'Provjerite vašu e-poštu za potvrdu računa');
+          setTimeout(() => setShowSignIn(false), 3000);
+        }
       } else {
-        setShowSignIn(false);
-        setSignInEmail('');
-        setSignInPassword('');
+        const { error } = await supabase.auth.signInWithPassword({
+          email: signInEmail,
+          password: signInPassword
+        });
+        if (error) {
+          console.error('Sign in error:', error);
+          if (error.status === 403) {
+            setAuthError(locale === 'en' ? 'Invalid email or password' : 'Nevaljana e-pošta ili lozinka');
+          } else {
+            setAuthError(error.message || (locale === 'en' ? 'Sign in failed' : 'Prijava neuspješna'));
+          }
+        } else {
+          setShowSignIn(false);
+          setSignInEmail('');
+          setSignInPassword('');
+          setAuthError('');
+        }
       }
     } catch (err) {
-      console.error('Sign in error:', err);
+      console.error('Auth error:', err);
+      setAuthError(locale === 'en' ? 'An error occurred' : 'Došlo je do greške');
     }
   };
 
@@ -283,11 +306,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* Sign In Modal */}
+      {/* Sign In/Up Modal */}
       {showSignIn && (
         <div className="fixed inset-0 z-[9100] flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-2xl">
-            <h2 className="text-lg font-bold mb-4">{locale === 'en' ? 'Sign In' : 'Prijava'}</h2>
+            <h2 className="text-lg font-bold mb-4">{isSignUp ? (locale === 'en' ? 'Create Account' : 'Kreiraj Račun') : (locale === 'en' ? 'Sign In' : 'Prijava')}</h2>
             <div className="space-y-3 mb-6">
               <input
                 type="email"
@@ -302,19 +325,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 value={signInPassword}
                 onChange={(e) => setSignInPassword(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-black/10 text-sm focus:outline-none focus:border-blue-500"
-                onKeyPress={(e) => e.key === 'Enter' && handleSignIn()}
+                onKeyPress={(e) => e.key === 'Enter' && handleAuth()}
               />
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => setShowSignIn(false)} className="flex-1 px-4 py-3 rounded-xl text-sm font-medium bg-black/5 hover:bg-black/10 text-black">
+            {authError && (
+              <div className={`mb-4 p-3 rounded-xl text-sm ${authError.includes('Check') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {authError}
+              </div>
+            )}
+            <div className="flex gap-2 mb-4">
+              <button onClick={() => { setShowSignIn(false); setAuthError(''); setIsSignUp(false); }} className="flex-1 px-4 py-3 rounded-xl text-sm font-medium bg-black/5 hover:bg-black/10 text-black">
                 {locale === 'en' ? 'Cancel' : 'Odustani'}
               </button>
-              <button onClick={handleSignIn} className="flex-1 px-4 py-3 rounded-xl text-sm font-medium bg-blue-500 text-white hover:bg-blue-700">
-                {locale === 'en' ? 'Sign in' : 'Prijava'}
+              <button onClick={handleAuth} className="flex-1 px-4 py-3 rounded-xl text-sm font-medium bg-blue-500 text-white hover:bg-blue-700">
+                {isSignUp ? (locale === 'en' ? 'Sign up' : 'Registracija') : (locale === 'en' ? 'Sign in' : 'Prijava')}
               </button>
             </div>
-            <button onClick={handleGoogleSignIn} className="w-full mt-4 px-4 py-3 rounded-xl text-sm font-medium border border-black/10 hover:bg-black/5 text-black">
+            <button onClick={handleGoogleSignIn} className="w-full px-4 py-3 rounded-xl text-sm font-medium border border-black/10 hover:bg-black/5 text-black mb-4">
               {locale === 'en' ? 'Sign in with Google' : 'Prijava s Google-om'}
+            </button>
+            <button onClick={() => setIsSignUp(!isSignUp)} className="w-full text-sm text-blue-500 hover:text-blue-700 font-medium">
+              {isSignUp ? (locale === 'en' ? 'Already have an account? Sign in' : 'Već imate račun? Prijavite se') : (locale === 'en' ? "Don't have an account? Sign up" : 'Nemate račun? Registrirajte se')}
             </button>
           </div>
         </div>
