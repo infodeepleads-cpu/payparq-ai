@@ -554,8 +554,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     {
       id: "space" as SectionKey,
       title: "Space",
-      value: locale === 'en' ? "Open, wall by street, lighting" : "Otvoreno, zid uz cestu, rasvjeta",
-      description: locale === 'en' ? "Open parking space with wall by street and lighting." : "Otvoreni parking prostor sa zidom uz cestu i rasvjetom.",
+      value: locale === 'en' ? "Available add-ons" : "Dostupni dodaci",
+      description: locale === 'en' ? "Services and features available at this location" : "Usluge i mogućnosti dostupne na ovoj lokaciji",
       icon: (
         <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <rect x="4" y="5" width="16" height="14" rx="2" />
@@ -563,10 +563,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
         </svg>
       ),
       addons: (() => {
-        const addons = [];
-        if (shuttleValetInfo) addons.push({ label: locale === 'en' ? 'Shuttle/Valet Service' : 'Shuttle/Valet Usluga', info: shuttleValetInfo });
-        if (freeCancellationEnabled && freeCancellationDays) addons.push({ label: locale === 'en' ? 'Free Cancellation' : 'Besplatno otkazivanje', info: locale === 'en' ? `Up to ${freeCancellationDays} days before arrival` : `Do ${freeCancellationDays} dana prije dolaska` });
-        return addons;
+        const addonsList = hub.verification_metadata?.addons as string[] | undefined;
+        if (!addonsList || addonsList.length === 0) return [];
+        return addonsList.map(addon => ({ label: addon, info: '' }));
       })(),
     },
     ...(freeCancellationEnabled ? [{
@@ -1585,16 +1584,17 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       </button>
                       {openSections[item.id] ? (
                         <div className="px-4 md:px-6 pb-4 md:pb-6 space-y-3">
-                          <div className="rounded-2xl border border-black/10 bg-white text-black p-4 md:p-5">
-                            <p className="text-sm font-semibold">{item.value}</p>
-                            <p className="text-xs text-black/70 mt-2">{item.description}</p>
-                          </div>
+                          {!(item.id === 'space' && (item as any).addons && (item as any).addons.length > 0) && (
+                            <div className="rounded-2xl border border-black/10 bg-white text-black p-4 md:p-5">
+                              <p className="text-sm font-semibold">{item.value}</p>
+                              <p className="text-xs text-black/70 mt-2">{item.description}</p>
+                            </div>
+                          )}
                           {item.id === 'space' && (item as any).addons && (item as any).addons.length > 0 && (
                             <div className="space-y-2">
                               {(item as any).addons.map((addon: any, idx: number) => (
-                                <div key={idx} className="rounded-xl border border-[#5F3DFC]/20 bg-[#F5F2FF] p-3 flex flex-col gap-1">
+                                <div key={idx} className="rounded-xl border border-[#5F3DFC]/20 bg-[#F5F2FF] p-3">
                                   <span className="text-xs font-semibold text-[#5F3DFC]">{addon.label}</span>
-                                  <span className="text-[10px] text-[#5F3DFC]/70">{addon.info}</span>
                                 </div>
                               ))}
                             </div>
