@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useLocale } from '@/components/LocaleProvider';
-import { MapPin, LayoutDashboard, Home, HelpCircle, MessageSquare, Mail, FileText, Lock, type LucideIcon } from 'lucide-react';
+import { MapPin, LayoutDashboard, Home, HelpCircle, MessageSquare, Mail, FileText, Lock, Settings, type LucideIcon } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -12,6 +12,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [localUserData, setLocalUserData] = useState<{ plate?: string; phone?: string } | null>(null);
   const [showDashboard, setShowDashboard] = useState(false);
   const [showContact, setShowContact] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const { locale, setLocale } = useLocale();
 
@@ -151,8 +152,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button onClick={handleLanguageToggle} className="text-xs font-bold text-black/70 hover:text-black px-2 py-1 rounded border border-black/10">
-              {locale === 'en' ? 'CRO' : 'ENG'}
+            <button onClick={() => setShowSettings(true)} className="text-black/60 hover:text-black p-1.5 rounded transition-colors">
+              <Settings className="w-5 h-5" />
             </button>
             <button onClick={close} className="text-black/40 hover:text-black text-xl leading-none">✕</button>
           </div>
@@ -243,7 +244,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="fixed inset-0 z-[9100] flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-2xl max-w-sm shadow-2xl overflow-hidden">
             <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-8">
-              <h2 className="text-2xl font-bold text-white mb-2">{locale === 'en' ? 'Premium Support' : 'Premijska Podrška'}</h2>
+              <h2 className="text-2xl font-bold text-white mb-2">{locale === 'en' ? 'Priority Support' : 'Prioritetna Podrška'}</h2>
               <p className="text-blue-100 text-sm">{locale === 'en' ? 'Get instant help from our dedicated team' : 'Dobijte trenutnu pomoć od našeg timea'}</p>
             </div>
             <div className="p-6 space-y-6">
@@ -288,6 +289,60 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </ul>
               </div>
               <button onClick={() => setShowContact(false)} className="w-full px-4 py-3 rounded-xl text-sm font-medium bg-black/5 hover:bg-black/10 text-black transition-colors">
+                {locale === 'en' ? 'Close' : 'Zatvori'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 z-[9100] flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl max-w-sm shadow-2xl overflow-hidden">
+            <div className="bg-gradient-to-r from-gray-900 to-gray-800 px-6 py-6">
+              <h2 className="text-xl font-bold text-white">{locale === 'en' ? 'Settings' : 'Postavke'}</h2>
+            </div>
+            <div className="p-6 space-y-6">
+              {/* Language Section */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-gray-900 text-sm">{locale === 'en' ? 'Language' : 'Jezik'}</h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (locale !== 'en') {
+                        setLocale('en');
+                      }
+                    }}
+                    className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${
+                      locale === 'en'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    }`}
+                  >
+                    English
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (locale !== 'hr') {
+                        setLocale('hr');
+                      }
+                    }}
+                    className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${
+                      locale === 'hr'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    }`}
+                  >
+                    Hrvatski
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowSettings(false)}
+                className="w-full px-4 py-3 rounded-xl text-sm font-medium bg-black/5 hover:bg-black/10 text-black transition-colors"
+              >
                 {locale === 'en' ? 'Close' : 'Zatvori'}
               </button>
             </div>
