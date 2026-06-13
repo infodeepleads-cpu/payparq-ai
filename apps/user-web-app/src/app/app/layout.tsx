@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useLocale } from '@/components/LocaleProvider';
-import { MapPin, LayoutDashboard, Home, HelpCircle, MessageSquare, Mail, FileText, Lock, LogIn, type LucideIcon } from 'lucide-react';
+import { MapPin, LayoutDashboard, Home, HelpCircle, MessageSquare, Mail, FileText, Lock, type LucideIcon } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -12,11 +12,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [localUserData, setLocalUserData] = useState<{ plate?: string; phone?: string } | null>(null);
   const [showDashboard, setShowDashboard] = useState(false);
   const [showContact, setShowContact] = useState(false);
-  const [showSignIn, setShowSignIn] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [signInEmail, setSignInEmail] = useState('');
-  const [signInPassword, setSignInPassword] = useState('');
-  const [authError, setAuthError] = useState('');
   const [isIOS, setIsIOS] = useState(false);
   const { locale } = useLocale();
 
@@ -76,53 +71,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const handleLanguageToggle = () => {
     const newLocale = locale === 'en' ? 'hr' : 'en';
     localStorage.setItem('NEXT_LOCALE', newLocale);
-    window.location.href = `/${newLocale}${window.location.pathname}`;
+    window.location.reload();
   };
 
   const handleDashboard = () => {
     close();
     setShowDashboard(true);
-  };
-
-  const handleAuth = async () => {
-    if (!supabase) return;
-    setAuthError('');
-    try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email: signInEmail,
-          password: signInPassword
-        });
-        if (error) {
-          console.error('Sign up error:', error);
-          setAuthError(error.message || (locale === 'en' ? 'Sign up failed' : 'Registracija neuspješna'));
-        } else {
-          setAuthError(locale === 'en' ? 'Check your email to confirm your account' : 'Provjerite vašu e-poštu za potvrdu računa');
-          setTimeout(() => setShowSignIn(false), 3000);
-        }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: signInEmail,
-          password: signInPassword
-        });
-        if (error) {
-          console.error('Sign in error:', error);
-          if (error.status === 403) {
-            setAuthError(locale === 'en' ? 'Invalid email or password' : 'Nevaljana e-pošta ili lozinka');
-          } else {
-            setAuthError(error.message || (locale === 'en' ? 'Sign in failed' : 'Prijava neuspješna'));
-          }
-        } else {
-          setShowSignIn(false);
-          setSignInEmail('');
-          setSignInPassword('');
-          setAuthError('');
-        }
-      }
-    } catch (err) {
-      console.error('Auth error:', err);
-      setAuthError(locale === 'en' ? 'An error occurred' : 'Došlo je do greške');
-    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -131,7 +85,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/app?dashboard=1`,
+          redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/members`,
           skipBrowserRedirect: false
         }
       });
@@ -271,9 +225,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           {/* Auth */}
           {!user && (
-            <button onClick={() => setShowSignIn(true)} className="px-4 py-3 rounded-xl text-sm font-medium bg-blue-500 text-white text-center hover:bg-blue-700 w-full flex items-center justify-center gap-2">
-              <LogIn className="w-4 h-4" />
-              {locale === 'en' ? 'Sign in' : 'Prijava'}
+            <button onClick={handleGoogleSignIn} className="px-4 py-3 rounded-xl text-sm font-medium bg-blue-500 text-white text-center hover:bg-blue-700 w-full">
+              {locale === 'en' ? 'Sign in with Google' : 'Prijava s Google-om'}
             </button>
           )}
 
@@ -288,68 +241,61 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Contact Modal */}
       {showContact && (
-        <div className="fixed inset-0 z-[9100] flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-2xl">
-            <h2 className="text-lg font-bold mb-4">{locale === 'en' ? 'Priority Support' : 'Prioritetna Podrška'}</h2>
-            <div className="space-y-3 mb-6">
-              <a href="mailto:payparq@outlook.com" className="block text-sm text-blue-500 hover:text-blue-700 font-medium">
-                payparq@outlook.com
-              </a>
-              <a href="tel:+385915963139" className="block text-sm text-blue-500 hover:text-blue-700 font-medium">
-                +385 91 596 3139
-              </a>
+        <div className="fixed inset-0 z-[9100] flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl max-w-sm shadow-2xl overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-8">
+              <h2 className="text-2xl font-bold text-white mb-2">{locale === 'en' ? 'Premium Support' : 'Premijska Podrška'}</h2>
+              <p className="text-blue-100 text-sm">{locale === 'en' ? 'Get instant help from our dedicated team' : 'Dobijte trenutnu pomoć od našeg timea'}</p>
             </div>
-            <button onClick={() => setShowContact(false)} className="w-full px-4 py-3 rounded-xl text-sm font-medium bg-black/5 hover:bg-black/10 text-black">
-              {locale === 'en' ? 'Close' : 'Zatvori'}
-            </button>
+            <div className="p-6 space-y-6">
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900 text-sm">{locale === 'en' ? 'Contact Information' : 'Kontakt Informacije'}</h3>
+                <div className="space-y-3">
+                  <a href="mailto:payparq@outlook.com" className="flex items-center gap-3 p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors">
+                    <span className="text-blue-600 font-semibold">✉</span>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-600">{locale === 'en' ? 'Email' : 'E-pošta'}</p>
+                      <p className="text-sm font-medium text-gray-900">payparq@outlook.com</p>
+                    </div>
+                  </a>
+                  <a href="tel:+385915963139" className="flex items-center gap-3 p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors">
+                    <span className="text-blue-600 font-semibold">☎</span>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-600">{locale === 'en' ? 'Phone' : 'Telefon'}</p>
+                      <p className="text-sm font-medium text-gray-900">+385 91 596 3139</p>
+                    </div>
+                  </a>
+                </div>
+              </div>
+              <div className="border-t pt-6">
+                <h3 className="font-semibold text-gray-900 text-sm mb-3">{locale === 'en' ? 'Available Services' : 'Dostupne Usluge'}</h3>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 font-bold mt-0.5">✓</span>
+                    <span>{locale === 'en' ? '24/7 Support for bookings and reservations' : '24/7 Podrška za rezervacije'}</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 font-bold mt-0.5">✓</span>
+                    <span>{locale === 'en' ? 'Technical assistance and troubleshooting' : 'Tehnička pomoć i rješavanje problema'}</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 font-bold mt-0.5">✓</span>
+                    <span>{locale === 'en' ? 'Payment and refund inquiries' : 'Upiti o plaćanju i povratima'}</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 font-bold mt-0.5">✓</span>
+                    <span>{locale === 'en' ? 'Premium account management' : 'Upravljanje premium računom'}</span>
+                  </li>
+                </ul>
+              </div>
+              <button onClick={() => setShowContact(false)} className="w-full px-4 py-3 rounded-xl text-sm font-medium bg-black/5 hover:bg-black/10 text-black transition-colors">
+                {locale === 'en' ? 'Close' : 'Zatvori'}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Sign In/Up Modal */}
-      {showSignIn && (
-        <div className="fixed inset-0 z-[9100] flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-2xl">
-            <h2 className="text-lg font-bold mb-4">{isSignUp ? (locale === 'en' ? 'Create Account' : 'Kreiraj Račun') : (locale === 'en' ? 'Sign In' : 'Prijava')}</h2>
-            <div className="space-y-3 mb-6">
-              <input
-                type="email"
-                placeholder={locale === 'en' ? 'Email' : 'Email'}
-                value={signInEmail}
-                onChange={(e) => setSignInEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-black/10 text-sm focus:outline-none focus:border-blue-500"
-              />
-              <input
-                type="password"
-                placeholder={locale === 'en' ? 'Password' : 'Lozinka'}
-                value={signInPassword}
-                onChange={(e) => setSignInPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-black/10 text-sm focus:outline-none focus:border-blue-500"
-                onKeyPress={(e) => e.key === 'Enter' && handleAuth()}
-              />
-            </div>
-            {authError && (
-              <div className={`mb-4 p-3 rounded-xl text-sm ${authError.includes('Check') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                {authError}
-              </div>
-            )}
-            <div className="flex gap-2 mb-4">
-              <button onClick={() => { setShowSignIn(false); setAuthError(''); setIsSignUp(false); }} className="flex-1 px-4 py-3 rounded-xl text-sm font-medium bg-black/5 hover:bg-black/10 text-black">
-                {locale === 'en' ? 'Cancel' : 'Odustani'}
-              </button>
-              <button onClick={handleAuth} className="flex-1 px-4 py-3 rounded-xl text-sm font-medium bg-blue-500 text-white hover:bg-blue-700">
-                {isSignUp ? (locale === 'en' ? 'Sign up' : 'Registracija') : (locale === 'en' ? 'Sign in' : 'Prijava')}
-              </button>
-            </div>
-            <button onClick={handleGoogleSignIn} className="w-full px-4 py-3 rounded-xl text-sm font-medium border border-black/10 hover:bg-black/5 text-black mb-4">
-              {locale === 'en' ? 'Sign in with Google' : 'Prijava s Google-om'}
-            </button>
-            <button onClick={() => setIsSignUp(!isSignUp)} className="w-full text-sm text-blue-500 hover:text-blue-700 font-medium">
-              {isSignUp ? (locale === 'en' ? 'Already have an account? Sign in' : 'Već imate račun? Prijavite se') : (locale === 'en' ? "Don't have an account? Sign up" : 'Nemate račun? Registrirajte se')}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
