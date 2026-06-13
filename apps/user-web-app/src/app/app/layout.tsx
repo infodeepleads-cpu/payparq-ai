@@ -13,7 +13,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [showDashboard, setShowDashboard] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
-  const { locale } = useLocale();
+  const { locale, setLocale } = useLocale();
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
@@ -70,8 +70,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleLanguageToggle = () => {
     const newLocale = locale === 'en' ? 'hr' : 'en';
-    localStorage.setItem('NEXT_LOCALE', newLocale);
-    window.location.reload();
+    setLocale(newLocale);
   };
 
   const handleDashboard = () => {
