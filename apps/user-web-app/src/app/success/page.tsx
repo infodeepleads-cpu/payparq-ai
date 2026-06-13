@@ -1131,7 +1131,7 @@ function SuccessContent() {
   return (
     <div className="min-h-screen text-black flex flex-col" style={{ background: '#EBF0FA' }}>
 
-      <div className="hidden md:block">
+      <div className="hidden">
         <SiteHeader hideAnnouncementBar />
       </div>
 

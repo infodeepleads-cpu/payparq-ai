@@ -565,7 +565,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
       addons: (() => {
         const addons = [];
         if (shuttleValetInfo) addons.push({ label: locale === 'en' ? 'Shuttle/Valet Service' : 'Shuttle/Valet Usluga', info: shuttleValetInfo });
-        if (freeCancellationEnabled) addons.push({ label: locale === 'en' ? 'Free Cancellation' : 'Besplatna otkazna', info: locale === 'en' ? `Up to ${freeCancellationDays || 0} days before arrival` : `Do ${freeCancellationDays || 0} dana prije dolaska` });
+        if (freeCancellationEnabled && freeCancellationDays) addons.push({ label: locale === 'en' ? 'Free Cancellation' : 'Besplatno otkazivanje', info: locale === 'en' ? `Up to ${freeCancellationDays} days before arrival` : `Do ${freeCancellationDays} dana prije dolaska` });
         return addons;
       })(),
     },
