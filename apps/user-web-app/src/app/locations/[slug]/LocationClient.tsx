@@ -562,6 +562,12 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
           <path d="M8 15V9h3a2 2 0 0 1 0 4H8" />
         </svg>
       ),
+      addons: (() => {
+        const addons = [];
+        if (shuttleValetInfo) addons.push({ label: locale === 'en' ? 'Shuttle/Valet Service' : 'Shuttle/Valet Usluga', info: shuttleValetInfo });
+        if (freeCancellationEnabled) addons.push({ label: locale === 'en' ? 'Free Cancellation' : 'Besplatna otkazna', info: locale === 'en' ? `Up to ${freeCancellationDays || 0} days before arrival` : `Do ${freeCancellationDays || 0} dana prije dolaska` });
+        return addons;
+      })(),
     },
     ...(freeCancellationEnabled ? [{
       id: "cancellation" as SectionKey,
@@ -1144,7 +1150,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     <circle cx="10.5" cy="4.8" r="1.8" />
                     <path d="M9.5 7.2h2.3l1.4 3 2.4 1.2-.9 1.6-2.7-1.4-.8-1.6-.8 3 1.9 2 1.3 4.9h-2l-1.1-4.1-1.8-1.9-.7 3.3-2.2 2.3-1.2-1.1 1.8-2 1.5-6.9z" />
                   </svg>
-                  Walking distance
+                  {shuttleValetInfo ? (locale === 'en' ? 'Shuttle included' : 'Shuttle uključen') : (locale === 'en' ? 'Walking distance' : 'Pješačka udaljenost')}
                 </span>
                 <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                   <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#5F3DFC]" fill="currentColor" aria-hidden="true">
@@ -1188,14 +1194,6 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     unoptimized={currentPhotoIsSupabase}
                     className="object-cover"
                   />
-                  {/* Close Button */}
-                  <button
-                    onClick={() => router.back()}
-                    className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 text-white rounded-full p-2 backdrop-blur-sm transition-all z-10"
-                    aria-label="Close details"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
 
                   {/* Photo Navigation */}
                   {photos.length > 1 && (
@@ -1317,7 +1315,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         <span className="notranslate" translate="no">Park & Taxi</span>
                       </button>
                     </div>
-                    {hubEnabled && <div className="border-t border-gray-100 pt-2 flex justify-center">
+                    <div className="border-t border-gray-100 pt-2 flex justify-center">
                       <button
                         type="button"
                         onClick={() => setShowBreakdown(true)}
@@ -1326,7 +1324,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         <span className="font-semibold text-black" style={{ fontSize: '20px' }}>{reserveTotalPriceLabel}</span>
                         <span className="text-xs text-gray-500 border-b border-gray-400 pb-0.5 md:hover:border-gray-400 md:cursor-default">{t('Ukupno', locale)}</span>
                       </button>
-                    </div>}
+                    </div>
                   </>
                 ) : (
                   <div className="mb-3">
@@ -1591,6 +1589,16 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                             <p className="text-sm font-semibold">{item.value}</p>
                             <p className="text-xs text-black/70 mt-2">{item.description}</p>
                           </div>
+                          {item.id === 'space' && (item as any).addons && (item as any).addons.length > 0 && (
+                            <div className="space-y-2">
+                              {(item as any).addons.map((addon: any, idx: number) => (
+                                <div key={idx} className="rounded-xl border border-[#5F3DFC]/20 bg-[#F5F2FF] p-3 flex flex-col gap-1">
+                                  <span className="text-xs font-semibold text-[#5F3DFC]">{addon.label}</span>
+                                  <span className="text-[10px] text-[#5F3DFC]/70">{addon.info}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                           {item.id === 'extras' && premiumSpots.length > 0 && (
                             <div className="space-y-2">
                               <p className="text-xs font-semibold text-black/60 uppercase tracking-wide">Premium parking spots</p>
@@ -1819,7 +1827,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     ) : null}
                   </div>
 
-                  <div className="rounded-2xl border border-black/10 bg-white text-black overflow-hidden">
+                  {hubEnabled && <div className="rounded-2xl border border-black/10 bg-white text-black overflow-hidden">
                     <button
                       type="button"
                       className="w-full flex items-center justify-between gap-3 px-4 md:px-6 py-4 text-left"
@@ -1867,7 +1875,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         </div>
                       </div>
                     ) : null}
-                  </div>
+                  </div>}
                 </div>
               </section>
             </div>
@@ -1926,8 +1934,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </div>
                   </div>
                   {hubEnabled && <p className="mb-3 text-xs text-gray-600">Note: You can book a ride after reserving parking. Uber integration is available. For a Parq ride send a message to the Host at least 60 minutes prior.</p>}
-                  
-                  {hubEnabled && <div className="border-t border-gray-100 mb-4 pt-3 flex justify-end">
+
+                  <div className="border-t border-gray-100 mb-4 pt-3 flex justify-end">
                     <div className="p-3 w-full flex flex-col gap-0">
                       <div className="flex items-baseline justify-between">
                         <span className="text-sm text-gray-500">Price:</span>
@@ -1939,7 +1947,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         </button>
                       </div>
                     </div>
-                  </div>}
+                  </div>
                 </>
               ) : (
                 <div className="mb-4">
