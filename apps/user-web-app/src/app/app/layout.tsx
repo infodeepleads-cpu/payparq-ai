@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useLocale } from '@/components/LocaleProvider';
-import { MapPin, LayoutDashboard, Home, HelpCircle, MessageSquare, Mail, FileText, Lock, type LucideIcon } from 'lucide-react';
+import { MapPin, LayoutDashboard, Home, HelpCircle, MessageSquare, Mail, FileText, Lock, LogIn, type LucideIcon } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -12,6 +12,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [localUserData, setLocalUserData] = useState<{ plate?: string; phone?: string } | null>(null);
   const [showDashboard, setShowDashboard] = useState(false);
   const [showContact, setShowContact] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
+  const [signInEmail, setSignInEmail] = useState('');
+  const [signInPassword, setSignInPassword] = useState('');
   const [isIOS, setIsIOS] = useState(false);
   const { locale } = useLocale();
 
@@ -68,9 +71,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const close = () => setMenuOpen(false);
 
+  const handleLanguageToggle = () => {
+    const newLocale = locale === 'en' ? 'hr' : 'en';
+    localStorage.setItem('NEXT_LOCALE', newLocale);
+    window.location.href = `/${newLocale}${window.location.pathname}`;
+  };
+
   const handleDashboard = () => {
     close();
     setShowDashboard(true);
+  };
+
+  const handleSignIn = async () => {
+    if (!supabase) return;
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: signInEmail,
+        password: signInPassword
+      });
+      if (error) {
+        console.error('Sign in error:', error);
+        alert(locale === 'en' ? 'Sign in failed: ' + error.message : 'Prijava neuspješna: ' + error.message);
+      } else {
+        setShowSignIn(false);
+        setSignInEmail('');
+        setSignInPassword('');
+      }
+    } catch (err) {
+      console.error('Sign in error:', err);
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -146,7 +175,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button onClick={() => { document.cookie = 'NEXT_LOCALE=' + (locale === 'en' ? 'hr' : 'en') + ';path=/'; window.location.reload(); }} className="text-xs font-bold text-black/70 hover:text-black px-2 py-1 rounded border border-black/10">
+            <button onClick={handleLanguageToggle} className="text-xs font-bold text-black/70 hover:text-black px-2 py-1 rounded border border-black/10">
               {locale === 'en' ? 'CRO' : 'ENG'}
             </button>
             <button onClick={close} className="text-black/40 hover:text-black text-xl leading-none">✕</button>
@@ -156,7 +185,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 overflow-y-auto flex flex-col px-3 py-4 gap-6">
           {/* Main Selector */}
           <div>
-            <p className="text-[10px] font-bold text-black/40 uppercase tracking-wide px-4 mb-2">{locale === 'en' ? 'Main Selector' : 'Glavni Izbor'}</p>
+            <p className="text-[10px] font-bold text-black/40 uppercase tracking-wide px-4 mb-2">{locale === 'en' ? 'Main Selector' : 'Glavni Izbornik'}</p>
             <div className="space-y-1">
               <a href="/app" onClick={close} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">
                 <MapPin className="w-4 h-4 text-black shrink-0" />
@@ -184,7 +213,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div>
             <p className="text-[10px] font-bold text-black/40 uppercase tracking-wide px-4 mb-2">{locale === 'en' ? 'Support' : 'Podrška'}</p>
             <div className="space-y-1">
-              <a href="https://help.payparq.com" target="_blank" rel="noopener noreferrer" onClick={close} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">
+              <a href="/help" onClick={close} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">
                 <HelpCircle className="w-4 h-4 text-black shrink-0" />
                 {locale === 'en' ? 'Help Centre' : 'Centar Pomoći'}
               </a>
@@ -192,20 +221,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <MessageSquare className="w-4 h-4 text-black shrink-0" />
                 {locale === 'en' ? 'App Feedback' : 'Povratna Informacija'}
               </a>
-              <button onClick={() => setShowContact(!showContact)} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black text-left">
+              <button onClick={() => setShowContact(true)} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black text-left">
                 <Mail className="w-4 h-4 text-black shrink-0" />
                 {locale === 'en' ? 'Priority Support' : 'Prioritetna Podrška'}
               </button>
-              {showContact && (
-                <div className="space-y-2 px-4 py-3 rounded-xl bg-black/5 ml-2">
-                  <a href="mailto:payparq@outlook.com" className="block text-sm text-black hover:text-black/70 font-medium">
-                    payparq@outlook.com
-                  </a>
-                  <a href="tel:+385915963139" className="block text-sm text-black hover:text-black/70 font-medium">
-                    +385 91 596 3139
-                  </a>
-                </div>
-              )}
+            </div>
+          </div>
+
+          {/* Pravno */}
+          <div>
+            <p className="text-[10px] font-bold text-black/40 uppercase tracking-wide px-4 mb-2">{locale === 'en' ? 'Legal' : 'Pravno'}</p>
+            <div className="space-y-1">
               <a href="/terms" target="_blank" onClick={close} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-black/5 text-sm font-medium text-black">
                 <FileText className="w-4 h-4 text-black shrink-0" />
                 {locale === 'en' ? 'Terms of Use' : 'Uvjeti Korištenja'}
@@ -220,6 +246,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {/* Spacer */}
           <div className="flex-1" />
 
+          {/* Auth */}
+          {!user && (
+            <button onClick={() => setShowSignIn(true)} className="px-4 py-3 rounded-xl text-sm font-medium bg-blue-500 text-white text-center hover:bg-blue-700 w-full flex items-center justify-center gap-2">
+              <LogIn className="w-4 h-4" />
+              {locale === 'en' ? 'Sign in' : 'Prijava'}
+            </button>
+          )}
+
           {/* Sign out */}
           {user && (
             <button onClick={async () => { if (supabase) { await supabase.auth.signOut(); close(); } }} className="px-4 py-3 rounded-xl text-sm font-medium text-black/50 text-center hover:bg-black/5 w-full">
@@ -228,6 +262,63 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           )}
         </nav>
       </div>
+
+      {/* Contact Modal */}
+      {showContact && (
+        <div className="fixed inset-0 z-[9100] flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-2xl">
+            <h2 className="text-lg font-bold mb-4">{locale === 'en' ? 'Priority Support' : 'Prioritetna Podrška'}</h2>
+            <div className="space-y-3 mb-6">
+              <a href="mailto:payparq@outlook.com" className="block text-sm text-blue-500 hover:text-blue-700 font-medium">
+                payparq@outlook.com
+              </a>
+              <a href="tel:+385915963139" className="block text-sm text-blue-500 hover:text-blue-700 font-medium">
+                +385 91 596 3139
+              </a>
+            </div>
+            <button onClick={() => setShowContact(false)} className="w-full px-4 py-3 rounded-xl text-sm font-medium bg-black/5 hover:bg-black/10 text-black">
+              {locale === 'en' ? 'Close' : 'Zatvori'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sign In Modal */}
+      {showSignIn && (
+        <div className="fixed inset-0 z-[9100] flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-2xl">
+            <h2 className="text-lg font-bold mb-4">{locale === 'en' ? 'Sign In' : 'Prijava'}</h2>
+            <div className="space-y-3 mb-6">
+              <input
+                type="email"
+                placeholder={locale === 'en' ? 'Email' : 'Email'}
+                value={signInEmail}
+                onChange={(e) => setSignInEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-black/10 text-sm focus:outline-none focus:border-blue-500"
+              />
+              <input
+                type="password"
+                placeholder={locale === 'en' ? 'Password' : 'Lozinka'}
+                value={signInPassword}
+                onChange={(e) => setSignInPassword(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-black/10 text-sm focus:outline-none focus:border-blue-500"
+                onKeyPress={(e) => e.key === 'Enter' && handleSignIn()}
+              />
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowSignIn(false)} className="flex-1 px-4 py-3 rounded-xl text-sm font-medium bg-black/5 hover:bg-black/10 text-black">
+                {locale === 'en' ? 'Cancel' : 'Odustani'}
+              </button>
+              <button onClick={handleSignIn} className="flex-1 px-4 py-3 rounded-xl text-sm font-medium bg-blue-500 text-white hover:bg-blue-700">
+                {locale === 'en' ? 'Sign in' : 'Prijava'}
+              </button>
+            </div>
+            <button onClick={handleGoogleSignIn} className="w-full mt-4 px-4 py-3 rounded-xl text-sm font-medium border border-black/10 hover:bg-black/5 text-black">
+              {locale === 'en' ? 'Sign in with Google' : 'Prijava s Google-om'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
