@@ -690,24 +690,6 @@ function PaidCheckoutForm({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Update payment intent with email, plate, phone when they change
-  useEffect(() => {
-    if (!clientSecret || clientSecret === 'free') return;
-    const piId = clientSecret.split('_secret_')[0];
-    if (!piId?.startsWith('pi_')) return;
-    if (!email && !plate && !phone) return; // Skip if nothing to update
-
-    fetch('/api/stripe/payment-intent', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        payment_intent_id: piId,
-        email: email || undefined,
-        plate: plate || undefined,
-        phone: phone || undefined,
-      }),
-    }).catch(() => {});
-  }, [email, plate, phone, clientSecret]);
 
   function updatePIAmount(totalAmountCents: number) {
     if (!clientSecret || clientSecret === 'free') return;
