@@ -146,7 +146,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button onClick={() => document.cookie = `NEXT_LOCALE=${locale === 'en' ? 'hr' : 'en'};path=/`; window.location.reload()} className="text-xs font-bold text-black/70 hover:text-black px-2 py-1 rounded border border-black/10">
+            <button onClick={() => { document.cookie = 'NEXT_LOCALE=' + (locale === 'en' ? 'hr' : 'en') + ';path=/'; window.location.reload(); }} className="text-xs font-bold text-black/70 hover:text-black px-2 py-1 rounded border border-black/10">
               {locale === 'en' ? 'CRO' : 'ENG'}
             </button>
             <button onClick={close} className="text-black/40 hover:text-black text-xl leading-none">✕</button>
