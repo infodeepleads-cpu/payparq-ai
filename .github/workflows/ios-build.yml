@@ -72,10 +72,6 @@ jobs:
           path: apps/user-web-app/ios/App/build/*.ipa
 
       - name: Upload to TestFlight
-        if: success()
+        if: false
         run: |
-          xcrun altool --upload-app \
-            -f ios/App/build/*.ipa \
-            -u "${{ secrets.APPLE_ID }}" \
-            -p "${{ secrets.APPLE_APP_PASSWORD }}" \
-            -t ios
+          echo "TestFlight upload disabled - IPA available as artifact"
