@@ -61,10 +61,9 @@ jobs:
       - name: Export IPA
         run: |
           cd ios/App
-          xcodebuild -exportArchive \
-            -archivePath ./build/App.xcarchive \
-            -exportOptionsPlist ./ExportOptions.plist \
-            -exportPath ./build
+          mkdir -p build/Payload
+          cp -r build/App.xcarchive/Products/Applications/App.app build/Payload/
+          cd build && zip -qr PayParq.ipa Payload && rm -rf Payload
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
