@@ -27,9 +27,9 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
   return (
     <div className="min-h-screen bg-white flex flex-col overflow-hidden">
       <SiteHeader />
-      <main className="flex-1 overflow-y-auto pt-24 md:pt-28">
+      <main className="flex-1 overflow-y-auto pt-12 md:pt-14">
         {/* Hero Section */}
-        <section className="w-full px-6 md:px-12 py-12 md:py-20 border-b border-black/10">
+        <section className="w-full px-6 md:px-12 py-6 md:py-8 border-b border-black/10">
           <div className="max-w-6xl mx-auto">
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
