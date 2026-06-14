@@ -30,10 +30,8 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-4 break-words">
-                  {locale === 'hr' ? `Pronađite parking u ${city.name}` : `Find Parking in ${city.name}`}
+                  {locale === 'hr' && slug === 'rovinj' ? 'Usporedi cijene parkinga u Rovinju' : locale === 'hr' ? `Pronađite parking u ${city.name}` : `Find Parking in ${city.name}`}
                 </h1>
-
-                <p className="text-base text-black/70 mb-8 leading-relaxed">{city.description}</p>
 
                 <div className="bg-white border border-black/10 rounded-xl p-6 shadow-sm">
                   <AirportBookingFlow defaultLat={city.lat} defaultLng={city.lng} defaultName={city.name} />
@@ -44,7 +42,7 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
                 <div
                   className="w-full bg-cover bg-center"
                   style={{
-                    backgroundImage: 'url("https://images.unsplash.com/photo-1494145904049-0dca59b4bbad?w=600&h=600&fit=crop")',
+                    backgroundImage: 'url("https://images.unsplash.com/photo-1597223557154-721c1cecc4b0?w=600&h=600&fit=crop")',
                   }}
                 />
               </div>

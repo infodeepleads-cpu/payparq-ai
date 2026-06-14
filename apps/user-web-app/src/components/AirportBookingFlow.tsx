@@ -116,42 +116,6 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEv
 
   return (
     <>
-      {/* Hourly/Daily vs Monthly vs Events Toggle */}
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => setBookingType('hourly_daily')}
-          className={`flex-1 px-4 py-3 text-sm font-semibold rounded transition ${
-            bookingType === 'hourly_daily'
-              ? 'bg-gray-700 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          {locale === 'en' ? 'Hourly/Daily' : 'Po satu/Dnevno'}
-        </button>
-        <button
-          onClick={() => setBookingType('monthly')}
-          className={`flex-1 px-4 py-3 text-sm font-semibold rounded transition ${
-            bookingType === 'monthly'
-              ? 'bg-gray-700 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          {locale === 'en' ? 'Monthly' : 'Mjesečno'}
-        </button>
-        {showEvents && (
-          <button
-            onClick={() => setBookingType('event')}
-            className={`flex-1 px-4 py-3 text-sm font-semibold rounded transition ${
-              bookingType === 'event'
-                ? 'bg-gray-700 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {locale === 'en' ? 'Events' : 'Događanja'}
-          </button>
-        )}
-      </div>
-
       {/* Widget Fields */}
       <div className="w-full space-y-3">
         {/* Event Selector */}
@@ -199,9 +163,9 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEv
           </div>
         </div>
 
-        {/* Hourly/Daily: From & Until - One Row */}
+        {/* Hourly/Daily: From & Until - Separate Rows */}
         {bookingType === 'hourly_daily' && (
-          <div className="grid grid-cols-2 gap-3">
+          <>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
                 {locale === 'en' ? 'From' : 'Od'}
@@ -223,7 +187,7 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEv
 
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
-                {locale === 'en' ? 'Until' : 'Do'}
+                {locale === 'en' ? 'To' : 'Do'}
               </label>
               <button
                 onClick={() => arrivalDateTime && setStep('departure')}
@@ -240,7 +204,7 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEv
                 </div>
               </button>
             </div>
-          </div>
+          </>
         )}
 
         {/* Monthly: Start Date Only */}
