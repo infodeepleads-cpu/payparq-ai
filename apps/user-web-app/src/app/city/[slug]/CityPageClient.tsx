@@ -34,7 +34,7 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
                 {locale === 'hr' && slug === 'rovinj' ? (
-                  <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4 break-words" style={{ lineHeight: '1.2' }}>
+                  <h1 className="text-5xl md:text-7xl font-semibold md:font-bold tracking-tight mb-4 break-words" style={{ lineHeight: '1.2' }}>
                     <span style={{ color: '#000' }}>Usporedi cijene</span><br />
                     <span style={{ color: '#7c3aed' }}>parkinga u Rovinju</span>
                   </h1>
@@ -54,7 +54,7 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
                 </div>
               </div>
 
-              <div className="hidden md:flex rounded-xl overflow-hidden border border-black/10 shadow-sm" style={{ height: slug === 'rovinj' ? '490px' : '600px' }}>
+              <div className="hidden md:flex rounded-xl overflow-hidden border border-black/10 shadow-sm" style={{ height: slug === 'rovinj' ? '600px' : '600px' }}>
                 <img
                   src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&h=600&fit=crop"
                   alt="Smiling lady"

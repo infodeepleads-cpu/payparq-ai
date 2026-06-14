@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { CITIES } from '@/data/cities';
+import { AIRPORTS } from '@/data/airports';
+import { VENUES } from '@/data/venues';
 import { useRouter } from 'next/navigation';
 
 interface LocationSelectorModalProps {
@@ -21,26 +23,21 @@ export function LocationSelectorModal({ isOpen, onClose, currentSlug }: Location
   if (!isOpen) return null;
 
   const allCities = Object.values(CITIES);
-
-  // Mock events data - in real app, would come from API
-  const events = [
-    { id: 'coachella', name: 'Coachella Music Festival', region: 'California' },
-    { id: 'glastonbury', name: 'Glastonbury Festival', region: 'United Kingdom' },
-    { id: 'tomorrowland', name: 'Tomorrowland', region: 'Belgium' },
-  ];
-
-  // Mock airports data - in real app, would come from API
-  const airports = [
-    { id: 'zag_airport', name: 'Zagreb Airport (ZAG)', region: 'Croatia' },
-    { id: 'split_airport', name: 'Split Airport (SPU)', region: 'Croatia' },
-    { id: 'pula_airport', name: 'Pula Airport (PUY)', region: 'Croatia' },
-  ];
+  const allAirports = Object.values(AIRPORTS).map(airport => ({
+    ...airport,
+    id: airport.slug || airport.id,
+  }));
+  const allVenues = Object.values(VENUES).map(venue => ({
+    id: venue.id,
+    name: venue.name,
+    region: venue.city,
+  }));
 
   const getFilteredLocations = () => {
-    let source = activeTab === 'cities' ? allCities : activeTab === 'events' ? events : airports;
+    let source = activeTab === 'cities' ? allCities : activeTab === 'events' ? allVenues : allAirports;
     return source.filter(item =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.region.toLowerCase().includes(searchQuery.toLowerCase())
+      (item.region || item.city || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
   };
 
@@ -102,7 +99,16 @@ export function LocationSelectorModal({ isOpen, onClose, currentSlug }: Location
               filteredLocations.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => activeTab === 'cities' ? handleSelectLocation(item.id) : onClose()}
+                  onClick={() => {
+                    if (activeTab === 'cities') {
+                      handleSelectLocation(item.id);
+                    } else if (activeTab === 'airports') {
+                      handleSelectLocation(item.id);
+                    } else {
+                      // For events/venues, just close the modal
+                      onClose();
+                    }
+                  }}
                   className={`p-4 rounded-lg border-2 transition text-left ${
                     item.id === currentSlug
                       ? 'border-purple-600 bg-purple-50'
@@ -110,7 +116,7 @@ export function LocationSelectorModal({ isOpen, onClose, currentSlug }: Location
                   }`}
                 >
                   <div className="font-semibold text-black">{item.name}</div>
-                  <div className="text-sm text-gray-600">{item.region}</div>
+                  <div className="text-sm text-gray-600">{item.region || item.city || ''}</div>
                 </button>
               ))
             ) : (
