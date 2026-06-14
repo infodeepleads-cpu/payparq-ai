@@ -26,13 +26,6 @@ jobs:
       - name: Build web app
         run: npm run build
 
-      - name: Generate iOS project
-        run: |
-          cp ios/App/ExportOptions.plist /tmp/ExportOptions.plist
-          rm -rf ios
-          npx cap add ios
-          cp /tmp/ExportOptions.plist ios/App/ExportOptions.plist
-
       - name: Sync Capacitor
         run: npx cap sync ios
 
