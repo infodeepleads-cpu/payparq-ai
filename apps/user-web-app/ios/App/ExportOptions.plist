@@ -15,7 +15,7 @@
   <key>provisioningProfiles</key>
   <dict>
     <key>com.payparq.app</key>
-    <string>payparq-provisioning-profile</string>
+    <string>payparq-provisioning-appstore-profile</string>
   </dict>
 </dict>
 </plist>
