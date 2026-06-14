@@ -73,7 +73,7 @@ jobs:
             -archivePath ./build/App.xcarchive \
             -allowProvisioningUpdates \
             CODE_SIGN_IDENTITY="iPhone Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="payparq-provisioning-appstore-profile" \
+            PROVISIONING_PROFILE_SPECIFIER="20b2f061-1705-4216-b87f-6ea13fa90c83" \
             DEVELOPMENT_TEAM="T254J772YJ"
 
       - name: Export IPA
