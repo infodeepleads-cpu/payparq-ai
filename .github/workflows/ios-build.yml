@@ -64,11 +64,7 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath ./build/App.xcarchive \
             -exportOptionsPlist ./ExportOptions.plist \
-            -exportPath ./build \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8 \
-            -authenticationKeyID "${{ secrets.APPLE_API_KEY_ID }}" \
-            -authenticationKeyIssuerID "${{ secrets.APPLE_API_KEY_ISSUER_ID }}"
+            -exportPath ./build
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
