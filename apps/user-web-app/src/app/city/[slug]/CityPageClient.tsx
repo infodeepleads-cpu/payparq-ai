@@ -29,8 +29,12 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
           <div className="max-w-6xl mx-auto">
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
-                <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-4 break-words">
-                  {locale === 'hr' && slug === 'rovinj' ? 'Usporedi cijene parkinga u Rovinju' : locale === 'hr' ? `Pronađite parking u ${city.name}` : `Find Parking in ${city.name}`}
+                <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4 break-words" style={slug === 'rovinj' ? { color: '#7c3aed', fontSize: locale === 'hr' && slug === 'rovinj' ? 'calc(3rem * 1.05)' : undefined, lineHeight: '1.2' } : { color: '#000' }}>
+                  {locale === 'hr' && slug === 'rovinj' ? (
+                    <>
+                      Usporedi cijene<br />parkinga u Rovinju
+                    </>
+                  ) : locale === 'hr' ? `Pronađite parking u ${city.name}` : `Find Parking in ${city.name}`}
                 </h1>
 
                 <div className="bg-white border border-black/10 rounded-xl p-6 shadow-sm">
@@ -38,12 +42,11 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
                 </div>
               </div>
 
-              <div className="hidden md:flex h-[600px] rounded-xl overflow-hidden border border-black/10 shadow-sm">
-                <div
-                  className="w-full bg-cover bg-center"
-                  style={{
-                    backgroundImage: 'url("https://images.unsplash.com/photo-1597223557154-721c1cecc4b0?w=600&h=600&fit=crop")',
-                  }}
+              <div className="hidden md:flex rounded-xl overflow-hidden border border-black/10 shadow-sm" style={{ height: slug === 'rovinj' ? 'calc(100% + 4rem)' : 'h-[600px]' }}>
+                <img
+                  src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&h=600&fit=crop"
+                  alt="Smiling lady"
+                  className="w-full object-cover"
                 />
               </div>
             </div>

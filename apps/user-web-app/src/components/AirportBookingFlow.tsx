@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ScrollableDateTimePicker } from './ScrollableDateTimePicker';
 import { useLocale } from './LocaleProvider';
-import { MapPin, Calendar, ArrowRight } from 'lucide-react';
+import { MapPin, Calendar, ArrowRight, ChevronDown } from 'lucide-react';
 
 interface AirportBookingFlowProps {
   defaultLat: number;
@@ -147,12 +147,12 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEv
           </div>
         )}
 
-        {/* Park at Location */}
+        {/* Park at Location - Dropdown */}
         <div>
           <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
             {locale === 'en' ? 'Park at' : 'Parkiraj u'}
           </label>
-          <div className="flex items-center gap-3 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3">
+          <div className="flex items-center gap-3 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 relative">
             <MapPin size={18} className="text-gray-600 flex-shrink-0" />
             <input
               type="text"
@@ -160,6 +160,7 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEv
               disabled
               className="flex-1 bg-transparent text-sm font-medium text-black outline-none disabled:cursor-default"
             />
+            <ChevronDown size={18} className="text-gray-600 flex-shrink-0" />
           </div>
         </div>
 
@@ -172,7 +173,7 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEv
               </label>
               <button
                 onClick={() => setStep('arrival')}
-                className="w-full flex items-center gap-3 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 hover:border-gray-400 transition text-left"
+                className="w-full flex items-center gap-3 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 hover:border-gray-400 transition text-left relative"
               >
                 <Calendar size={18} className="text-gray-600 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
@@ -182,6 +183,7 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEv
                       : (locale === 'en' ? 'Today at 15:00' : 'Danas u 15:00')}
                   </div>
                 </div>
+                <ChevronDown size={18} className="text-gray-600 flex-shrink-0" />
               </button>
             </div>
 
@@ -192,7 +194,7 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEv
               <button
                 onClick={() => arrivalDateTime && setStep('departure')}
                 disabled={!arrivalDateTime}
-                className="w-full flex items-center gap-3 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 hover:border-gray-400 transition text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-3 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 hover:border-gray-400 transition text-left disabled:opacity-50 disabled:cursor-not-allowed relative"
               >
                 <Calendar size={18} className="text-gray-600 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
@@ -202,6 +204,7 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEv
                       : (locale === 'en' ? 'Today at 19:00' : 'Danas u 19:00')}
                   </div>
                 </div>
+                <ChevronDown size={18} className="text-gray-600 flex-shrink-0" />
               </button>
             </div>
           </>
@@ -257,7 +260,7 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEv
           disabled={bookingType === 'event' ? !selectedEvent : (!arrivalDateTime || (bookingType === 'hourly_daily' && !departureDateTime))}
           className="w-full bg-black text-white font-semibold py-3 px-4 rounded-lg hover:bg-black/90 disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
-          {locale === 'en' ? 'Show me the best parking deals' : 'Pokaži mi najbolje ponude parkinga'}
+          {locale === 'en' ? 'Search parking' : 'Pretraži parkirna mjesta'}
         </button>
       </div>
 
