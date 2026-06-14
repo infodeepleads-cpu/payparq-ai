@@ -327,6 +327,8 @@ export default function EditListingPage() {
 
   const [photos, setPhotos] = useState<File[]>([]);
   const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [existingLogoUrl, setExistingLogoUrl] = useState<string>('');
 
   const [checkoutSlots, setCheckoutSlots] = useState<{ type: 'hour' | 'vrsta'; value: number | string }[]>([
     { type: 'hour', value: 1 },
@@ -419,6 +421,7 @@ export default function EditListingPage() {
       setTicketingOnlyEnabled(meta.ticketing_only_enabled ?? false);
 
       setExistingPhotos(data.verification_photos || []);
+      setExistingLogoUrl(data.logo_url || '');
       setCheckoutSlots(meta.checkoutSlots || [
         { type: 'hour', value: 1 },
         { type: 'hour', value: 2 },
@@ -436,22 +439,29 @@ export default function EditListingPage() {
     setSaving(true);
     try {
       const photoUrls: string[] = [...existingPhotos];
+      let logoUrl = existingLogoUrl;
 
-      // Upload new photos via supabase storage (needs browser client)
       if (supabase) {
+        // Upload new photos
         for (const photo of photos) {
           if (photo instanceof File) {
             const fileName = `${id}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
             const { error: uploadError } = await supabase.storage
               .from('locations')
               .upload(fileName, photo);
-
             if (!uploadError) {
-              const { data: { publicUrl } } = supabase.storage
-                .from('locations')
-                .getPublicUrl(fileName);
+              const { data: { publicUrl } } = supabase.storage.from('locations').getPublicUrl(fileName);
               photoUrls.push(publicUrl);
             }
+          }
+        }
+        // Upload logo
+        if (logoFile) {
+          const logoFileName = `${id}/logo-${Date.now()}.jpg`;
+          const { error: logoError } = await supabase.storage.from('locations').upload(logoFileName, logoFile);
+          if (!logoError) {
+            const { data: { publicUrl } } = supabase.storage.from('locations').getPublicUrl(logoFileName);
+            logoUrl = publicUrl;
           }
         }
       }
@@ -475,6 +485,7 @@ export default function EditListingPage() {
           base_price_monthly: standardMonthlyPrice ? parseFloat(standardMonthlyPrice) : null,
           rate_per_hour: standardHourlyPrice ? parseFloat(standardHourlyPrice) : null,
           verification_photos: photoUrls.length > 0 ? photoUrls : null,
+          logo_url: logoUrl || null,
           verification_metadata: {
             region,
             type: parkingType,
@@ -927,6 +938,30 @@ export default function EditListingPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-blue-600 flex-shrink-0" /> {et('Boost conversions', locale)}</p>
                 <p className="text-xs text-black leading-relaxed">{et('Listings with photos have 33-72% higher conversion rates.', locale)}</p>
+              </div>
+
+              {/* Logo upload */}
+              <div className="mb-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                <p className="text-xs font-semibold text-gray-700 mb-2">Logo / Brand Image</p>
+                <p className="text-xs text-gray-500 mb-3">Shown in search results as your lot's brand identity. Square image recommended.</p>
+                <div className="flex items-center gap-4">
+                  {(logoFile || existingLogoUrl) && (
+                    <div className="relative">
+                      <img
+                        src={logoFile ? URL.createObjectURL(logoFile) : existingLogoUrl}
+                        alt="Logo"
+                        className="w-20 h-20 object-cover rounded-xl border border-gray-200"
+                      />
+                      <button type="button" onClick={() => { setLogoFile(null); setExistingLogoUrl(''); }}
+                        className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs">×</button>
+                    </div>
+                  )}
+                  <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-xl px-4 py-3 text-xs text-gray-600 hover:border-violet-400 transition-colors">
+                    {logoFile || existingLogoUrl ? 'Change logo' : 'Upload logo'}
+                    <input type="file" accept="image/jpeg,image/png" className="hidden"
+                      onChange={(e) => { const f = e.currentTarget.files?.[0]; if (f) setLogoFile(f); }} />
+                  </label>
+                </div>
               </div>
 
               <div className="space-y-3">

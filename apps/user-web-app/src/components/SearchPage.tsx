@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { GoogleMap, Marker, OverlayView, useJsApiLoader } from '@react-google-maps/api';
 import { SiteHeader } from './SiteHeader';
 import { ListingCard } from './ListingCard';
+import { ParkingLogoCard } from './ParkingLogoCard';
 import { SearchFilters } from './SearchFilters';
 import { BookingModal } from './BookingModal';
 import { DateTimePickerDropdown } from './DateTimePickerDropdown';
@@ -234,6 +235,7 @@ interface Parking {
   baseHourlyRate?: number;
   baseDailyRate?: number;
   dateConfigs?: Record<string, { priceHourly?: number; priceDaily?: number; priceMonthly?: number; priceMode?: 'auto' | 'manual' }>;
+  logo_url?: string;
 }
 
 export function SearchPage() {
@@ -256,6 +258,7 @@ export function SearchPage() {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const isAppRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/app');
   const [showMobileMap, setShowMobileMap] = useState(isAppRoute);
+  const [desktopViewMode, setDesktopViewMode] = useState<'list' | 'logo'>('list');
   const [loading, setLoading] = useState(true);
   const [locationReady, setLocationReady] = useState(false);
   const [reservationType, setReservationType] = useState('Satna/dnevna');
@@ -821,6 +824,7 @@ export function SearchPage() {
               dateConfigs: metadata?.dateConfigs || {},
               verification_metadata: metadata,
               ticketingOnlyEnabled: metadata?.ticketing_only_enabled === true,
+              logo_url: loc.logo_url || undefined,
             };
           });
 
@@ -2030,13 +2034,26 @@ export function SearchPage() {
       <div className="hidden md:flex flex-1 overflow-hidden">
         {/* Parking Lots Cards - hidden when hubId present */}
         <div className={`flex flex-col overflow-hidden bg-gray-50 border-r border-gray-200 ${isHubIdMode ? 'hidden' : showDetailsView ? 'flex-1' : 'w-[35%]'} max-h-[calc(100vh-120px)]`}>
-          {/* Sort Dropdown - Top Right */}
-          <div className="flex-shrink-0 px-4 py-3 bg-gray-100 border-b border-gray-200 flex justify-end">
+          {/* Sort Dropdown + View Toggle - Top Right */}
+          <div className="flex-shrink-0 px-4 py-3 bg-gray-100 border-b border-gray-200 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1 bg-white border border-gray-300 rounded-lg p-0.5">
+              <button
+                onClick={() => setDesktopViewMode('list')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${desktopViewMode === 'list' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+              >
+                {locale === 'en' ? 'List' : 'Popis'}
+              </button>
+              <button
+                onClick={() => setDesktopViewMode('logo')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${desktopViewMode === 'logo' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+              >
+                {locale === 'en' ? 'Lots' : 'Prostori'}
+              </button>
+            </div>
             <select
               value={sortBy}
               onChange={(e) => {
                 const newVal = e.target.value as typeof sortBy;
-                console.log('Dropdown changed to:', newVal, 'from:', sortBy);
                 setSortBy(newVal);
               }}
               className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -2141,6 +2158,36 @@ export function SearchPage() {
                     if (cheapest.id !== closest.id) badgeMap.set(cheapest.id, locale === 'en' ? 'Best Value' : 'Najbolja Vrijednost');
                     if (!badgeMap.has(highestRated.id)) badgeMap.set(highestRated.id, locale === 'en' ? 'Highest Rated' : 'Najviše Ocijenjeno');
                   }
+                }
+
+                if (desktopViewMode === 'logo') {
+                  return (
+                    <div className="grid grid-cols-1 gap-3">
+                      {filteredListings.map((listing) => {
+                        const liveRef = searchLocationPin || mapCenter;
+                        const liveListing = { ...listing, distance: parseFloat(haversineKm(liveRef.lat, liveRef.lng, listing.lat, listing.lng).toFixed(1)) };
+                        const rates = resolveRatesForDate(listing, startTime);
+                        const livePricedListing = { ...liveListing, pricePerHour: rates.hourly, pricePerDay: rates.daily };
+                        const rawPrice = getDisplayPrice(livePricedListing, durationHours, reservationType);
+                        const price = parseFloat((showTotalPrice ? rawPrice + Math.min(1.99, 0.99 + rawPrice * 0.10) : rawPrice).toFixed(2));
+                        const days = Math.round(durationHours / 24) || 1;
+                        const durationLabel = reservationType === 'Mjesečna'
+                          ? (locale === 'en' ? 'Monthly' : 'Mjesečno')
+                          : `${locale === 'en' ? 'Price for' : 'Cijena za'} ${days} ${locale === 'en' ? (days === 1 ? 'day' : 'days') : (days === 1 ? 'dan' : 'dana')}`;
+                        return (
+                          <ParkingLogoCard
+                            key={listing.id}
+                            listing={liveListing as any}
+                            price={price}
+                            durationLabel={durationLabel}
+                            locale={locale}
+                            onBook={() => { setSelectedListing(listing); setShowBookingModal(true); }}
+                            onInfo={() => { setSelectedListing(listing); setShowDetailsView(true); }}
+                          />
+                        );
+                      })}
+                    </div>
+                  );
                 }
 
                 return filteredListings.map((listing) => {

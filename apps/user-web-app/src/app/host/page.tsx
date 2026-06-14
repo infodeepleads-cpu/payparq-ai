@@ -783,6 +783,7 @@ export default function HostPage() {
 
   // Photos
   const [photos, setPhotos] = useState<File[]>([]);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
 
   // Toggles
   const [wantPartnership, setWantPartnership] = useState(true);
@@ -895,6 +896,10 @@ export default function HostPage() {
     // Photos — compress before upload to avoid 413
     const compressedPhotos = await Promise.all(photos.map((p) => compressImage(p)));
     compressedPhotos.forEach((photo) => fd.append('photos', photo));
+    if (logoFile) {
+      const compressedLogo = await compressImage(logoFile);
+      fd.append('logo', compressedLogo);
+    }
 
     try {
       const res = await fetch('/api/host/submit', { method: 'POST', body: fd });
@@ -1362,6 +1367,26 @@ export default function HostPage() {
                 <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
                   <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" />{locale === 'en' ? 'Increase conversions' : 'Povećajte konverzije'}</p>
                   <p className="text-xs text-black leading-relaxed">{locale === 'en' ? 'Listings with photos have 33-72% higher conversion rates. We recommend adding 3-5 quality photos of your parking space.' : 'Ogledni parkingi s fotografijama imaju 33-72% veće stope konverzije. Preporučujemo dodavanje 3-5 kvalitetnih fotografija vašeg parking mjesta.'}</p>
+                </div>
+
+                {/* Logo upload */}
+                <div className="mb-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                  <p className="text-xs font-semibold text-gray-700 mb-1">{locale === 'en' ? 'Logo / Brand Image' : 'Logo / Slika brenda'}</p>
+                  <p className="text-xs text-gray-500 mb-3">{locale === 'en' ? 'Shown in search results. Square image recommended.' : 'Prikazuje se u rezultatima pretrage. Preporučuje se kvadratna slika.'}</p>
+                  <div className="flex items-center gap-4">
+                    {logoFile && (
+                      <div className="relative">
+                        <img src={URL.createObjectURL(logoFile)} alt="Logo" className="w-20 h-20 object-cover rounded-xl border border-gray-200" />
+                        <button type="button" onClick={() => setLogoFile(null)}
+                          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs">×</button>
+                      </div>
+                    )}
+                    <label className="cursor-pointer border-2 border-dashed border-gray-300 rounded-xl px-4 py-3 text-xs text-gray-600 hover:border-violet-400 transition-colors">
+                      {logoFile ? (locale === 'en' ? 'Change logo' : 'Promijeni logo') : (locale === 'en' ? 'Upload logo' : 'Učitaj logo')}
+                      <input type="file" accept="image/jpeg,image/png" className="hidden"
+                        onChange={(e) => { const f = e.currentTarget.files?.[0]; if (f) setLogoFile(f); }} />
+                    </label>
+                  </div>
                 </div>
 
                 {/* Photos upload */}

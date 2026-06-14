@@ -136,6 +136,20 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // 2b. Upload logo
+    let logoUrl: string | null = null;
+    const logoFile = formData.get('logo') as File | null;
+    if (logoFile && logoFile.size > 0) {
+      const ext = logoFile.name.split('.').pop() ?? 'jpg';
+      const logoPath = `host-listings/${userId}/logo-${Date.now()}.${ext}`;
+      const logoBuffer = Buffer.from(await logoFile.arrayBuffer());
+      const { error: logoUploadError } = await supabaseAdmin.storage.from('listing-photos').upload(logoPath, logoBuffer, { contentType: logoFile.type });
+      if (!logoUploadError) {
+        const { data: { publicUrl } } = supabaseAdmin.storage.from('listing-photos').getPublicUrl(logoPath);
+        logoUrl = publicUrl;
+      }
+    }
+
     // 3. Insert location
     const { data: location, error: locationError } = await supabaseAdmin
       .from('locations')
@@ -158,6 +172,7 @@ export async function POST(req: NextRequest) {
         display_id: String((Date.now() % 90000) + 10000),
         canonical_slug: `${lotName.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').trim() || 'lot'}-${Date.now() % 90000 + 10000}`,
         verification_photos: photoUrls.length > 0 ? photoUrls : null,
+        logo_url: logoUrl,
         verification_status: 'pending',
         verification_metadata: {
           listing_status: 'pending',
