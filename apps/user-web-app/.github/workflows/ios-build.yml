@@ -43,11 +43,11 @@ jobs:
 
       - name: Decode signing certificate
         run: |
-          echo "${{ secrets.IOS_DISTRIBUTION_CERT_B64 }}" | base64 -D > /tmp/payparq_distribution.p12
+          echo -n "${{ secrets.IOS_DISTRIBUTION_CERT_B64 }}" | base64 --decode > /tmp/payparq_distribution.p12
 
       - name: Decode provisioning profile
         run: |
-          echo "${{ secrets.IOS_PROVISIONING_PROFILE_B64 }}" | base64 -D > /tmp/payparq.mobileprovision
+          echo -n "${{ secrets.IOS_PROVISIONING_PROFILE_B64 }}" | base64 --decode > /tmp/payparq.mobileprovision
 
       - name: Install provisioning profile
         run: |
