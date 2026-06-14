@@ -37,7 +37,7 @@ export function LocationSelectorModal({ isOpen, onClose, currentSlug }: Location
     let source = activeTab === 'cities' ? allCities : activeTab === 'events' ? allVenues : allAirports;
     return source.filter(item =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.region || item.city || '').toLowerCase().includes(searchQuery.toLowerCase())
+      (item.region || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
   };
 
@@ -116,7 +116,7 @@ export function LocationSelectorModal({ isOpen, onClose, currentSlug }: Location
                   }`}
                 >
                   <div className="font-semibold text-black">{item.name}</div>
-                  <div className="text-sm text-gray-600">{item.region || item.city || ''}</div>
+                  <div className="text-sm text-gray-600">{item.region || ''}</div>
                 </button>
               ))
             ) : (
