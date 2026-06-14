@@ -47,12 +47,13 @@ jobs:
 
       - name: Decode provisioning profile
         run: |
-          echo "${{ secrets.IOS_PROVISIONING_PROFILE_B64 }}" | base64 --decode > /tmp/payparq.mobileprovision
+          echo -n "${{ secrets.IOS_PROVISIONING_PROFILE_B64 }}" | base64 --decode > /tmp/payparq.mobileprovision
 
       - name: Install provisioning profile
         run: |
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp /tmp/payparq.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' /dev/stdin <<< $(security cms -D -i /tmp/payparq.mobileprovision))
+          cp /tmp/payparq.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/${UUID}.mobileprovision
 
       - name: Import signing certificate into Keychain
         run: |
@@ -73,7 +74,7 @@ jobs:
             -archivePath ./build/App.xcarchive \
             CODE_SIGN_STYLE="Manual" \
             CODE_SIGN_IDENTITY="iPhone Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="payparq-provisioning-profile" \
+            PROVISIONING_PROFILE_SPECIFIER="payparq-provisioning-appstore-profile" \
             DEVELOPMENT_TEAM="T254J772YJ"
 
       - name: Export IPA
