@@ -54,7 +54,7 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
                 </div>
               </div>
 
-              <div className="hidden md:flex rounded-xl overflow-hidden border border-black/10 shadow-sm" style={{ height: slug === 'rovinj' ? '600px' : '600px' }}>
+              <div className="hidden md:flex rounded-xl overflow-hidden border border-black/10 shadow-sm md:mt-3" style={{ height: slug === 'rovinj' ? '600px' : '600px' }}>
                 <img
                   src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&h=600&fit=crop"
                   alt="Smiling lady"
