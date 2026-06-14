@@ -11,6 +11,7 @@ interface AirportBookingFlowProps {
   defaultLng: number;
   defaultName: string;
   showEvents?: boolean;
+  onLocationClick?: () => void;
 }
 
 type Step = null | 'arrival' | 'departure';
@@ -21,7 +22,7 @@ interface Event {
   date: string;
 }
 
-export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEvents = false }: AirportBookingFlowProps) {
+export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEvents = false, onLocationClick }: AirportBookingFlowProps) {
   const router = useRouter();
   const { locale } = useLocale();
   const [step, setStep] = useState<Step>(null);
@@ -152,7 +153,10 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEv
           <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
             {locale === 'en' ? 'Park at' : 'Parkiraj u'}
           </label>
-          <div className="flex items-center gap-3 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 relative">
+          <button
+            onClick={onLocationClick}
+            className="w-full flex items-center gap-3 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 hover:border-gray-400 transition relative text-left"
+          >
             <MapPin size={18} className="text-gray-600 flex-shrink-0" />
             <input
               type="text"
@@ -161,7 +165,7 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEv
               className="flex-1 bg-transparent text-sm font-medium text-black outline-none disabled:cursor-default"
             />
             <ChevronDown size={18} className="text-gray-600 flex-shrink-0" />
-          </div>
+          </button>
         </div>
 
         {/* Hourly/Daily: From & Until - Separate Rows */}

@@ -1,10 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useLocale } from '@/components/LocaleProvider';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
 import { AirportBookingFlow } from '@/components/AirportBookingFlow';
+import { LocationSelectorModal } from '@/components/LocationSelectorModal';
 import { AirportReviews } from '@/components/AirportReviews';
 import { AirportParkingLots } from '@/components/AirportParkingLots';
 import { NearbyPlaces } from '@/components/NearbyPlaces';
@@ -20,6 +22,8 @@ interface CityPageClientProps {
 
 export default function CityPageClient({ city, slug }: CityPageClientProps) {
   const { locale } = useLocale();
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-white flex flex-col overflow-hidden">
       <SiteHeader />
@@ -29,24 +33,33 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
           <div className="max-w-6xl mx-auto">
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
-                <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4 break-words" style={slug === 'rovinj' ? { color: '#7c3aed', fontSize: locale === 'hr' && slug === 'rovinj' ? 'calc(3rem * 1.05)' : undefined, lineHeight: '1.2' } : { color: '#000' }}>
-                  {locale === 'hr' && slug === 'rovinj' ? (
-                    <>
-                      Usporedi cijene<br />parkinga u Rovinju
-                    </>
-                  ) : locale === 'hr' ? `Pronađite parking u ${city.name}` : `Find Parking in ${city.name}`}
-                </h1>
+                {locale === 'hr' && slug === 'rovinj' ? (
+                  <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4 break-words" style={{ fontSize: 'calc(1.875rem * 1.05)', lineHeight: '1.2' }}>
+                    <span style={{ color: '#000' }}>Usporedi cijene</span><br />
+                    <span style={{ color: '#7c3aed' }}>parkinga u Rovinju</span>
+                  </h1>
+                ) : (
+                  <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-4 break-words">
+                    {locale === 'hr' ? `Pronađite parking u ${city.name}` : `Find Parking in ${city.name}`}
+                  </h1>
+                )}
 
                 <div className="bg-white border border-black/10 rounded-xl p-6 shadow-sm">
-                  <AirportBookingFlow defaultLat={city.lat} defaultLng={city.lng} defaultName={city.name} />
+                  <AirportBookingFlow
+                    defaultLat={city.lat}
+                    defaultLng={city.lng}
+                    defaultName={city.name}
+                    onLocationClick={() => setIsLocationModalOpen(true)}
+                  />
                 </div>
               </div>
 
-              <div className="hidden md:flex rounded-xl overflow-hidden border border-black/10 shadow-sm" style={{ height: slug === 'rovinj' ? 'calc(100% + 4rem)' : 'h-[600px]' }}>
+              <div className="hidden md:flex rounded-xl overflow-hidden border border-black/10 shadow-sm" style={{ height: slug === 'rovinj' ? 'auto' : '600px' }}>
                 <img
                   src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&h=600&fit=crop"
                   alt="Smiling lady"
                   className="w-full object-cover"
+                  style={{ height: slug === 'rovinj' ? '100%' : 'auto' }}
                 />
               </div>
             </div>
@@ -71,6 +84,12 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
         {/* Why PayParq */}
         <WhyPayParq airport={city.name} />
       </main>
+
+      <LocationSelectorModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        currentSlug={slug}
+      />
 
       <footer className="bg-[#05020A] px-6 md:px-12 py-12 border-t border-white/10">
         <div className="max-w-6xl mx-auto">
