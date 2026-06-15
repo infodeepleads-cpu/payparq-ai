@@ -2604,7 +2604,7 @@ export function SearchPage() {
                       price={price}
                       durationLabel={durationLabel}
                       locale={locale}
-                      onBook={() => { setSelectedListing(listing); setShowBookingModal(true); }}
+                      checkoutUrl={buildCheckoutUrl(listing)}
                       onInfo={() => { setSelectedListing(listing); setShowDetailsView(true); }}
                     />
                   );

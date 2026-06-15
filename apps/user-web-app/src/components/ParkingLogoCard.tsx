@@ -7,7 +7,7 @@ interface ParkingLogoCardProps {
   price: number;
   durationLabel: string;
   locale: string;
-  onBook: () => void;
+  checkoutUrl: string;
   onInfo: () => void;
 }
 
@@ -16,7 +16,7 @@ export function ParkingLogoCard({
   price,
   durationLabel,
   locale,
-  onBook,
+  checkoutUrl,
   onInfo,
 }: ParkingLogoCardProps) {
   const isOnlinePayment = listing.verification_metadata?.personal_branding_enabled;
@@ -99,12 +99,12 @@ export function ParkingLogoCard({
 
       {/* CTA Button - Always visible at bottom */}
       <div className="px-6 py-4 border-t border-gray-200">
-        <button
-          onClick={onBook}
-          className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 active:scale-95 transition text-sm shadow-sm hover:shadow-md"
+        <a
+          href={checkoutUrl}
+          className="w-full inline-block text-center bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 active:scale-95 transition text-sm shadow-sm hover:shadow-md"
         >
           {locale === 'hr' ? 'Nastavi na Checkout' : 'Proceed to booking'}
-        </button>
+        </a>
       </div>
     </div>
   );
