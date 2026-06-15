@@ -176,10 +176,12 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
 
                 {/* Distance + Features (compact) */}
                 <div className="text-xs text-black/70 space-y-1 mb-4 flex-1">
-                  <p className="flex items-center justify-center gap-1">
-                    <MapPin size={12} className="flex-shrink-0" />
-                    {locale === 'hr' ? `Većina čeka ${Math.round(lot.distance * 12)} min` : `Most people wait ${Math.round(lot.distance * 12)} min`}
-                  </p>
+                  {lot.distance !== undefined && (
+                    <p className="flex items-center justify-center gap-1">
+                      <MapPin size={12} className="flex-shrink-0" />
+                      {locale === 'hr' ? `Većina čeka ${Math.round(lot.distance * 12)} min` : `Most people wait ${Math.round(lot.distance * 12)} min`}
+                    </p>
+                  )}
                   <p>✓ {locale === 'hr' ? 'Natkrivena garaža' : 'Covered Garage'}</p>
                   <p>✓ {locale === 'hr' ? 'Bez ograničenja veličine' : 'No max. height'}</p>
                   <p>✓ {locale === 'hr' ? 'Nemojte zadržavati ključeve' : 'Do Not Keep Keys'}</p>
