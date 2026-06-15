@@ -111,7 +111,7 @@ export function LocationSelectorModal({ isOpen, onClose, currentSlug }: Location
                   }}
                   className={`p-4 rounded-lg border-2 transition text-left ${
                     item.id === currentSlug
-                      ? 'border-purple-600 bg-purple-50'
+                      ? 'border-black bg-gray-100'
                       : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50'
                   }`}
                 >

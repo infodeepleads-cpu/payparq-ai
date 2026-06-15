@@ -80,16 +80,6 @@ export function AirportReviews({ airport, locationName }: AirportReviewsProps) {
   const averageRating = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollContainerRef.current) {
-      const scrollAmount = 400;
-      scrollContainerRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      });
-    }
-  };
-
   return (
     <>
       <script
@@ -138,7 +128,6 @@ export function AirportReviews({ airport, locationName }: AirportReviewsProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <button onClick={() => scroll('left')} className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center hover:bg-black/80 transition text-xs flex-shrink-0">←</button>
             <div ref={scrollContainerRef} className="flex gap-3 overflow-x-auto pb-2 scroll-smooth scrollbar-hide flex-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {displayReviews.map((review, idx) => (
                 <div key={idx} className="flex-shrink-0 w-40 h-52 bg-white rounded-lg border border-black/10 p-4 shadow-sm flex flex-col">
@@ -159,7 +148,6 @@ export function AirportReviews({ airport, locationName }: AirportReviewsProps) {
                 </div>
               ))}
             </div>
-            <button onClick={() => scroll('right')} className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center hover:bg-black/80 transition text-xs flex-shrink-0">→</button>
           </div>
         </div>
       </section>
