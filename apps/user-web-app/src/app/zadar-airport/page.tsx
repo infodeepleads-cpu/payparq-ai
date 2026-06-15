@@ -12,7 +12,6 @@ import { AirportSEOSection } from '@/components/AirportSEOSection';
 import { NearbyPlaces } from '@/components/NearbyPlaces';
 import { HowItWorks } from '@/components/HowItWorks';
 import { WhyPayParq } from '@/components/WhyPayParq';
-import { ArrowRight, Check } from 'lucide-react';
 
 export default function ZadarAirportPage() {
   const router = useRouter();
