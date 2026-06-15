@@ -42,7 +42,17 @@ export default function VenuePage() {
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
                 <h1 className="text-4xl md:text-7xl font-semibold md:font-bold tracking-tight mb-2 md:mb-4 break-words text-white" style={{ lineHeight: '1.2' }}>
-                  {locale === 'hr' ? `Parkiranje blizu ${venue.name}` : `Parking near ${venue.name}`}
+                  {locale === 'hr' ? (
+                    <>
+                      <span style={{ color: '#fff' }}>Parkiranje blizu</span><br />
+                      <span style={{ color: '#7c3aed' }}>{venue.name}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ color: '#fff' }}>Parking near</span><br />
+                      <span style={{ color: '#7c3aed' }}>{venue.name}</span>
+                    </>
+                  )}
                 </h1>
 
                 <div className="bg-white border border-white/10 rounded-xl p-6 shadow-sm">

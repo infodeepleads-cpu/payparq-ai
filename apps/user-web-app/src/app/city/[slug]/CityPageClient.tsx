@@ -40,7 +40,17 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
                   </h1>
                 ) : (
                   <h1 className="text-4xl md:text-7xl font-semibold md:font-bold tracking-tight mb-2 md:mb-4 break-words text-white" style={{ lineHeight: '1.2' }}>
-                    {locale === 'hr' ? `Pronađite parking u ${city.name}` : `Find Parking in ${city.name}`}
+                    {locale === 'hr' ? (
+                      <>
+                        <span style={{ color: '#fff' }}>Pronađite parking u</span><br />
+                        <span style={{ color: '#7c3aed' }}>{city.name}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ color: '#fff' }}>Find Parking in</span><br />
+                        <span style={{ color: '#7c3aed' }}>{city.name}</span>
+                      </>
+                    )}
                   </h1>
                 )}
 

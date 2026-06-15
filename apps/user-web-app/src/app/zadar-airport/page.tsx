@@ -30,7 +30,17 @@ export default function ZadarAirportPage() {
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
                 <h1 className="text-4xl md:text-7xl font-semibold md:font-bold tracking-tight mb-2 md:mb-4 break-words text-white" style={{ lineHeight: '1.2' }}>
-                  {locale === 'hr' ? 'Parkiraj kod Aerodroma Zadar' : 'Park at Zadar Airport'}
+                  {locale === 'hr' ? (
+                    <>
+                      <span style={{ color: '#fff' }}>Parkiraj kod</span><br />
+                      <span style={{ color: '#7c3aed' }}>Aerodroma Zadar</span>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ color: '#fff' }}>Park at</span><br />
+                      <span style={{ color: '#7c3aed' }}>Zadar Airport</span>
+                    </>
+                  )}
                 </h1>
                 <div className="bg-white border border-white/10 rounded-xl p-6 shadow-sm">
                   <AirportBookingFlow defaultLat={44.1083} defaultLng={15.3467} defaultName="Zadar Airport" />
