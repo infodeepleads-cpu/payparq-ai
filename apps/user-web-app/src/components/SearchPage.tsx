@@ -2581,11 +2581,11 @@ export function SearchPage() {
 
         {/* Vehicle Modal - Centered Overlay */}
         {/* Map 65% RIGHT (normal) or flex-1 RIGHT (details) or full width (logo mode) */}
-        <div className={`${desktopViewMode === 'logo' ? 'flex-1 bg-white overflow-y-auto' : 'bg-gray-100'} ${desktopViewMode === 'logo' ? '' : 'pr-2'}`} style={{ height: 'calc(100vh - 80px)' }}>
+        <div className={`${desktopViewMode === 'logo' ? 'flex-1 bg-white overflow-y-auto' : `bg-gray-100 ${showDetailsView ? 'flex-1' : 'w-[65%]'} pr-2`}`} style={{ height: 'calc(100vh - 80px)' }}>
           {desktopViewMode === 'logo' ? (
-            // Logo/Prostori Vertical Stack - 3 cards visible, scrollable
+            // Logo/Prostori Grid - 3 columns on desktop, 1 on mobile, scrollable
             <div className="w-full overflow-y-auto" style={{ height: 'calc(100vh - 80px)' }}>
-              <div className="grid grid-cols-1 gap-6 p-6 max-w-2xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 max-w-7xl mx-auto">
                 {filteredListings.map((listing) => {
                   const liveRef = searchLocationPin || mapCenter;
                   const liveListing = { ...listing, distance: parseFloat(haversineKm(liveRef.lat, liveRef.lng, listing.lat, listing.lng).toFixed(1)) };
