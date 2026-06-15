@@ -92,7 +92,7 @@ export function ScrollableDateTimePicker({
       <div className="bg-white w-full md:max-w-2xl rounded-t-3xl md:rounded-3xl p-4 md:p-6 space-y-4 md:space-y-5">
         {/* Header */}
         <div className="text-center space-y-1">
-          <div className="text-xs font-semibold text-black uppercase tracking-wide">{step}</div>
+          <div className="text-xs font-semibold text-blue-600 uppercase tracking-wide">{step}</div>
           <h2 className="text-2xl md:text-3xl font-bold text-black">{title}</h2>
           <p className="text-xs md:text-sm text-black/60">{subtitle}</p>
         </div>
@@ -199,7 +199,7 @@ export function ScrollableDateTimePicker({
             translate="no"
             className={`w-full px-5 py-3 md:py-4 font-bold rounded-2xl transition-all notranslate ${
               value
-                ? 'bg-black text-white hover:bg-gray-900 active:scale-95'
+                ? 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >

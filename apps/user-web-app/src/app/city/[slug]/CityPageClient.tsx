@@ -34,7 +34,7 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
                 {locale === 'hr' && slug === 'rovinj' ? (
-                  <h1 className="text-5xl md:text-7xl font-semibold md:font-bold tracking-tight mb-4 break-words text-white" style={{ lineHeight: '1.2' }}>
+                  <h1 className="text-2xl md:text-7xl font-semibold md:font-bold tracking-tight mb-2 md:mb-4 break-words text-white" style={{ lineHeight: '1.2' }}>
                     <span style={{ color: '#fff' }}>Usporedi cijene</span><br />
                     <span style={{ color: '#7c3aed' }}>parkinga u Rovinju</span>
                   </h1>

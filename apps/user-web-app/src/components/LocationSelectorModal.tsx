@@ -53,7 +53,7 @@ export function LocationSelectorModal({ isOpen, onClose, currentSlug }: Location
       <div className="bg-white w-full max-w-2xl rounded-3xl p-6 space-y-4 max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-black">Select Location</h2>
+          <h2 className="text-2xl font-semibold text-black">Odaberite Lokaciju</h2>
           <button
             onClick={onClose}
             className="p-1 hover:bg-gray-100 rounded-lg transition"
@@ -70,11 +70,11 @@ export function LocationSelectorModal({ isOpen, onClose, currentSlug }: Location
               onClick={() => { setActiveTab(tab); setSearchQuery(''); }}
               className={`px-4 py-2 font-medium transition text-sm ${
                 activeTab === tab
-                  ? 'text-black border-b-2 border-purple-600 -mb-[2px]'
+                  ? 'text-black border-b-2 border-black -mb-[2px]'
                   : 'text-gray-600 hover:text-black'
               }`}
             >
-              {tab === 'cities' ? 'Cities' : tab === 'events' ? 'Events' : 'Airports'}
+              {tab === 'cities' ? 'Gradovi' : tab === 'events' ? 'Događaji' : 'Aerodrom'}
             </button>
           ))}
         </div>
