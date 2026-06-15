@@ -1886,21 +1886,40 @@ export function SearchPage() {
             </>
           )}
 
-          {/* Right: Toggle show total price */}
-          <div className="ml-auto flex items-center gap-3">
-            <span className="text-sm font-medium text-gray-700">Show total price with fees</span>
-            <button
-              onClick={() => setShowTotalPrice(!showTotalPrice)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                showTotalPrice ? 'bg-black' : 'bg-gray-300'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  showTotalPrice ? 'translate-x-6' : 'translate-x-1'
+          {/* Right: Popis Prostori Toggle + Show total price */}
+          <div className="ml-auto flex items-center gap-6">
+            {/* Popis Prostori Toggle - Desktop only */}
+            <div className="hidden md:flex items-center gap-1 bg-white border border-gray-300 rounded-lg p-0.5">
+              <button
+                onClick={() => setDesktopViewMode('list')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${desktopViewMode === 'list' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+              >
+                {locale === 'en' ? 'List' : 'Popis'}
+              </button>
+              <button
+                onClick={() => setDesktopViewMode('logo')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${desktopViewMode === 'logo' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+              >
+                {locale === 'en' ? 'Lots' : 'Prostori'}
+              </button>
+            </div>
+
+            {/* Show total price toggle */}
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-700">Show total price with fees</span>
+              <button
+                onClick={() => setShowTotalPrice(!showTotalPrice)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  showTotalPrice ? 'bg-black' : 'bg-gray-300'
                 }`}
-              />
-            </button>
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    showTotalPrice ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -2032,24 +2051,10 @@ export function SearchPage() {
 
       {/* Desktop: Split layout - 2 column (normal) or 3 column (details view) */}
       <div className="hidden md:flex flex-1 overflow-hidden">
-        {/* Parking Lots Cards - hidden when hubId present */}
-        <div className={`flex flex-col overflow-hidden bg-gray-50 border-r border-gray-200 ${isHubIdMode ? 'hidden' : showDetailsView ? 'flex-1' : 'w-[35%]'} max-h-[calc(100vh-120px)]`}>
-          {/* Sort Dropdown + View Toggle - Top Right */}
+        {/* Parking Lots Cards - hidden when hubId present or logo mode active */}
+        <div className={`flex flex-col overflow-hidden bg-gray-50 border-r border-gray-200 ${isHubIdMode || desktopViewMode === 'logo' ? 'hidden' : showDetailsView ? 'flex-1' : 'w-[35%]'} max-h-[calc(100vh-120px)]`}>
+          {/* Sort Dropdown */}
           <div className="flex-shrink-0 px-4 py-3 bg-gray-100 border-b border-gray-200 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1 bg-white border border-gray-300 rounded-lg p-0.5">
-              <button
-                onClick={() => setDesktopViewMode('list')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${desktopViewMode === 'list' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-              >
-                {locale === 'en' ? 'List' : 'Popis'}
-              </button>
-              <button
-                onClick={() => setDesktopViewMode('logo')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${desktopViewMode === 'logo' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-              >
-                {locale === 'en' ? 'Lots' : 'Prostori'}
-              </button>
-            </div>
             <select
               value={sortBy}
               onChange={(e) => {
@@ -2162,7 +2167,7 @@ export function SearchPage() {
 
                 if (desktopViewMode === 'logo') {
                   return (
-                    <div className="grid grid-cols-1 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 max-w-7xl mx-auto">
                       {filteredListings.map((listing) => {
                         const liveRef = searchLocationPin || mapCenter;
                         const liveListing = { ...listing, distance: parseFloat(haversineKm(liveRef.lat, liveRef.lng, listing.lat, listing.lng).toFixed(1)) };
@@ -2605,8 +2610,8 @@ export function SearchPage() {
         )}
 
         {/* Vehicle Modal - Centered Overlay */}
-        {/* Map 65% RIGHT (normal) or flex-1 RIGHT (details) */}
-        <div className={`bg-gray-100 ${showDetailsView ? 'flex-1' : 'w-[65%]'} pr-2`} style={{ height: 'calc(100vh - 80px)' }}>
+        {/* Map 65% RIGHT (normal) or flex-1 RIGHT (details) or full width (logo mode) */}
+        <div className={`bg-gray-100 ${desktopViewMode === 'logo' ? 'flex-1' : showDetailsView ? 'flex-1' : 'w-[65%]'} pr-2`} style={{ height: 'calc(100vh - 80px)' }}>
           {!isLoaded ? (
             <div className="w-full h-full flex items-center justify-center">
               <div className="relative flex items-center justify-center w-14 h-14">
