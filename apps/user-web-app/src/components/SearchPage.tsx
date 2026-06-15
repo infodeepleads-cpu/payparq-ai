@@ -2165,36 +2165,6 @@ export function SearchPage() {
                   }
                 }
 
-                if (desktopViewMode === 'logo') {
-                  return (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 max-w-7xl mx-auto">
-                      {filteredListings.map((listing) => {
-                        const liveRef = searchLocationPin || mapCenter;
-                        const liveListing = { ...listing, distance: parseFloat(haversineKm(liveRef.lat, liveRef.lng, listing.lat, listing.lng).toFixed(1)) };
-                        const rates = resolveRatesForDate(listing, startTime);
-                        const livePricedListing = { ...liveListing, pricePerHour: rates.hourly, pricePerDay: rates.daily };
-                        const rawPrice = getDisplayPrice(livePricedListing, durationHours, reservationType);
-                        const price = parseFloat((showTotalPrice ? rawPrice + Math.min(1.99, 0.99 + rawPrice * 0.10) : rawPrice).toFixed(2));
-                        const days = Math.round(durationHours / 24) || 1;
-                        const durationLabel = reservationType === 'Mjesečna'
-                          ? (locale === 'en' ? 'Monthly' : 'Mjesečno')
-                          : `${locale === 'en' ? 'Price for' : 'Cijena za'} ${days} ${locale === 'en' ? (days === 1 ? 'day' : 'days') : (days === 1 ? 'dan' : 'dana')}`;
-                        return (
-                          <ParkingLogoCard
-                            key={listing.id}
-                            listing={liveListing as any}
-                            price={price}
-                            durationLabel={durationLabel}
-                            locale={locale}
-                            onBook={() => { setSelectedListing(listing); setShowBookingModal(true); }}
-                            onInfo={() => { setSelectedListing(listing); setShowDetailsView(true); }}
-                          />
-                        );
-                      })}
-                    </div>
-                  );
-                }
-
                 return filteredListings.map((listing) => {
                   const badgeText = badgeMap.get(listing.id);
                   const isSelected = selectedListing?.id === listing.id;
@@ -2611,8 +2581,35 @@ export function SearchPage() {
 
         {/* Vehicle Modal - Centered Overlay */}
         {/* Map 65% RIGHT (normal) or flex-1 RIGHT (details) or full width (logo mode) */}
-        <div className={`bg-gray-100 ${desktopViewMode === 'logo' ? 'flex-1' : showDetailsView ? 'flex-1' : 'w-[65%]'} pr-2`} style={{ height: 'calc(100vh - 80px)' }}>
-          {!isLoaded ? (
+        <div className={`${desktopViewMode === 'logo' ? 'flex-1 bg-white overflow-y-auto' : 'bg-gray-100'} ${desktopViewMode === 'logo' ? '' : 'pr-2'}`} style={{ height: 'calc(100vh - 80px)' }}>
+          {desktopViewMode === 'logo' ? (
+            // Logo/Prostori Grid Mode
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 max-w-7xl mx-auto">
+              {filteredListings.map((listing) => {
+                const liveRef = searchLocationPin || mapCenter;
+                const liveListing = { ...listing, distance: parseFloat(haversineKm(liveRef.lat, liveRef.lng, listing.lat, listing.lng).toFixed(1)) };
+                const rates = resolveRatesForDate(listing, startTime);
+                const livePricedListing = { ...liveListing, pricePerHour: rates.hourly, pricePerDay: rates.daily };
+                const rawPrice = getDisplayPrice(livePricedListing, durationHours, reservationType);
+                const price = parseFloat((showTotalPrice ? rawPrice + Math.min(1.99, 0.99 + rawPrice * 0.10) : rawPrice).toFixed(2));
+                const days = Math.round(durationHours / 24) || 1;
+                const durationLabel = reservationType === 'Mjesečna'
+                  ? (locale === 'en' ? 'Monthly' : 'Mjesečno')
+                  : `${locale === 'en' ? 'Price for' : 'Cijena za'} ${days} ${locale === 'en' ? (days === 1 ? 'day' : 'days') : (days === 1 ? 'dan' : 'dana')}`;
+                return (
+                  <ParkingLogoCard
+                    key={listing.id}
+                    listing={liveListing as any}
+                    price={price}
+                    durationLabel={durationLabel}
+                    locale={locale}
+                    onBook={() => { setSelectedListing(listing); setShowBookingModal(true); }}
+                    onInfo={() => { setSelectedListing(listing); setShowDetailsView(true); }}
+                  />
+                );
+              })}
+            </div>
+          ) : !isLoaded ? (
             <div className="w-full h-full flex items-center justify-center">
               <div className="relative flex items-center justify-center w-14 h-14">
                 <div className="absolute inset-0 rounded-full border-4 border-gray-100 border-t-white animate-spin" style={{ animationDuration: '1s' }} />
