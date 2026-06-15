@@ -39,7 +39,7 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
                     <span style={{ color: '#7c3aed' }}>parkinga u Rovinju</span>
                   </h1>
                 ) : (
-                  <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-white mb-4 break-words">
+                  <h1 className="text-4xl md:text-7xl font-semibold md:font-bold tracking-tight mb-2 md:mb-4 break-words text-white" style={{ lineHeight: '1.2' }}>
                     {locale === 'hr' ? `Pronađite parking u ${city.name}` : `Find Parking in ${city.name}`}
                   </h1>
                 )}
