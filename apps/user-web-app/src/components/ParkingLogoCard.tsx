@@ -23,86 +23,70 @@ export function ParkingLogoCard({
   const brandName = listing.verification_metadata?.personal_brand_name || listing.name;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow">
-      {/* Header with Name and Badge */}
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="font-bold text-lg text-black mb-1">
+    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow flex flex-col min-h-[550px]">
+      {/* Header with Name - Blue Background */}
+      <div className="px-6 py-4 bg-blue-600 border-b border-blue-700">
+        <h3 className="font-bold text-lg text-white">
           {listing.name}
-          {isOnlinePayment && <span className="text-xs text-gray-500"> (Online payment)</span>}
+          {isOnlinePayment && <span className="text-xs text-blue-100"> (Online payment)</span>}
         </h3>
-        <p className="text-xs text-gray-500 uppercase tracking-wider">{brandName}</p>
       </div>
 
-      {/* Rating Section */}
-      <div className="px-6 py-3 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <div className="flex gap-0.5">
-            {[...Array(5)].map((_, i) => (
-              <Star
-                key={i}
-                size={14}
-                className={i < Math.floor(listing.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
-              />
-            ))}
+      {/* Content - flex-1 to push CTA to bottom */}
+      <div className="flex-1 flex flex-col">
+        {/* Rating Section */}
+        <div className="px-6 py-3 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="flex gap-0.5">
+              {[...Array(5)].map((_, i) => (
+                <Star
+                  key={i}
+                  size={14}
+                  className={i < Math.floor(listing.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
+                />
+              ))}
+            </div>
+            <div>
+              <span className="font-semibold text-black text-sm">{listing.rating?.toFixed(1) || '0'}</span>
+              <span className="text-xs text-gray-500 ml-2">({listing.reviewCount || 0} {locale === 'hr' ? 'recenzija' : 'reviews'})</span>
+            </div>
           </div>
-          <div>
-            <span className="font-semibold text-black text-sm">{listing.rating?.toFixed(1) || '0'}</span>
-            <span className="text-xs text-gray-500 ml-2">({listing.reviewCount || 0} {locale === 'hr' ? 'recenzija' : 'reviews'})</span>
+        </div>
+
+        {/* Description - if available */}
+        {listing.description && (
+          <div className="px-6 py-3 border-b border-gray-200">
+            <p className="text-sm text-gray-700 font-medium">{listing.description}</p>
           </div>
+        )}
+
+        {/* Distance/Walking time */}
+        {listing.distance && (
+          <div className="px-6 py-3 border-b border-gray-200">
+            <p className="text-sm text-gray-700">
+              {locale === 'hr' ? `${Math.round(listing.distance * 12)} min hoda od terminala` : `${Math.round(listing.distance * 12)} minute walk from terminal`}
+            </p>
+          </div>
+        )}
+
+        {/* Features - only show if data exists */}
+        {(listing.covered !== undefined || listing.selfPark !== undefined) && (
+          <div className="px-6 py-3 border-b border-gray-200 space-y-1">
+            {listing.covered && <p className="text-sm text-gray-700">✓ {locale === 'hr' ? 'Natkrivena garaža' : 'Covered Garage'}</p>}
+            {!listing.covered && <p className="text-sm text-gray-700">• {locale === 'hr' ? 'Nepokriveno' : 'Uncovered'}</p>}
+            {listing.selfPark && <p className="text-sm text-gray-700">✓ {locale === 'hr' ? 'Samo parkiranje' : 'Self Park'}</p>}
+          </div>
+        )}
+
+        {/* Price Section */}
+        <div className="px-6 py-4 border-b border-gray-200 mt-auto">
+          <p className="text-xs text-gray-500 font-semibold mb-1 uppercase tracking-wider">{durationLabel}</p>
+          <p className="text-3xl font-bold text-black">€{price.toFixed(2)}</p>
         </div>
       </div>
 
-      {/* Description/Features */}
-      <div className="px-6 py-3 border-b border-gray-200">
-        <p className="text-sm text-gray-700 font-medium mb-2">
-          {locale === 'hr' ? 'Servis valet - Vozite direktno na odlazne terminale' : 'Valet service - Drive directly to the departures lounge'}
-        </p>
-      </div>
-
-      {/* Parking Type */}
-      <div className="px-6 py-3 border-b border-gray-200">
-        <p className="text-sm text-gray-700 font-medium">{listing.covered ? 'Covered' : 'Uncovered'}</p>
-      </div>
-
-      {/* Key Policies */}
-      <div className="px-6 py-3 border-b border-gray-200 space-y-1">
-        <p className="text-sm text-gray-700">
-          {locale === 'hr' ? '❌ Nemojte zadržavati ključeve' : '❌ Do Not Keep Keys'}
-        </p>
-        <p className="text-sm text-gray-700">
-          {locale === 'hr' ? '✓ Prosljeđivanje automobila' : '✓ Hand in car keys'}
-        </p>
-      </div>
-
-      {/* Hours */}
-      <div className="px-6 py-3 border-b border-gray-200 space-y-1">
-        <p className="text-sm font-semibold text-gray-900">{locale === 'hr' ? 'Otvoreno 7-24' : 'Open 7-24'}</p>
-        <p className="text-sm text-gray-600">{locale === 'hr' ? 'Otvoreno 24/7' : 'Open 24/7'}</p>
-      </div>
-
-      {/* More Info Link */}
-      <div className="px-6 py-3 border-b border-gray-200">
-        <button
-          onClick={onInfo}
-          className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-        >
-          {locale === 'hr' ? 'Više informacija' : 'More Information'}
-        </button>
-      </div>
-
-      {/* EV Charge Info */}
-      <div className="px-6 py-3 border-b border-gray-200">
-        <p className="text-sm text-gray-600">{locale === 'hr' ? 'Nema EV punjenja' : 'No EV charge'}</p>
-      </div>
-
-      {/* Price Section */}
-      <div className="px-6 py-4 border-b border-gray-200">
-        <p className="text-xs text-gray-500 font-semibold mb-1 uppercase tracking-wider">{durationLabel}</p>
-        <p className="text-3xl font-bold text-black">€{price.toFixed(2)}</p>
-      </div>
-
-      {/* CTA Button */}
-      <div className="px-6 py-4">
+      {/* CTA Button - Always visible at bottom */}
+      <div className="px-6 py-4 border-t border-gray-200">
         <button
           onClick={onBook}
           className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 active:scale-95 transition text-sm shadow-sm hover:shadow-md"
