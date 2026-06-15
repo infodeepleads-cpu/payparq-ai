@@ -262,7 +262,7 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEv
         <button
           onClick={handleSearch}
           disabled={bookingType === 'event' ? !selectedEvent : (!arrivalDateTime || (bookingType === 'hourly_daily' && !departureDateTime))}
-          className="w-full bg-black text-white font-semibold py-3 px-4 rounded-lg hover:bg-black/90 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
           {locale === 'en' ? 'Search parking' : 'Pretraži parkirna mjesta'}
         </button>

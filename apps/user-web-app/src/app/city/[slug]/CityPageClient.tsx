@@ -25,26 +25,26 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-[#05020A] flex flex-col overflow-hidden">
       <SiteHeader />
       <main className="flex-1 overflow-y-auto pt-14 md:pt-16">
         {/* Hero Section */}
-        <section className="w-full px-6 md:px-12 py-8 md:py-10 border-b border-black/10">
+        <section className="w-full px-6 md:px-12 py-8 md:py-10 border-b border-white/10">
           <div className="max-w-6xl mx-auto">
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
                 {locale === 'hr' && slug === 'rovinj' ? (
-                  <h1 className="text-5xl md:text-7xl font-semibold md:font-bold tracking-tight mb-4 break-words" style={{ lineHeight: '1.2' }}>
-                    <span style={{ color: '#000' }}>Usporedi cijene</span><br />
+                  <h1 className="text-5xl md:text-7xl font-semibold md:font-bold tracking-tight mb-4 break-words text-white" style={{ lineHeight: '1.2' }}>
+                    <span style={{ color: '#fff' }}>Usporedi cijene</span><br />
                     <span style={{ color: '#7c3aed' }}>parkinga u Rovinju</span>
                   </h1>
                 ) : (
-                  <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black mb-4 break-words">
+                  <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-white mb-4 break-words">
                     {locale === 'hr' ? `Pronađite parking u ${city.name}` : `Find Parking in ${city.name}`}
                   </h1>
                 )}
 
-                <div className="bg-white border border-black/10 rounded-xl p-6 shadow-sm">
+                <div className="bg-white border border-white/10 rounded-xl p-6 shadow-sm">
                   <AirportBookingFlow
                     defaultLat={city.lat}
                     defaultLng={city.lng}
@@ -54,7 +54,7 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
                 </div>
               </div>
 
-              <div className="hidden md:flex rounded-xl overflow-hidden border border-black/10 shadow-sm md:mt-3" style={{ height: slug === 'rovinj' ? '600px' : '600px' }}>
+              <div className="hidden md:flex rounded-xl overflow-hidden border border-white/10 shadow-sm md:mt-3" style={{ height: slug === 'rovinj' ? '600px' : '600px' }}>
                 <img
                   src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&h=600&fit=crop"
                   alt="Smiling lady"
