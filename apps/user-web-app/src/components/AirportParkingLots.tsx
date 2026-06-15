@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Star, MapPin, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from '@/components/LocaleProvider';
@@ -34,7 +34,6 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
   const { locale } = useLocale();
   const [lots, setLots] = useState<ParkingLot[]>([]);
   const [loading, setLoading] = useState(true);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchNearbyLots = async () => {
@@ -91,16 +90,6 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
     }
   };
 
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollContainerRef.current) {
-      const scrollAmount = 400;
-      scrollContainerRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      });
-    }
-  };
-
   const minPrice = Math.min(...lots.map(l => {
     const price = parseFloat(l.priceFrom.replace('€', ''));
     return isNaN(price) ? 0 : price;
@@ -140,9 +129,9 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
         }}
       />
 
-      <section className="w-full px-6 md:px-12 py-16 border-b border-black/10 bg-white overflow-hidden">
+      <section className="w-full px-6 md:px-12 py-16 border-b border-black/10 bg-white">
         <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col gap-6 mb-10">
+          <div className="flex flex-col gap-6 mb-12">
             <div>
               <p className="text-xs uppercase tracking-[0.12em] text-black/50 mb-2 font-semibold">{locale === 'hr' ? 'Premium Parkiranje' : 'Premium Parking'}</p>
               <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-black">{locale === 'hr' ? `Zajamčena mjesta blizu ${airportName}` : `Guaranteed Spots Near ${airportName}`}</h2>
@@ -150,75 +139,69 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
             <p className="text-base text-black/60 max-w-2xl">{locale === 'hr' ? 'Osigurajte parkirno mjesto na premium lokacijama. Trenutna potvrda, zajamčene best cijene i iznimna usluga.' : 'Secure your parking space at premium locations. Instant confirmation, best prices guaranteed, and exceptional service.'}</p>
           </div>
 
-          <div className="flex items-center gap-4">
-            <button onClick={() => scroll('left')} className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center hover:bg-black/80 transition shadow-sm flex-shrink-0">←</button>
-            <div className="overflow-hidden flex-1">
-              <div ref={scrollContainerRef} className="flex gap-6 overflow-x-auto pb-4 scroll-smooth scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {lots.map((lot) => (
-                  <div key={lot.id} className="flex-shrink-0 w-96 bg-white border border-black/8 rounded-2xl overflow-hidden hover:shadow-xl transition-shadow duration-300 group flex flex-col">
-                    {/* Image */}
-                    <div className="h-48 overflow-hidden bg-gray-100 flex-shrink-0">
-                      <img
-                        src={lot.image}
-                        alt={lot.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {lots.map((lot) => (
+              <div key={lot.id} className="bg-white border border-black/8 rounded-2xl p-6 hover:shadow-lg transition-shadow duration-300 flex flex-col items-center text-center">
+                {/* Logo */}
+                <div className="w-20 h-20 rounded-xl bg-gray-100 flex items-center justify-center mb-4 flex-shrink-0 border border-black/10 overflow-hidden">
+                  {lot.image && (
+                    <img
+                      src={lot.image}
+                      alt={lot.name}
+                      className="w-full h-full object-contain p-2"
+                    />
+                  )}
+                </div>
+
+                {/* Name */}
+                <h3 className="font-bold text-black text-base mb-2 line-clamp-2">{lot.name}</h3>
+
+                {/* Rating */}
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <div className="flex gap-0.5">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        size={13}
+                        className={i < Math.floor(lot.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
                       />
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-6 flex flex-col flex-1 min-h-0">
-                      <div className="flex-1 min-h-0">
-                        <h3 className="font-semibold text-black text-lg mb-1.5">{lot.name}</h3>
-                        <p className="text-xs text-black/60 flex items-center gap-2 mb-3">
-                          <MapPin size={14} className="flex-shrink-0" />
-                          {lot.location}
-                        </p>
-
-                        {/* Rating */}
-                        <div className="flex items-center gap-2 mb-3 pb-3 border-b border-black/8">
-                          <div className="flex gap-0.5">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                size={13}
-                                className={i < Math.floor(lot.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
-                              />
-                            ))}
-                          </div>
-                          <span className="font-semibold text-black text-xs">{lot.rating}</span>
-                          <span className="text-xs text-black/50">({lot.reviewCount})</span>
-                        </div>
-
-                        {/* Description */}
-                        <p className="text-xs text-black/70 mb-3 leading-relaxed line-clamp-2">{lot.description}</p>
-
-                        {/* Badge */}
-                        {lot.badge && (
-                          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 rounded-full mb-3">
-                            <span className="text-xs font-semibold text-green-700">{locale === 'hr' ? 'Zajamčena best cijena' : 'Best price guaranteed'}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Price & CTA - Always at bottom */}
-                      <div className="pt-4 border-t border-black/8 mt-auto flex-shrink-0">
-                        <p className="text-xs text-black/50 font-semibold mb-2 uppercase tracking-wider">{locale === 'hr' ? 'Od' : 'From'}</p>
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-xl font-bold text-black whitespace-nowrap">{lot.priceFrom}</p>
-                          <button
-                            onClick={() => handleBookNow(lot as any)}
-                            className="bg-black text-white font-semibold py-2 px-4 rounded-lg hover:bg-black/90 active:scale-95 transition text-xs shadow-sm hover:shadow-md flex-shrink-0"
-                          >
-                            {locale === 'hr' ? 'Rezerviraj' : 'Reserve'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                  <span className="font-semibold text-black text-xs">{lot.rating}</span>
+                  <span className="text-xs text-black/50">({lot.reviewCount})</span>
+                </div>
+
+                {/* Divider */}
+                <div className="w-full h-px bg-black/8 mb-3" />
+
+                {/* Distance + Features (compact) */}
+                <div className="text-xs text-black/70 space-y-1 mb-4 flex-1">
+                  <p className="flex items-center justify-center gap-1">
+                    <MapPin size={12} className="flex-shrink-0" />
+                    {locale === 'hr' ? `Većina čeka ${Math.round(lot.distance * 12)} min` : `Most people wait ${Math.round(lot.distance * 12)} min`}
+                  </p>
+                  <p>✓ {locale === 'hr' ? 'Natkrivena garaža' : 'Covered Garage'}</p>
+                  <p>✓ {locale === 'hr' ? 'Bez ograničenja veličine' : 'No max. height'}</p>
+                  <p>✓ {locale === 'hr' ? 'Nemojte zadržavati ključeve' : 'Do Not Keep Keys'}</p>
+                  <p>✓ {locale === 'hr' ? 'Prosljeđivanje automobila' : 'Hand in car keys'}</p>
+                  <p className="font-semibold mt-2">{locale === 'hr' ? 'Otvoreno 7-24' : 'Open 7-24'}</p>
+                </div>
+
+                {/* Price */}
+                <div className="w-full mb-4 pb-4 border-t border-black/8">
+                  <p className="text-xs text-black/50 font-semibold mb-1 uppercase tracking-wider">{locale === 'hr' ? 'Cijena za 7 dana' : 'Price for 7 days'}</p>
+                  <p className="text-2xl font-bold text-black">{lot.priceFrom}</p>
+                </div>
+
+                {/* CTA Button */}
+                <button
+                  onClick={() => handleBookNow(lot as any)}
+                  className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 active:scale-95 transition text-sm shadow-sm hover:shadow-md"
+                >
+                  {locale === 'hr' ? 'Nastavi na Checkout' : 'Proceed to Checkout'}
+                </button>
               </div>
-            </div>
-            <button onClick={() => scroll('right')} className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center hover:bg-black/80 transition shadow-sm flex-shrink-0">→</button>
+            ))}
           </div>
         </div>
       </section>
