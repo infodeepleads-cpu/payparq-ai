@@ -29,9 +29,9 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
       <SiteHeader />
       <main className="flex-1 overflow-y-auto pt-14 md:pt-16">
         {/* Hero Section */}
-        <section className="w-full px-6 md:px-12 py-16 md:py-10 md:border-b md:border-white/10 min-h-screen md:min-h-auto">
-          <div className="max-w-6xl mx-auto h-full">
-            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start h-full md:h-auto">
+        <section className="w-full px-6 md:px-12 py-16 md:py-10 md:border-b md:border-white/10">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
               <div className="flex flex-col justify-center">
                 {locale === 'hr' && slug === 'rovinj' ? (
                   <h1 className="text-4xl md:text-7xl font-semibold md:font-bold tracking-tight mb-2 md:mb-4 break-words text-white" style={{ lineHeight: '1.2' }}>
