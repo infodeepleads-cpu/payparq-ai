@@ -29,12 +29,12 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
       <SiteHeader />
       <main className="flex-1 overflow-y-auto pt-14 md:pt-16">
         {/* Hero Section */}
-        <section className="w-full px-6 md:px-12 py-8 md:py-10 border-b border-white/10">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
+        <section className="w-full px-6 md:px-12 py-16 md:py-10 md:border-b md:border-white/10 min-h-screen md:min-h-auto">
+          <div className="max-w-6xl mx-auto h-full">
+            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start h-full md:h-auto">
               <div className="flex flex-col justify-center">
                 {locale === 'hr' && slug === 'rovinj' ? (
-                  <h1 className="text-2xl md:text-7xl font-semibold md:font-bold tracking-tight mb-2 md:mb-4 break-words text-white" style={{ lineHeight: '1.2' }}>
+                  <h1 className="text-4xl md:text-7xl font-semibold md:font-bold tracking-tight mb-2 md:mb-4 break-words text-white" style={{ lineHeight: '1.2' }}>
                     <span style={{ color: '#fff' }}>Usporedi cijene</span><br />
                     <span style={{ color: '#7c3aed' }}>parkinga u Rovinju</span>
                   </h1>
@@ -65,8 +65,10 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
           </div>
         </section>
 
-        {/* Reviews Section */}
-        <AirportReviews airport={slug} locationName={city.name} />
+        {/* Reviews Section - Hidden on mobile */}
+        <div className="hidden md:block">
+          <AirportReviews airport={slug} locationName={city.name} />
+        </div>
 
         {/* Parking Lots Section */}
         <AirportParkingLots airport={slug} lat={city.lat} lng={city.lng} airportName={city.name} />
