@@ -3,12 +3,6 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
-async function ensureTable() {
-  if (!supabaseAdmin) return;
-  await supabaseAdmin.rpc('create_crm_table_if_not_exists').catch(() => {});
-  // Fallback: try direct query, if table doesn't exist supabase will return an error we handle upstream
-}
-
 export async function GET(req: NextRequest) {
   try {
     if (!supabaseAdmin) {
