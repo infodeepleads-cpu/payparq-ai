@@ -23,6 +23,29 @@ const COLUMNS: { key: keyof CRMRow; label: string }[] = [
   { key: 'notes', label: 'Notes' },
 ];
 
+type TemplateLanguage = 'serbian' | 'italian' | 'german' | 'spanish' | 'english';
+
+interface EmailTemplate {
+  subject: string;
+  body: (name: string) => string;
+  disclaimers: Record<TemplateLanguage, string>;
+}
+
+const TEMPLATES: Record<string, EmailTemplate> = {
+  parking: {
+    subject: 'Parking Space Inquiry',
+    body: (name: string) =>
+      `<p><b>Poštovani ${name},</b></p>\n\n<p>Da li imate višak praznog parking mjesta?</p>\n\n<p>Mi smo digitalna parking trgovina, oglašavamo prazna mjesta u Vašim terminima po Vašim cijenama, maržu (service fee) plaća kupac.</p>\n\n<p>Zainteresirani?</p>\n\n<p>--<br />\n<b>Karlo Žamić, mag.oec.</b><br />\nManaging Partner, payparq<br />\npayparq.com<br />\n+385915963139<br />\n--</p>`,
+    disclaimers: {
+      serbian: `IZJAVA O ODRICANJU ODGOVORNOSTI: Sadržaj ove poruke i eventualno priloženih datoteka je povjerljiv i namijenjen je samo osobama ili subjektima koji su navedeni u adresi. Ukoliko ste primili ovu poruku greškom, molimo Vas, obavijestite pošiljatelja, a poruku i sve njene privitke odmah, bez čitanja, trajno uklonite s računala. Bilo kakvo prenošenje, kopiranje ili distribucija informacija sadržanih u poruci trećim osobama je zabranjeno i može biti zakonski kažnjivo. Sadržaj, stavovi i mišljenja izneseni u poruci su autorovi i ne predstavljaju nužno stavove PayParq Grupe. PayParq Group ne prihvaća nikakvu odgovornost za eventualnu štetu nastalu primitkom ove poruke i priloga sadržanih u poruci.`,
+      italian: `DISCLAIMER: Il contenuto di questa email e eventuali allegati è riservato e destinato esclusivamente alle persone o entità indicate come destinatari. Se hai ricevuto questo messaggio per errore, ti preghiamo di notificarlo al mittente e di eliminare permanentemente il messaggio e tutti gli allegati dal tuo computer senza leggerli. Qualsiasi divulgazione, copia o distribuzione delle informazioni contenute in questo messaggio a terzi è proibita e potrebbe essere illegale. Le opinioni espresse in questo messaggio sono solo quelle dell'autore e non rappresentano necessariamente le opinioni di PayParq Group. PayParq Group non assume alcuna responsabilità per eventuali danni causati da questo messaggio.`,
+      german: `HAFTUNGSAUSSCHLUSS: Der Inhalt dieser E-Mail und eventueller Anhänge ist vertraulich und ausschließlich für die Personen oder Entitäten bestimmt, die als Empfänger aufgeführt sind. Sollten Sie diese Nachricht versehentlich erhalten haben, bitten wir Sie, den Absender zu benachrichtigen und die Nachricht sowie alle Anhänge sofort und ohne sie zu lesen dauerhaft von Ihrem Computer zu löschen. Jede Weitergabe, Vervielfältigung oder Verteilung von Informationen aus dieser Nachricht an Dritte ist untersagt und kann rechtswidrig sein. Die in dieser Nachricht geäußerten Meinungen sind nur die des Autors und stellen nicht unbedingt die Ansichten von PayParq Group dar. PayPayParq Group übernimmt keine Haftung für Schäden, die durch diese Nachricht entstehen.`,
+      spanish: `DESCARGO DE RESPONSABILIDAD: El contenido de este correo electrónico y los anexos adjuntos es confidencial y está destinado únicamente a las personas o entidades indicadas como destinatarios. Si ha recibido este mensaje por error, le pedimos que notifique al remitente y elimine permanentemente el mensaje y todos los anexos de su computadora sin leerlos. Está prohibida la divulgación, copia o distribución de cualquier información contenida en este mensaje a terceros y puede ser ilegal. Las opiniones expresadas en este mensaje son solo las del autor y no representan necesariamente las opiniones de PayParq Group. PayParq Group no asume ninguna responsabilidad por los daños causados por este mensaje.`,
+      english: `DISCLAIMER: The contents of this email as well as any files attached to it are confidential and intended solely for individuals or entities to which they are addressed. If you have received this email message in error, please notify the sender and permanently remove the message and all attached files from your computer without reading them. Any disclosure, copying or distribution of all or part of information contained herein to third parties is prohibited and may be unlawful. Please note that any views or opinions presented in this message are solely those of the author and do not necessarily represent the views and opinions of PayParq Group. PayParq Group accepts no liability for any potential damage caused by this message and files attached to it.`,
+    },
+  },
+};
+
 export function CRMTable() {
   const [rows, setRows] = useState<CRMRow[]>([]);
   const [selectedCity, setSelectedCity] = useState('');
@@ -45,6 +68,8 @@ export function CRMTable() {
   const [senderRegion, setSenderRegion] = useState<'international' | 'yugoslavia'>('international');
   const [sendingProgress, setSendingProgress] = useState('');
   const [availableRecipients, setAvailableRecipients] = useState<CRMRow[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<'custom' | 'parking'>('custom');
+  const [templateLanguage, setTemplateLanguage] = useState<'serbian' | 'italian' | 'german' | 'spanish' | 'english'>('serbian');
 
   useEffect(() => {
     fetchCRM();
@@ -262,7 +287,21 @@ export function CRMTable() {
     setSenderType('outreach');
     setSenderRegion('international');
     setSendingProgress('');
+    setSelectedTemplate('custom');
+    setTemplateLanguage('serbian');
     setShowEmailModal(true);
+  };
+
+  const handleApplyTemplate = (templateName: string, language: TemplateLanguage) => {
+    const template = TEMPLATES[templateName];
+    if (template) {
+      setSelectedTemplate(templateName as 'custom' | 'parking');
+      setTemplateLanguage(language);
+      setEmailSubject(template.subject);
+      const disclaimer = template.disclaimers[language];
+      const bodyWithDisclaimer = `${template.body('X')}\n\n${disclaimer}`;
+      setEmailBody(bodyWithDisclaimer);
+    }
   };
 
   const handleAddAllRecipients = () => {
@@ -317,10 +356,12 @@ export function CRMTable() {
         const recipient = allRecipients[i];
         setSendingProgress(`Sending ${i + 1}/${totalRecipients} to ${recipient.name}...`);
 
+        const personalizedBody = emailBody.replace(/X/g, recipient.name);
+
         const payload: any = {
           to: recipient.email,
           subject: emailSubject,
-          text: emailBody,
+          html: personalizedBody,
         };
 
         if (senderType === 'outreach') {
@@ -451,6 +492,62 @@ export function CRMTable() {
             </div>
 
             <div className="p-6 space-y-4">
+              {/* Templates */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Template</label>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <button
+                    onClick={() => setSelectedTemplate('custom')}
+                    className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                      selectedTemplate === 'custom'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Custom
+                  </button>
+                  <button
+                    onClick={() => handleApplyTemplate('parking', templateLanguage)}
+                    className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                      selectedTemplate === 'parking'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Parking Inquiry
+                  </button>
+                </div>
+
+                {selectedTemplate === 'parking' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">Language:</label>
+                    <div className="grid grid-cols-5 gap-1 mb-3">
+                      {(['serbian', 'italian', 'german', 'spanish', 'english'] as TemplateLanguage[]).map((lang) => (
+                        <button
+                          key={lang}
+                          onClick={() => handleApplyTemplate('parking', lang)}
+                          className={`px-2 py-1 rounded text-xs font-medium transition-colors capitalize ${
+                            templateLanguage === lang
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {lang}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Preview */}
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+                      <p className="text-xs font-semibold text-gray-700 mb-2">Preview (X = recipient name):</p>
+                      <div className="bg-white rounded p-2 text-xs text-gray-900 whitespace-pre-wrap break-words max-h-40 overflow-y-auto font-mono">
+                        {emailBody.split('\n').slice(0, 8).join('\n')}...
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Recipients */}
               <div>
                 <div className="flex items-center justify-between mb-2">
