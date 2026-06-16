@@ -14,25 +14,25 @@ interface CRMRow {
   city: string;
 }
 
-const COLUMNS: { key: keyof CRMRow; label: string; width: string }[] = [
-  { key: 'city', label: 'City', width: 'w-24' },
-  { key: 'company', label: 'Company', width: 'w-40' },
-  { key: 'contact', label: 'Contact', width: 'w-36' },
-  { key: 'status', label: 'Status', width: 'w-28' },
-  { key: 'nextAction', label: 'Next Action', width: 'w-40' },
-  { key: 'date', label: 'Date', width: 'w-28' },
-  { key: 'notes', label: 'Notes', width: 'w-64' },
+const COLUMNS: { key: keyof CRMRow; label: string }[] = [
+  { key: 'company', label: 'Company' },
+  { key: 'contact', label: 'Contact' },
+  { key: 'status', label: 'Status' },
+  { key: 'nextAction', label: 'Next Action' },
+  { key: 'date', label: 'Date' },
+  { key: 'notes', label: 'Notes' },
 ];
 
 export function CRMTable() {
   const [rows, setRows] = useState<CRMRow[]>([]);
+  const [selectedCity, setSelectedCity] = useState('');
+  const [cities, setCities] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [setupError, setSetupError] = useState('');
   const [editingCell, setEditingCell] = useState<{ id: string; field: keyof CRMRow } | null>(null);
   const [editValue, setEditValue] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
-  const [importData, setImportData] = useState('');
   const [importCity, setImportCity] = useState('');
   const [importLoading, setImportLoading] = useState(false);
 
@@ -48,6 +48,11 @@ export function CRMTable() {
       const data = await res.json();
       if (Array.isArray(data)) {
         setRows(data);
+        const uniqueCities = Array.from(new Set(data.map((r: CRMRow) => r.city).filter(Boolean))).sort();
+        setCities(uniqueCities as string[]);
+        if (uniqueCities.length > 0 && !selectedCity) {
+          setSelectedCity(uniqueCities[0] as string);
+        }
       } else if (data?.error) {
         setSetupError(data.error);
         setRows([]);
@@ -99,14 +104,14 @@ export function CRMTable() {
 
   const handleAddRow = () => {
     const newRow: CRMRow = {
-      id: Date.now().toString(),
+      id: `${selectedCity}-${Date.now()}`,
       company: '',
       contact: '',
       status: '',
       nextAction: '',
       date: '',
       notes: '',
-      city: '',
+      city: selectedCity,
     };
     const updated = [...rows, newRow];
     setRows(updated);
@@ -121,34 +126,92 @@ export function CRMTable() {
     }
   };
 
-  const handleImport = async () => {
-    if (!importData.trim() || !importCity.trim()) {
-      alert('Please enter both city name and data');
-      return;
-    }
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
     try {
       setImportLoading(true);
+      const text = await file.text();
+
+      // Parse CSV
+      const lines = text.trim().split('\n');
+      const csvRows = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        // Simple CSV parser - handles quoted fields
+        const parts: string[] = [];
+        let current = '';
+        let inQuotes = false;
+
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            parts.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        parts.push(current.trim());
+
+        // Skip tier headers
+        if (!parts[0] || parts[0].toLowerCase().includes('tier') || parts[0].toLowerCase() === 'company') {
+          continue;
+        }
+
+        const company = parts[0] || '';
+        const contact = parts[1] || '';
+        const status = parts[2] || '';
+        const nextAction = parts[3] || '';
+        const date = parts[4] || '';
+        const notes = parts[5] || '';
+
+        if (company) {
+          csvRows.push({
+            company,
+            contact,
+            status,
+            nextAction,
+            date,
+            notes,
+            city: importCity,
+          });
+        }
+      }
+
+      if (csvRows.length === 0) {
+        alert('No valid data found in CSV');
+        return;
+      }
+
       const res = await fetch('/api/crm/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rawData: importData, city: importCity }),
+        body: JSON.stringify({ rows: csvRows, city: importCity }),
       });
 
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
 
-      alert(`Imported ${result.imported} entries for ${importCity}`);
-      setImportData('');
-      setImportCity('');
+      alert(`✅ Imported ${result.imported} entries for ${importCity}`);
       setShowImportModal(false);
+      setImportCity('');
       fetchCRM();
     } catch (error) {
       alert(`Error importing: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setImportLoading(false);
+      e.target.value = '';
     }
   };
+
+  const filteredRows = selectedCity ? rows.filter((r) => r.city === selectedCity) : [];
 
   if (loading) {
     return (
@@ -174,11 +237,33 @@ export function CRMTable() {
         </div>
       )}
 
+      {/* City Selector */}
+      <div className="flex items-center gap-4 flex-wrap bg-white p-4 rounded-lg border border-gray-200">
+        <label className="text-sm font-semibold text-gray-900">City:</label>
+        <select
+          value={selectedCity}
+          onChange={(e) => setSelectedCity(e.target.value)}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white text-gray-900"
+        >
+          <option value="">Select a city...</option>
+          {cities.map((city) => (
+            <option key={city} value={city}>
+              {city} ({rows.filter((r) => r.city === city).length})
+            </option>
+          ))}
+        </select>
+        {selectedCity && (
+          <span className="text-xs text-gray-600">
+            {filteredRows.length} entries in {selectedCity}
+          </span>
+        )}
+      </div>
+
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
         <button
           onClick={handleAddRow}
-          disabled={saving}
+          disabled={saving || !selectedCity}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
         >
           <Plus size={16} />
@@ -190,7 +275,7 @@ export function CRMTable() {
           className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
         >
           <Upload size={16} />
-          Import Data
+          Import CSV
         </button>
         <button
           onClick={fetchCRM}
@@ -201,15 +286,14 @@ export function CRMTable() {
           Refresh
         </button>
         {saving && <span className="text-sm text-gray-600">Saving...</span>}
-        <span className="ml-auto text-sm text-gray-500">{rows.length} entries</span>
       </div>
 
       {/* Import Modal */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Import CRM Data</h2>
+              <h2 className="text-xl font-bold text-gray-900">Import CSV Data</h2>
               <button onClick={() => setShowImportModal(false)} className="text-gray-500 hover:text-gray-700">
                 <X size={20} />
               </button>
@@ -222,24 +306,30 @@ export function CRMTable() {
                   type="text"
                   value={importCity}
                   onChange={(e) => setImportCity(e.target.value)}
-                  placeholder="e.g., Milano, Roma, Venezia"
+                  placeholder="e.g., Torino, Milano, Roma"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 text-gray-900 bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Paste Your Data (Tab-separated from Google Sheets)
-                </label>
-                <p className="text-xs text-gray-600 mb-2">
-                  Select all rows in your sheet (Ctrl+A), copy (Ctrl+C), paste here. Columns expected: Company | Contact | Status | Next Action | Date | Notes
+                <label className="block text-sm font-semibold text-gray-900 mb-2">CSV File</label>
+                <p className="text-xs text-gray-600 mb-3">
+                  Upload a CSV with columns: Company | Contact | Status | Next Action | Date | Notes
                 </p>
-                <textarea
-                  value={importData}
-                  onChange={(e) => setImportData(e.target.value)}
-                  placeholder="Paste your tab-separated data here..."
-                  className="w-full h-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 font-mono text-sm text-gray-900 bg-white"
-                />
+                <label className="block px-4 py-3 border-2 border-dashed border-green-300 rounded-lg cursor-pointer hover:bg-green-50 bg-green-50">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                    disabled={importLoading || !importCity}
+                    className="hidden"
+                  />
+                  <div className="text-center">
+                    <Upload size={20} className="mx-auto text-green-600 mb-2" />
+                    <p className="text-sm font-medium text-gray-900">Click to upload CSV file</p>
+                    <p className="text-xs text-gray-600">or drag and drop</p>
+                  </div>
+                </label>
               </div>
 
               <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
@@ -247,87 +337,89 @@ export function CRMTable() {
                   onClick={() => setShowImportModal(false)}
                   className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-medium transition-colors"
                 >
-                  Cancel
+                  Close
                 </button>
-                <button
-                  onClick={handleImport}
-                  disabled={importLoading}
-                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-                >
-                  {importLoading ? 'Importing...' : 'Import'}
-                </button>
+                {importLoading && <span className="text-sm text-gray-600">Processing...</span>}
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px]">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                {COLUMNS.map((col) => (
-                  <th key={col.key} className={`px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider ${col.width}`}>
-                    {col.label}
-                  </th>
-                ))}
-                <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase tracking-wider w-16">Del</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {rows.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50 transition-colors">
-                  {COLUMNS.map(({ key }) => (
-                    <td key={key} className="px-4 py-2">
-                      {editingCell?.id === row.id && editingCell.field === key ? (
-                        <input
-                          autoFocus
-                          type="text"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={() => handleCellSave(row.id, key, editValue)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleCellSave(row.id, key, editValue);
-                            if (e.key === 'Escape') setEditingCell(null);
-                          }}
-                          className="w-full px-2 py-1 border border-blue-500 rounded text-sm focus:outline-none bg-white text-gray-900"
-                        />
-                      ) : (
-                        <div
-                          onClick={() => handleCellClick(row.id, key, row[key])}
-                          className="px-2 py-1 cursor-pointer hover:bg-blue-50 rounded text-sm text-gray-900 break-words min-h-[28px]"
+      {!selectedCity ? (
+        <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+          <p className="text-gray-600 font-medium">Select a city to view and edit entries</p>
+        </div>
+      ) : (
+        <>
+          {/* Table */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px]">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    {COLUMNS.map((col) => (
+                      <th key={col.key} className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">
+                        {col.label}
+                      </th>
+                    ))}
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase tracking-wider w-16">Del</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredRows.map((row) => (
+                    <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+                      {COLUMNS.map(({ key }) => (
+                        <td key={key} className="px-4 py-2">
+                          {editingCell?.id === row.id && editingCell.field === key ? (
+                            <input
+                              autoFocus
+                              type="text"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onBlur={() => handleCellSave(row.id, key, editValue)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleCellSave(row.id, key, editValue);
+                                if (e.key === 'Escape') setEditingCell(null);
+                              }}
+                              className="w-full px-2 py-1 border border-blue-500 rounded text-sm focus:outline-none bg-white text-gray-900"
+                            />
+                          ) : (
+                            <div
+                              onClick={() => handleCellClick(row.id, key, row[key])}
+                              className="px-2 py-1 cursor-pointer hover:bg-blue-50 rounded text-sm text-gray-900 break-words min-h-[28px]"
+                            >
+                              {row[key] || <span className="text-gray-400 italic text-xs">click to edit</span>}
+                            </div>
+                          )}
+                        </td>
+                      ))}
+                      <td className="px-4 py-2 text-center">
+                        <button
+                          onClick={() => handleDeleteRow(row.id)}
+                          className="inline-flex items-center justify-center p-1.5 hover:bg-red-50 text-red-500 rounded transition-colors"
                         >
-                          {row[key] || <span className="text-gray-400 italic text-xs">click to edit</span>}
-                        </div>
-                      )}
-                    </td>
+                          <Trash2 size={15} />
+                        </button>
+                      </td>
+                    </tr>
                   ))}
-                  <td className="px-4 py-2 text-center">
-                    <button
-                      onClick={() => handleDeleteRow(row.id)}
-                      className="inline-flex items-center justify-center p-1.5 hover:bg-red-50 text-red-500 rounded transition-colors"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-      {rows.length === 0 && !setupError && (
-        <div className="text-center py-12 text-gray-500">
-          No CRM entries yet. Click <strong>Import Data</strong> to import from your spreadsheet, or <strong>Add Row</strong> to add manually.
-        </div>
+          {filteredRows.length === 0 && !setupError && (
+            <div className="text-center py-12 text-gray-500">
+              No entries for {selectedCity}. Click <strong>Import CSV</strong> or <strong>Add Row</strong>.
+            </div>
+          )}
+
+          <div className="text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded-lg p-3">
+            Click any cell to edit inline. Changes auto-save. {filteredRows.length} entries in {selectedCity}
+          </div>
+        </>
       )}
-
-      <div className="text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded-lg p-3">
-        Click any cell to edit inline. Changes auto-save. Columns: City | Company | Contact | Status | Next Action | Date | Notes
-      </div>
     </div>
   );
 }
