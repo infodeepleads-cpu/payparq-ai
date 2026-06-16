@@ -48,6 +48,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No valid data found to import' }, { status: 400 });
     }
 
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 });
+    }
+
     // Insert rows
     const { error } = await supabaseAdmin
       .from('crm_entries')
