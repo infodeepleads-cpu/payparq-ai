@@ -362,19 +362,22 @@ export function CRMTable() {
       const endpoint = senderType === 'transactional' ? '/api/send-email' : '/api/send-outreach-email';
 
       const resolveName = (r: CRMRow): string => {
-        if (r.company && r.company.trim()) return r.company.trim();
+        const company = r.company?.trim() || '';
+        if (company && !company.includes('@')) return company;
+        const contact = r.contact?.trim() || '';
+        if (contact && !contact.includes('@')) return contact;
         return 'Sir/Madam';
       };
 
       const allRecipients = [
         ...emailRecipients.map((r) => ({ email: r.email, name: resolveName(r) })),
-        ...customEmails.map((email) => ({ email, name: email.split('@')[0] })),
+        ...customEmails.map((email) => ({ email, name: 'Sir/Madam' })),
       ];
       const totalRecipients = allRecipients.length;
 
       const invalidRecipients = allRecipients.filter((r) => !r.email || !r.email.includes('@'));
       if (invalidRecipients.length > 0) {
-        const names = invalidRecipients.map((r) => r.name || r.email).join(', ');
+        const names = invalidRecipients.map((r) => r.name).join(', ');
         alert(`These contacts have no email address set: ${names}\n\nPlease fill in the Email column for each contact before sending.`);
         setSendingProgress('');
         return;
@@ -382,7 +385,7 @@ export function CRMTable() {
 
       for (let i = 0; i < allRecipients.length; i++) {
         const recipient = allRecipients[i];
-        const recipientName = String(recipient.name || recipient.email);
+        const recipientName = recipient.name || 'Sir/Madam';
         setSendingProgress(`Sending ${i + 1}/${totalRecipients} to ${recipientName}...`);
 
         const personalizedBody = emailBody.replace(/X/g, recipientName);
