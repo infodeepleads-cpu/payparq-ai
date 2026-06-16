@@ -34,9 +34,15 @@ export function CRMTable() {
       setLoading(true);
       const res = await fetch('/api/crm');
       const data = await res.json();
-      setRows(data || []);
+      if (Array.isArray(data)) {
+        setRows(data);
+      } else {
+        console.error('CRM API error:', data?.error || 'Unknown error');
+        setRows([]);
+      }
     } catch (error) {
       console.error('Error fetching CRM:', error);
+      setRows([]);
     } finally {
       setLoading(false);
     }
