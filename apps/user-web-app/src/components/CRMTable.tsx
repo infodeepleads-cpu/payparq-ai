@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trash2, Plus, RefreshCw, Upload, X, AlertCircle } from 'lucide-react';
+import { Trash2, Plus, RefreshCw, Upload, X, AlertCircle, Mail } from 'lucide-react';
 
 interface CRMRow {
   id: string;
@@ -35,6 +35,14 @@ export function CRMTable() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importCity, setImportCity] = useState('');
   const [importLoading, setImportLoading] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailRecipients, setEmailRecipients] = useState<CRMRow[]>([]);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [senderType, setSenderType] = useState<'transactional' | 'outreach'>('outreach');
+  const [senderRegion, setSenderRegion] = useState<'international' | 'yugoslavia'>('international');
+  const [sendingProgress, setSendingProgress] = useState('');
+  const [availableRecipients, setAvailableRecipients] = useState<CRMRow[]>([]);
 
   useEffect(() => {
     fetchCRM();
@@ -242,6 +250,79 @@ export function CRMTable() {
     setSelectedCity(newCityName);
   };
 
+  const handleOpenEmailModal = (row: CRMRow) => {
+    setEmailRecipients([row]);
+    setAvailableRecipients(filteredRows.filter((r) => r.id !== row.id));
+    setEmailSubject('');
+    setEmailBody('');
+    setSenderType('outreach');
+    setSenderRegion('international');
+    setSendingProgress('');
+    setShowEmailModal(true);
+  };
+
+  const handleAddRecipient = (row: CRMRow) => {
+    if (!emailRecipients.find((r) => r.id === row.id)) {
+      setEmailRecipients([...emailRecipients, row]);
+      setAvailableRecipients(availableRecipients.filter((r) => r.id !== row.id));
+    }
+  };
+
+  const handleRemoveRecipient = (rowId: string) => {
+    const removed = emailRecipients.find((r) => r.id === rowId);
+    setEmailRecipients(emailRecipients.filter((r) => r.id !== rowId));
+    if (removed) {
+      setAvailableRecipients([...availableRecipients, removed]);
+    }
+  };
+
+  const handleSendEmails = async () => {
+    if (!emailSubject.trim() || !emailBody.trim() || emailRecipients.length === 0) {
+      alert('Please fill in all fields and select at least one recipient');
+      return;
+    }
+
+    try {
+      setSendingProgress('Starting...');
+      const endpoint = senderType === 'transactional' ? '/api/send-email' : '/api/send-outreach-email';
+
+      for (let i = 0; i < emailRecipients.length; i++) {
+        const recipient = emailRecipients[i];
+        setSendingProgress(`Sending ${i + 1}/${emailRecipients.length} to ${recipient.contact}...`);
+
+        const payload: any = {
+          to: recipient.contact,
+          subject: emailSubject,
+          text: emailBody,
+        };
+
+        if (senderType === 'outreach') {
+          payload.nameVariant = senderRegion;
+        }
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(`Failed to send to ${recipient.contact}: ${err.error}`);
+        }
+      }
+
+      setSendingProgress('✅ All emails sent successfully!');
+      setTimeout(() => {
+        setShowEmailModal(false);
+        setSendingProgress('');
+      }, 2000);
+    } catch (error) {
+      alert(`Error sending emails: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setSendingProgress('');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -331,6 +412,170 @@ export function CRMTable() {
         {saving && <span className="text-sm text-gray-600">Saving...</span>}
       </div>
 
+      {/* Email Modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Send Email</h2>
+              <button onClick={() => setShowEmailModal(false)} className="text-gray-500 hover:text-gray-700">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Recipients */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Recipients ({emailRecipients.length})</label>
+                <div className="bg-gray-50 rounded-lg p-3 space-y-2 mb-3 max-h-40 overflow-y-auto">
+                  {emailRecipients.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between bg-white p-2 rounded border border-gray-200 text-sm">
+                      <span className="text-gray-900">{r.contact} ({r.company})</span>
+                      <button
+                        onClick={() => handleRemoveRecipient(r.id)}
+                        className="text-red-500 hover:text-red-700 text-xs font-medium"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {availableRecipients.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">Add more recipients:</label>
+                    <select
+                      onChange={(e) => {
+                        const selected = availableRecipients.find((r) => r.id === e.target.value);
+                        if (selected) handleAddRecipient(selected);
+                        e.target.value = '';
+                      }}
+                      defaultValue=""
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white text-gray-900 text-sm"
+                    >
+                      <option value="">Select a contact...</option>
+                      {availableRecipients.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.contact} ({r.company})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Sender Type */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Sender</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setSenderType('transactional')}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
+                      senderType === 'transactional'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    PayParq (Transactional)
+                  </button>
+                  <button
+                    onClick={() => setSenderType('outreach')}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
+                      senderType === 'outreach'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Karlo (Outreach)
+                  </button>
+                </div>
+
+                {senderType === 'outreach' && (
+                  <div className="mt-3">
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">Region:</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setSenderRegion('international')}
+                        className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                          senderRegion === 'international'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Karlo Zamic (International)
+                      </button>
+                      <button
+                        onClick={() => setSenderRegion('yugoslavia')}
+                        className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                          senderRegion === 'yugoslavia'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Karlo Žamić (Yugoslavia)
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Subject */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Subject</label>
+                <input
+                  type="text"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Email subject"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900 bg-white"
+                />
+              </div>
+
+              {/* Body */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Message</label>
+                <textarea
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  placeholder="Email message"
+                  rows={6}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900 bg-white resize-none"
+                />
+              </div>
+
+              {/* Progress */}
+              {sendingProgress && (
+                <div className={`p-3 rounded-lg text-sm ${
+                  sendingProgress.includes('✅')
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-blue-50 text-blue-700 border border-blue-200'
+                }`}>
+                  {sendingProgress}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setShowEmailModal(false)}
+                  disabled={!!sendingProgress}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-medium transition-colors disabled:opacity-50"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={handleSendEmails}
+                  disabled={!emailSubject.trim() || !emailBody.trim() || emailRecipients.length === 0 || !!sendingProgress}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                >
+                  {sendingProgress ? 'Sending...' : `Send to ${emailRecipients.length} recipient(s)`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Import Modal */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -415,6 +660,7 @@ export function CRMTable() {
                         {col.label}
                       </th>
                     ))}
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase tracking-wider w-16">Email</th>
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase tracking-wider w-16">Del</th>
                   </tr>
                 </thead>
@@ -446,6 +692,14 @@ export function CRMTable() {
                           )}
                         </td>
                       ))}
+                      <td className="px-4 py-2 text-center">
+                        <button
+                          onClick={() => handleOpenEmailModal(row)}
+                          className="inline-flex items-center justify-center p-1.5 hover:bg-blue-50 text-blue-500 rounded transition-colors"
+                        >
+                          <Mail size={15} />
+                        </button>
+                      </td>
                       <td className="px-4 py-2 text-center">
                         <button
                           onClick={() => handleDeleteRow(row.id)}
