@@ -130,6 +130,12 @@ export function CRMTable() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!importCity.trim()) {
+      alert('Please enter a city name first');
+      e.target.value = '';
+      return;
+    }
+
     try {
       setImportLoading(true);
       const text = await file.text();
