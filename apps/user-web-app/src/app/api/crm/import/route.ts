@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
       id: `${city}-${i}-${Date.now()}`,
       company: row.company || '',
       contact: row.contact || '',
+      name: row.name || '',
       email: row.email || '',
       status: row.status || '',
       next_action: row.nextAction || '',
