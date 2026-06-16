@@ -7,6 +7,7 @@ interface CRMRow {
   id: string;
   company: string;
   contact: string;
+  email: string;
   status: string;
   nextAction: string;
   date: string;
@@ -17,6 +18,7 @@ interface CRMRow {
 const COLUMNS: { key: keyof CRMRow; label: string }[] = [
   { key: 'company', label: 'Company' },
   { key: 'contact', label: 'Contact' },
+  { key: 'email', label: 'Email' },
   { key: 'status', label: 'Status' },
   { key: 'nextAction', label: 'Next Action' },
   { key: 'date', label: 'Date' },
@@ -154,6 +156,7 @@ export function CRMTable() {
       id: `${selectedCity}-${Date.now()}`,
       company: '',
       contact: '',
+      email: '',
       status: '',
       nextAction: '',
       date: '',
@@ -359,10 +362,18 @@ export function CRMTable() {
       const endpoint = senderType === 'transactional' ? '/api/send-email' : '/api/send-outreach-email';
 
       const allRecipients = [
-        ...emailRecipients.map((r) => ({ email: r.contact, name: r.contact })),
+        ...emailRecipients.map((r) => ({ email: r.email, name: r.contact })),
         ...customEmails.map((email) => ({ email, name: email })),
       ];
       const totalRecipients = allRecipients.length;
+
+      const invalidRecipients = allRecipients.filter((r) => !r.email || !r.email.includes('@'));
+      if (invalidRecipients.length > 0) {
+        const names = invalidRecipients.map((r) => r.name || r.email).join(', ');
+        alert(`These contacts have no email address set: ${names}\n\nPlease fill in the Email column for each contact before sending.`);
+        setSendingProgress('');
+        return;
+      }
 
       for (let i = 0; i < allRecipients.length; i++) {
         const recipient = allRecipients[i];
