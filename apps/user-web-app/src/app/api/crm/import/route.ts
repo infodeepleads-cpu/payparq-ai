@@ -52,12 +52,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 });
     }
 
-    // Insert rows
+    // Insert rows (upsert to avoid duplicate key errors on re-import)
     const { error } = await supabaseAdmin
       .from('crm_entries')
-      .insert(rows);
+      .upsert(rows, { onConflict: 'id' });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase insert error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, imported: rows.length });
   } catch (error) {

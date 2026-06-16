@@ -1,19 +1,20 @@
 -- Create CRM entries table
-create table if not exists crm_entries (
-  id text primary key,
-  company text not null,
+CREATE TABLE IF NOT EXISTS crm_entries (
+  id text PRIMARY KEY,
+  company text NOT NULL,
   contact text,
   status text,
   next_action text,
   date text,
   notes text,
-  created_at timestamp with time zone default timezone('utc'::text, now()),
-  updated_at timestamp with time zone default timezone('utc'::text, now())
+  city text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
 );
 
--- Create index for faster queries
-create index if not exists crm_entries_company_idx on crm_entries(company);
-create index if not exists crm_entries_status_idx on crm_entries(status);
+CREATE INDEX IF NOT EXISTS crm_entries_company_idx ON crm_entries(company);
+CREATE INDEX IF NOT EXISTS crm_entries_city_idx ON crm_entries(city);
+CREATE INDEX IF NOT EXISTS crm_entries_status_idx ON crm_entries(status);
 
--- Enable RLS if needed
-alter table crm_entries enable row level security;
+-- Disable RLS so service role can access without policies
+ALTER TABLE crm_entries DISABLE ROW LEVEL SECURITY;

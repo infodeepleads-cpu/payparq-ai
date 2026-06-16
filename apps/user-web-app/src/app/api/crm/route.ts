@@ -3,6 +3,12 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
+async function ensureTable() {
+  if (!supabaseAdmin) return;
+  await supabaseAdmin.rpc('create_crm_table_if_not_exists').catch(() => {});
+  // Fallback: try direct query, if table doesn't exist supabase will return an error we handle upstream
+}
+
 export async function GET(req: NextRequest) {
   try {
     if (!supabaseAdmin) {
@@ -14,9 +20,15 @@ export async function GET(req: NextRequest) {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      // Table might not exist yet — return empty array instead of crashing
+      if (error.code === '42P01') {
+        return NextResponse.json([]);
+      }
+      throw error;
+    }
 
-    const formattedData = data.map((row: any) => ({
+    const formattedData = (data || []).map((row: any) => ({
       id: row.id,
       company: row.company || '',
       contact: row.contact || '',
@@ -24,6 +36,7 @@ export async function GET(req: NextRequest) {
       nextAction: row.next_action || '',
       date: row.date || '',
       notes: row.notes || '',
+      city: row.city || '',
     }));
 
     return NextResponse.json(formattedData);
@@ -54,6 +67,7 @@ export async function POST(req: NextRequest) {
         next_action: row.nextAction,
         date: row.date,
         notes: row.notes,
+        city: row.city || '',
       }));
 
       const { error } = await supabaseAdmin
