@@ -37,6 +37,8 @@ export function CRMTable() {
   const [importLoading, setImportLoading] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailRecipients, setEmailRecipients] = useState<CRMRow[]>([]);
+  const [customEmails, setCustomEmails] = useState<string[]>([]);
+  const [customEmailInput, setCustomEmailInput] = useState('');
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [senderType, setSenderType] = useState<'transactional' | 'outreach'>('outreach');
@@ -253,12 +255,31 @@ export function CRMTable() {
   const handleOpenEmailModal = (row: CRMRow) => {
     setEmailRecipients([row]);
     setAvailableRecipients(filteredRows.filter((r) => r.id !== row.id));
+    setCustomEmails([]);
+    setCustomEmailInput('');
     setEmailSubject('');
     setEmailBody('');
     setSenderType('outreach');
     setSenderRegion('international');
     setSendingProgress('');
     setShowEmailModal(true);
+  };
+
+  const handleAddAllRecipients = () => {
+    setEmailRecipients([...emailRecipients, ...availableRecipients]);
+    setAvailableRecipients([]);
+  };
+
+  const handleAddCustomEmail = () => {
+    const email = customEmailInput.trim();
+    if (email && !customEmails.includes(email)) {
+      setCustomEmails([...customEmails, email]);
+      setCustomEmailInput('');
+    }
+  };
+
+  const handleRemoveCustomEmail = (email: string) => {
+    setCustomEmails(customEmails.filter((e) => e !== email));
   };
 
   const handleAddRecipient = (row: CRMRow) => {
@@ -277,7 +298,7 @@ export function CRMTable() {
   };
 
   const handleSendEmails = async () => {
-    if (!emailSubject.trim() || !emailBody.trim() || emailRecipients.length === 0) {
+    if (!emailSubject.trim() || !emailBody.trim() || (emailRecipients.length === 0 && customEmails.length === 0)) {
       alert('Please fill in all fields and select at least one recipient');
       return;
     }
@@ -286,12 +307,18 @@ export function CRMTable() {
       setSendingProgress('Starting...');
       const endpoint = senderType === 'transactional' ? '/api/send-email' : '/api/send-outreach-email';
 
-      for (let i = 0; i < emailRecipients.length; i++) {
-        const recipient = emailRecipients[i];
-        setSendingProgress(`Sending ${i + 1}/${emailRecipients.length} to ${recipient.contact}...`);
+      const allRecipients = [
+        ...emailRecipients.map((r) => ({ email: r.contact, name: r.contact })),
+        ...customEmails.map((email) => ({ email, name: email })),
+      ];
+      const totalRecipients = allRecipients.length;
+
+      for (let i = 0; i < allRecipients.length; i++) {
+        const recipient = allRecipients[i];
+        setSendingProgress(`Sending ${i + 1}/${totalRecipients} to ${recipient.name}...`);
 
         const payload: any = {
-          to: recipient.contact,
+          to: recipient.email,
           subject: emailSubject,
           text: emailBody,
         };
@@ -308,7 +335,7 @@ export function CRMTable() {
 
         if (!res.ok) {
           const err = await res.json();
-          throw new Error(`Failed to send to ${recipient.contact}: ${err.error}`);
+          throw new Error(`Failed to send to ${recipient.name}: ${err.error}`);
         }
       }
 
@@ -426,7 +453,18 @@ export function CRMTable() {
             <div className="p-6 space-y-4">
               {/* Recipients */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">Recipients ({emailRecipients.length})</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-semibold text-gray-900">Recipients ({emailRecipients.length + customEmails.length})</label>
+                  {availableRecipients.length > 0 && (
+                    <button
+                      onClick={handleAddAllRecipients}
+                      className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded font-medium"
+                    >
+                      Add All ({availableRecipients.length})
+                    </button>
+                  )}
+                </div>
+
                 <div className="bg-gray-50 rounded-lg p-3 space-y-2 mb-3 max-h-40 overflow-y-auto">
                   {emailRecipients.map((r) => (
                     <div key={r.id} className="flex items-center justify-between bg-white p-2 rounded border border-gray-200 text-sm">
@@ -439,11 +477,22 @@ export function CRMTable() {
                       </button>
                     </div>
                   ))}
+                  {customEmails.map((email) => (
+                    <div key={email} className="flex items-center justify-between bg-white p-2 rounded border border-gray-200 text-sm">
+                      <span className="text-gray-900">{email}</span>
+                      <button
+                        onClick={() => handleRemoveCustomEmail(email)}
+                        className="text-red-500 hover:text-red-700 text-xs font-medium"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
                 </div>
 
                 {availableRecipients.length > 0 && (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-2">Add more recipients:</label>
+                  <div className="mb-3">
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">Add from contacts:</label>
                     <select
                       onChange={(e) => {
                         const selected = availableRecipients.find((r) => r.id === e.target.value);
@@ -462,6 +511,29 @@ export function CRMTable() {
                     </select>
                   </div>
                 )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-2">Or add custom email:</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={customEmailInput}
+                      onChange={(e) => setCustomEmailInput(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') handleAddCustomEmail();
+                      }}
+                      placeholder="e.g., kzamic@gmail.com"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white text-gray-900 text-sm"
+                    />
+                    <button
+                      onClick={handleAddCustomEmail}
+                      disabled={!customEmailInput.trim()}
+                      className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Sender Type */}
@@ -502,7 +574,7 @@ export function CRMTable() {
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
-                        Karlo Zamic (International)
+                        Karlo Zamic (Int'l)
                       </button>
                       <button
                         onClick={() => setSenderRegion('yugoslavia')}
@@ -512,7 +584,7 @@ export function CRMTable() {
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
-                        Karlo Žamić (Yugoslavia)
+                        Karlo Žamić (Yu)
                       </button>
                     </div>
                   </div>
@@ -565,10 +637,10 @@ export function CRMTable() {
                 </button>
                 <button
                   onClick={handleSendEmails}
-                  disabled={!emailSubject.trim() || !emailBody.trim() || emailRecipients.length === 0 || !!sendingProgress}
+                  disabled={!emailSubject.trim() || !emailBody.trim() || (emailRecipients.length === 0 && customEmails.length === 0) || !!sendingProgress}
                   className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
-                  {sendingProgress ? 'Sending...' : `Send to ${emailRecipients.length} recipient(s)`}
+                  {sendingProgress ? 'Sending...' : `Send to ${emailRecipients.length + customEmails.length} recipient(s)`}
                 </button>
               </div>
             </div>
