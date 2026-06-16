@@ -7,7 +7,6 @@ interface CRMRow {
   id: string;
   company: string;
   contact: string;
-  name: string;
   email: string;
   status: string;
   nextAction: string;
@@ -17,9 +16,8 @@ interface CRMRow {
 }
 
 const COLUMNS: { key: keyof CRMRow; label: string }[] = [
-  { key: 'company', label: 'Company' },
+  { key: 'company', label: 'Tvrtka' },
   { key: 'contact', label: 'Contact' },
-  { key: 'name', label: 'Name' },
   { key: 'email', label: 'Email' },
   { key: 'status', label: 'Status' },
   { key: 'nextAction', label: 'Next Action' },
@@ -158,7 +156,6 @@ export function CRMTable() {
       id: `${selectedCity}-${Date.now()}`,
       company: '',
       contact: '',
-      name: '',
       email: '',
       status: '',
       nextAction: '',
@@ -365,7 +362,6 @@ export function CRMTable() {
       const endpoint = senderType === 'transactional' ? '/api/send-email' : '/api/send-outreach-email';
 
       const resolveName = (r: CRMRow): string => {
-        if (r.name && r.name.trim()) return r.name.trim();
         if (r.company && r.company.trim()) return r.company.trim();
         return 'Sir/Madam';
       };
