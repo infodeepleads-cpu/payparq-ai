@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const { to, subject, text } = await req.json();
 
     const result = await resend.emails.send({
-      from: 'PayParq <noreply@payparq.com>',
+      from: 'PayParq <team@info.payparq.com>',
       to,
       subject,
       text,
