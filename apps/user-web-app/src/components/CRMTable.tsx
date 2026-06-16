@@ -73,7 +73,7 @@ export function CRMTable() {
   const [importCity, setImportCity] = useState('');
   const [importLoading, setImportLoading] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [emailRecipients, setEmailRecipients] = useState<CRMRow[]>([]);
+  const [emailRecipients, setEmailRecipients] = useState<Array<{ id: string; email: string; displayName: string }>>([]);
   const [customEmails, setCustomEmails] = useState<string[]>([]);
   const [customEmailInput, setCustomEmailInput] = useState('');
   const [emailSubject, setEmailSubject] = useState('');
@@ -293,7 +293,11 @@ export function CRMTable() {
   };
 
   const handleOpenEmailModal = (row: CRMRow) => {
-    setEmailRecipients([row]);
+    setEmailRecipients([{
+      id: row.id,
+      email: row.email,
+      displayName: extractDisplayName(row),
+    }]);
     setAvailableRecipients(filteredRows.filter((r) => r.id !== row.id));
     setCustomEmails([]);
     setCustomEmailInput('');
@@ -305,6 +309,15 @@ export function CRMTable() {
     setSelectedTemplate('custom');
     setTemplateLanguage('serbian');
     setShowEmailModal(true);
+  };
+
+  const handleCloseEmailModal = () => {
+    setShowEmailModal(false);
+    setEmailRecipients([]);
+    setAvailableRecipients(filteredRows);
+    setCustomEmails([]);
+    setEmailSubject('');
+    setEmailBody('');
   };
 
   const handleApplyTemplate = (templateName: string, language: TemplateLanguage) => {
@@ -319,8 +332,21 @@ export function CRMTable() {
     }
   };
 
+  const extractDisplayName = (row: CRMRow): string => {
+    const company = row.company?.trim() || '';
+    if (company && !company.includes('@')) return company;
+    const contact = row.contact?.trim() || '';
+    if (contact && !contact.includes('@')) return contact;
+    return 'Sir/Madam';
+  };
+
   const handleAddAllRecipients = () => {
-    setEmailRecipients([...emailRecipients, ...availableRecipients]);
+    const newRecipients = availableRecipients.map((row) => ({
+      id: row.id,
+      email: row.email,
+      displayName: extractDisplayName(row),
+    }));
+    setEmailRecipients([...emailRecipients, ...newRecipients]);
     setAvailableRecipients([]);
   };
 
@@ -338,7 +364,11 @@ export function CRMTable() {
 
   const handleAddRecipient = (row: CRMRow) => {
     if (!emailRecipients.find((r) => r.id === row.id)) {
-      setEmailRecipients([...emailRecipients, row]);
+      setEmailRecipients([...emailRecipients, {
+        id: row.id,
+        email: row.email,
+        displayName: extractDisplayName(row),
+      }]);
       setAvailableRecipients(availableRecipients.filter((r) => r.id !== row.id));
     }
   };
@@ -347,7 +377,10 @@ export function CRMTable() {
     const removed = emailRecipients.find((r) => r.id === rowId);
     setEmailRecipients(emailRecipients.filter((r) => r.id !== rowId));
     if (removed) {
-      setAvailableRecipients([...availableRecipients, removed]);
+      const originalRow = rows.find((r) => r.id === rowId);
+      if (originalRow) {
+        setAvailableRecipients([...availableRecipients, originalRow]);
+      }
     }
   };
 
@@ -361,23 +394,15 @@ export function CRMTable() {
       setSendingProgress('Starting...');
       const endpoint = senderType === 'transactional' ? '/api/send-email' : '/api/send-outreach-email';
 
-      const resolveName = (r: CRMRow): string => {
-        const company = r.company?.trim() || '';
-        if (company && !company.includes('@')) return company;
-        const contact = r.contact?.trim() || '';
-        if (contact && !contact.includes('@')) return contact;
-        return 'Sir/Madam';
-      };
-
       const allRecipients = [
-        ...emailRecipients.map((r) => ({ email: r.email, name: resolveName(r) })),
-        ...customEmails.map((email) => ({ email, name: 'Sir/Madam' })),
+        ...emailRecipients.map((r) => ({ email: r.email, displayName: r.displayName })),
+        ...customEmails.map((email) => ({ email, displayName: 'Sir/Madam' })),
       ];
       const totalRecipients = allRecipients.length;
 
       const invalidRecipients = allRecipients.filter((r) => !r.email || !r.email.includes('@'));
       if (invalidRecipients.length > 0) {
-        const names = invalidRecipients.map((r) => r.name).join(', ');
+        const names = invalidRecipients.map((r) => r.displayName).join(', ');
         alert(`These contacts have no email address set: ${names}\n\nPlease fill in the Email column for each contact before sending.`);
         setSendingProgress('');
         return;
@@ -385,7 +410,7 @@ export function CRMTable() {
 
       for (let i = 0; i < allRecipients.length; i++) {
         const recipient = allRecipients[i];
-        const recipientName = recipient.name || 'Sir/Madam';
+        const recipientName = recipient.displayName;
         setSendingProgress(`Sending ${i + 1}/${totalRecipients} to ${recipientName}...`);
 
         const personalizedBody = emailBody.replace(/X/g, recipientName);
@@ -420,7 +445,7 @@ export function CRMTable() {
 
       setSendingProgress('✅ All emails sent successfully!');
       setTimeout(() => {
-        setShowEmailModal(false);
+        handleCloseEmailModal();
         setSendingProgress('');
       }, 2000);
     } catch (error) {
@@ -524,7 +549,7 @@ export function CRMTable() {
           <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900">Send Email</h2>
-              <button onClick={() => setShowEmailModal(false)} className="text-gray-500 hover:text-gray-700">
+              <button onClick={handleCloseEmailModal} className="text-gray-500 hover:text-gray-700">
                 <X size={20} />
               </button>
             </div>
@@ -613,7 +638,7 @@ export function CRMTable() {
                 <div className="bg-gray-50 rounded-lg p-3 space-y-2 mb-3 max-h-40 overflow-y-auto">
                   {emailRecipients.map((r) => (
                     <div key={r.id} className="flex items-center justify-between bg-white p-2 rounded border border-gray-200 text-sm">
-                      <span className="text-gray-900">{r.contact} ({r.company})</span>
+                      <span className="text-gray-900">{r.displayName} ({r.email})</span>
                       <button
                         onClick={() => handleRemoveRecipient(r.id)}
                         className="text-red-500 hover:text-red-700 text-xs font-medium"
@@ -774,7 +799,7 @@ export function CRMTable() {
               {/* Actions */}
               <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
                 <button
-                  onClick={() => setShowEmailModal(false)}
+                  onClick={handleCloseEmailModal}
                   disabled={!!sendingProgress}
                   className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
