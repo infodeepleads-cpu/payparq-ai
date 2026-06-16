@@ -213,6 +213,29 @@ export function CRMTable() {
 
   const filteredRows = selectedCity ? rows.filter((r) => r.city === selectedCity) : [];
 
+  const handleDeleteCity = () => {
+    if (!selectedCity) return;
+    if (!confirm(`Delete all ${filteredRows.length} entries from ${selectedCity}? This cannot be undone.`)) return;
+
+    const updated = rows.filter((r) => r.city !== selectedCity);
+    setRows(updated);
+    saveCRM(updated);
+    setSelectedCity('');
+  };
+
+  const handleRenameCity = () => {
+    if (!selectedCity) return;
+    const newCityName = prompt(`Rename "${selectedCity}" to:`, selectedCity);
+    if (!newCityName || newCityName === selectedCity) return;
+
+    const updated = rows.map((r) =>
+      r.city === selectedCity ? { ...r, city: newCityName } : r
+    );
+    setRows(updated);
+    saveCRM(updated);
+    setSelectedCity(newCityName);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -238,7 +261,7 @@ export function CRMTable() {
       )}
 
       {/* City Selector */}
-      <div className="flex items-center gap-4 flex-wrap bg-white p-4 rounded-lg border border-gray-200">
+      <div className="flex items-center gap-3 flex-wrap bg-white p-4 rounded-lg border border-gray-200">
         <label className="text-sm font-semibold text-gray-900">City:</label>
         <select
           value={selectedCity}
@@ -253,9 +276,23 @@ export function CRMTable() {
           ))}
         </select>
         {selectedCity && (
-          <span className="text-xs text-gray-600">
-            {filteredRows.length} entries in {selectedCity}
-          </span>
+          <>
+            <span className="text-xs text-gray-600">
+              {filteredRows.length} entries
+            </span>
+            <button
+              onClick={handleRenameCity}
+              className="px-3 py-1.5 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded font-medium transition-colors"
+            >
+              Rename
+            </button>
+            <button
+              onClick={handleDeleteCity}
+              className="px-3 py-1.5 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded font-medium transition-colors"
+            >
+              Delete City
+            </button>
+          </>
         )}
       </div>
 
@@ -316,20 +353,29 @@ export function CRMTable() {
                 <p className="text-xs text-gray-600 mb-3">
                   Upload a CSV with columns: Company | Contact | Status | Next Action | Date | Notes
                 </p>
-                <label className="block px-4 py-3 border-2 border-dashed border-green-300 rounded-lg cursor-pointer hover:bg-green-50 bg-green-50">
+                <div className={`block px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                  importCity
+                    ? 'border-green-300 hover:bg-green-50 bg-green-50'
+                    : 'border-gray-300 bg-gray-50 opacity-50'
+                }`}>
                   <input
                     type="file"
+                    id="csv-upload"
                     accept=".csv"
                     onChange={handleFileUpload}
-                    disabled={importLoading || !importCity}
+                    disabled={importLoading}
                     className="hidden"
                   />
-                  <div className="text-center">
-                    <Upload size={20} className="mx-auto text-green-600 mb-2" />
-                    <p className="text-sm font-medium text-gray-900">Click to upload CSV file</p>
-                    <p className="text-xs text-gray-600">or drag and drop</p>
-                  </div>
-                </label>
+                  <label htmlFor="csv-upload" className="cursor-pointer block">
+                    <div className="text-center">
+                      <Upload size={20} className={`mx-auto mb-2 ${importCity ? 'text-green-600' : 'text-gray-400'}`} />
+                      <p className={`text-sm font-medium ${importCity ? 'text-gray-900' : 'text-gray-500'}`}>
+                        {importCity ? 'Click to upload CSV file' : 'Enter city name first'}
+                      </p>
+                      <p className="text-xs text-gray-600">or drag and drop</p>
+                    </div>
+                  </label>
+                </div>
               </div>
 
               <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
