@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trash2, Plus, RefreshCw } from 'lucide-react';
+import { Trash2, Plus, RefreshCw, Upload, X } from 'lucide-react';
 
 interface CRMRow {
   id: string;
@@ -19,6 +19,10 @@ export function CRMTable() {
   const [saving, setSaving] = useState(false);
   const [editingCell, setEditingCell] = useState<{ id: string; field: keyof CRMRow } | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importData, setImportData] = useState('');
+  const [importCity, setImportCity] = useState('');
+  const [importLoading, setImportLoading] = useState(false);
 
   // Fetch data
   useEffect(() => {
@@ -91,6 +95,35 @@ export function CRMTable() {
     }
   };
 
+  const handleImport = async () => {
+    if (!importData.trim() || !importCity.trim()) {
+      alert('Please enter both city name and data');
+      return;
+    }
+
+    try {
+      setImportLoading(true);
+      const res = await fetch('/api/crm/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rawData: importData, city: importCity }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
+
+      alert(`✅ Imported ${result.imported} entries for ${importCity}`);
+      setImportData('');
+      setImportCity('');
+      setShowImportModal(false);
+      fetchCRM();
+    } catch (error) {
+      alert(`Error importing: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -112,6 +145,14 @@ export function CRMTable() {
           Add Row
         </button>
         <button
+          onClick={() => setShowImportModal(true)}
+          disabled={saving}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+        >
+          <Upload size={16} />
+          Import Data
+        </button>
+        <button
           onClick={fetchCRM}
           disabled={saving}
           className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-medium transition-colors disabled:opacity-50"
@@ -121,6 +162,63 @@ export function CRMTable() {
         </button>
         {saving && <span className="text-sm text-gray-600">Saving...</span>}
       </div>
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Import CRM Data</h2>
+              <button
+                onClick={() => setShowImportModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">City Name</label>
+                <input
+                  type="text"
+                  value={importCity}
+                  onChange={(e) => setImportCity(e.target.value)}
+                  placeholder="e.g., Milano, Roma, Venezia"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Paste Your Data (Tab-separated)</label>
+                <p className="text-xs text-gray-600 mb-2">Copy from your spreadsheet and paste here. Columns: Company | Contact | Status | Next Action | Date | Notes</p>
+                <textarea
+                  value={importData}
+                  onChange={(e) => setImportData(e.target.value)}
+                  placeholder="Paste your tab-separated data here..."
+                  className="w-full h-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 font-mono text-sm"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setShowImportModal(false)}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleImport}
+                  disabled={importLoading}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                >
+                  {importLoading ? 'Importing...' : 'Import'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
