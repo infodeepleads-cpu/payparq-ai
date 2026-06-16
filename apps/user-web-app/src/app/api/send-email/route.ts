@@ -7,14 +7,21 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   try {
-    const { to, subject, text } = await req.json();
+    const { to, subject, text, html } = await req.json();
 
-    const result = await resend.emails.send({
+    const payload: any = {
       from: 'PayParq <team@info.payparq.com>',
       to,
       subject,
-      text,
-    });
+    };
+
+    if (html) {
+      payload.html = html;
+    } else if (text) {
+      payload.text = text;
+    }
+
+    const result = await resend.emails.send(payload);
 
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: 400 });
