@@ -1,5 +1,5 @@
 'use client';
-
+// v2
 import { useState, useEffect } from 'react';
 import { Trash2, Plus, RefreshCw, Upload, X, AlertCircle, Mail } from 'lucide-react';
 
