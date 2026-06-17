@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Trash2, Plus, RefreshCw, Upload, X, AlertCircle, Mail, BarChart2 } from 'lucide-react';
 import { ManagementDashboard } from '@/components/ManagementDashboard';
+import { SendSequenceModal } from '@/components/SendSequenceModal';
 
 interface CRMRow {
   id: string;
@@ -124,6 +125,8 @@ export function CRMTable() {
   const [sequences, setSequences] = useState<any[]>([]);
   const [selectedSequence, setSelectedSequence] = useState('');
   const [enrollmentProgress, setEnrollmentProgress] = useState('');
+  const [showSendSequenceModal, setShowSendSequenceModal] = useState(false);
+  const [selectedRowsForSequence, setSelectedRowsForSequence] = useState<CRMRow[]>([]);
 
   useEffect(() => {
     fetchCRM();
@@ -649,6 +652,17 @@ export function CRMTable() {
           Dashboard
         </button>
         <button
+          onClick={() => {
+            setSelectedRowsForSequence(filteredRows);
+            setShowSendSequenceModal(true);
+          }}
+          disabled={!selectedCity || filteredRows.length === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+        >
+          🎯
+          Send Sequence
+        </button>
+        <button
           onClick={() => setShowSequenceEnrollModal(true)}
           disabled={!selectedCity || filteredRows.length === 0}
           className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
@@ -687,6 +701,13 @@ export function CRMTable() {
       {showDashboard && (
         <ManagementDashboard rows={rows} onClose={() => setShowDashboard(false)} />
       )}
+
+      {/* Send Parking Sequence Modal */}
+      <SendSequenceModal
+        isOpen={showSendSequenceModal}
+        onClose={() => setShowSendSequenceModal(false)}
+        selectedRows={selectedRowsForSequence}
+      />
 
       {/* Email Modal */}
       {showEmailModal && (

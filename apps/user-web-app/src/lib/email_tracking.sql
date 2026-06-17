@@ -5,10 +5,10 @@ CREATE TABLE IF NOT EXISTS email_sends (
   enrollment_id UUID NOT NULL,
   recipient_email TEXT NOT NULL,
   email_number INTEGER NOT NULL,
-  language TEXT NOT NULL, -- 'hr', 'en', 'de', 'it', 'fr'
+  language TEXT NOT NULL DEFAULT 'en',
   subject TEXT,
   sent_at TIMESTAMP DEFAULT NOW(),
-  status TEXT DEFAULT 'sent', -- 'sent', 'bounced', 'failed'
+  status TEXT DEFAULT 'sent',
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -24,13 +24,13 @@ CREATE TABLE IF NOT EXISTS email_replies (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Add pause tracking to sequence_enrollments (if not exists)
+-- Update sequence_enrollments table with new columns
 ALTER TABLE sequence_enrollments
-ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active', -- 'active', 'paused', 'completed'
+ADD COLUMN IF NOT EXISTS language TEXT DEFAULT 'en',
 ADD COLUMN IF NOT EXISTS paused_at TIMESTAMP,
 ADD COLUMN IF NOT EXISTS reply_detected_at TIMESTAMP;
 
--- Indexes for fast lookups
+-- Indexes
 CREATE INDEX IF NOT EXISTS idx_email_sends_enrollment ON email_sends(enrollment_id);
 CREATE INDEX IF NOT EXISTS idx_email_sends_recipient ON email_sends(recipient_email);
 CREATE INDEX IF NOT EXISTS idx_email_sends_sent_at ON email_sends(sent_at);
