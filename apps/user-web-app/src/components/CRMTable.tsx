@@ -1,7 +1,7 @@
 'use client';
-// v2
 import { useState, useEffect } from 'react';
-import { Trash2, Plus, RefreshCw, Upload, X, AlertCircle, Mail } from 'lucide-react';
+import { Trash2, Plus, RefreshCw, Upload, X, AlertCircle, Mail, BarChart2 } from 'lucide-react';
+import { ManagementDashboard } from '@/components/ManagementDashboard';
 
 interface CRMRow {
   id: string;
@@ -84,6 +84,7 @@ export function CRMTable() {
   const [availableRecipients, setAvailableRecipients] = useState<CRMRow[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<'custom' | 'parking' | 'parking-bilingual'>('custom');
   const [templateLanguage, setTemplateLanguage] = useState<'serbian' | 'italian' | 'german' | 'spanish' | 'english'>('serbian');
+  const [showDashboard, setShowDashboard] = useState(false);
 
   useEffect(() => {
     fetchCRM();
@@ -517,6 +518,13 @@ export function CRMTable() {
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
         <button
+          onClick={() => setShowDashboard(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+        >
+          <BarChart2 size={16} />
+          Dashboard
+        </button>
+        <button
           onClick={handleAddRow}
           disabled={saving || !selectedCity}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
@@ -542,6 +550,11 @@ export function CRMTable() {
         </button>
         {saving && <span className="text-sm text-gray-600">Saving...</span>}
       </div>
+
+      {/* Management Dashboard */}
+      {showDashboard && (
+        <ManagementDashboard rows={rows} onClose={() => setShowDashboard(false)} />
+      )}
 
       {/* Email Modal */}
       {showEmailModal && (
@@ -911,7 +924,18 @@ export function CRMTable() {
                     <tr key={row.id} className="hover:bg-gray-50 transition-colors">
                       {COLUMNS.map(({ key }) => (
                         <td key={key} className="px-4 py-2">
-                          {editingCell?.id === row.id && editingCell.field === key ? (
+                          {key === 'status' ? (
+                            <select
+                              value={row.status}
+                              onChange={(e) => handleCellSave(row.id, 'status', e.target.value)}
+                              className="w-full px-2 py-1 border border-gray-200 rounded text-sm bg-white text-gray-900 focus:outline-none focus:border-blue-500"
+                            >
+                              <option value="">—</option>
+                              <option value="Newly Contacted">Newly Contacted</option>
+                              <option value="DEMO Sent">DEMO Sent</option>
+                              <option value="Closed">Closed</option>
+                            </select>
+                          ) : editingCell?.id === row.id && editingCell.field === key ? (
                             <input
                               autoFocus
                               type="text"
