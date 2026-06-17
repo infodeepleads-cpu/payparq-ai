@@ -6,6 +6,10 @@
                   {
                       "path":  "/api/cron/review-emails",
                       "schedule":  "0 8 * * *"
+                  },
+                  {
+                      "path":  "/api/scrape/airbnb-booking",
+                      "schedule":  "0 2 * * *"
                   }
               ]
 }
