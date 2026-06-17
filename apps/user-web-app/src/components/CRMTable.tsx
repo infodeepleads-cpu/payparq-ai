@@ -192,7 +192,7 @@ export function CRMTable() {
   const [senderRegion, setSenderRegion] = useState<'international' | 'yugoslavia'>('international');
   const [sendingProgress, setSendingProgress] = useState('');
   const [availableRecipients, setAvailableRecipients] = useState<CRMRow[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<'custom' | 'parking' | 'parking-bilingual'>('custom');
+  const [selectedTemplate, setSelectedTemplate] = useState<'custom' | 'parking' | 'parking-bilingual' | 'parking-sequence'>('custom');
   const [templateLanguage, setTemplateLanguage] = useState<'serbian' | 'italian' | 'german' | 'spanish' | 'english'>('serbian');
   const [showDashboard, setShowDashboard] = useState(false);
   const [abTestEnabled, setAbTestEnabled] = useState(false);
