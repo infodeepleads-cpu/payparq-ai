@@ -31,28 +31,14 @@ export function ParkingLogoCard({
     <>
       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow flex flex-col min-h-[550px]">
         {/* Header - Dark Blue */}
-        <div className="px-6 py-3 bg-blue-600 border-b border-blue-700">
-          <h3 className="font-bold text-lg text-white leading-tight">
+        <div className="px-6 py-5 bg-blue-600 border-b border-blue-700">
+          <h3 className="font-black text-2xl text-white leading-tight">
             {listing.name}
           </h3>
         </div>
 
         {/* Content - flex-1 to push CTA to bottom */}
         <div className="flex-1 flex flex-col">
-          {/* Logo/Photo Section */}
-          {(listing.logo || listing.photo) && (
-            <div className="px-6 py-3 border-b border-gray-200 flex justify-center">
-              <img
-                src={listing.logo || listing.photo}
-                alt={listing.name}
-                className="h-16 object-contain"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            </div>
-          )}
-
           {/* Reviews Section */}
           <div className="px-6 py-3 border-b border-gray-200 flex items-center gap-2">
             <Star className="w-4 h-4 fill-amber-400 text-amber-400 flex-shrink-0" strokeWidth={3} />
@@ -105,25 +91,23 @@ export function ParkingLogoCard({
             </button>
           </div>
 
-          {/* Payment Methods */}
-          <div className="px-6 py-3 border-b border-gray-200 flex justify-between">
-            <span className="text-sm font-semibold text-gray-900">
-              {listing.ticketingOnly ? (locale === 'hr' ? '(Plaćanje na dolasku)' : '(Pay on arrival)') : ''}
-            </span>
-            <span className="text-sm font-semibold text-gray-900">
-              {!listing.ticketingOnly ? (locale === 'hr' ? '(Plaćanje online)' : '(Pay online)') : ''}
-            </span>
-          </div>
-
-          {/* Price Section - Right aligned */}
-          <div className="px-6 py-4 border-b border-gray-200 mt-auto flex items-center justify-end gap-3">
-            <p className="text-3xl font-bold text-black">€{price.toFixed(2)}</p>
-            <button
-              onClick={() => setShowFeeModal(true)}
-              className="flex items-center justify-center p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
-            >
-              <Info className="w-5 h-5 text-black font-bold" strokeWidth={3} />
-            </button>
+          {/* Price Section - Right Side with Blue */}
+          <div className="px-6 py-4 border-b border-gray-200 mt-auto">
+            <p className="text-xs text-gray-600 font-bold mb-2 uppercase tracking-wider">{locale === 'hr' ? `Cijena za ${selectedDays} ${selectedDays === 1 ? 'dan' : 'dana'}` : `Price for ${selectedDays} day${selectedDays !== 1 ? 's' : ''}`}</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-3xl font-bold text-blue-600">€{price.toFixed(2)}</p>
+                <p className="text-xs text-gray-600 mt-1 font-semibold">
+                  {listing.ticketingOnly ? (locale === 'hr' ? 'Plaćanje na dolasku' : 'Pay on arrival') : (locale === 'hr' ? 'Plaćanje online' : 'Pay online')}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowFeeModal(true)}
+                className="flex items-center justify-center p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+              >
+                <Info className="w-5 h-5 text-blue-600 font-bold" strokeWidth={3} />
+              </button>
+            </div>
           </div>
         </div>
 
