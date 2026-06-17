@@ -30,9 +30,9 @@ export function ParkingLogoCard({
   return (
     <>
       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow flex flex-col min-h-[550px]">
-        {/* Header - Parking Blue */}
-        <div className="px-6 py-4 bg-[#5F3DFC] border-b border-purple-700">
-          <h3 className="font-bold text-lg text-white leading-tight">
+        {/* Header - Dark Blue */}
+        <div className="px-6 py-5 bg-blue-600 border-b border-blue-700">
+          <h3 className="font-black text-2xl text-white leading-tight">
             {listing.name}
           </h3>
         </div>
@@ -60,32 +60,24 @@ export function ParkingLogoCard({
             <p className="text-sm font-bold text-gray-900">10 min hoda od terminala</p>
           </div>
 
-          {/* Premium Categories - 2x2 Grid */}
-          <div className="px-6 py-3 border-b border-gray-200">
-            <div className="grid grid-cols-2 gap-2">
-              {/* Nepokriveno */}
-              <div className="flex items-center gap-2 bg-gray-50 px-2 py-2 rounded text-xs">
-                <Eye className="w-4 h-4 text-black flex-shrink-0 font-bold" strokeWidth={3} />
-                <span className="font-bold text-gray-900">⭐ {locale === 'hr' ? 'Nepokriveno' : 'Uncovered'}</span>
-              </div>
+          {/* Premium Categories - Vertical Stack */}
+          <div className="px-6 py-3 border-b border-gray-200 space-y-2">
+            {/* Nepokriveno */}
+            <div className="flex items-center gap-3">
+              <Eye className="w-5 h-5 text-black flex-shrink-0" strokeWidth={3} />
+              <span className="text-sm font-bold text-gray-900">{locale === 'hr' ? 'Nepokriveno' : 'Uncovered'}</span>
+            </div>
 
-              {/* Nemojte zadržavati ključe */}
-              <div className="flex items-center gap-2 bg-gray-50 px-2 py-2 rounded text-xs">
-                <Lock className="w-4 h-4 text-black flex-shrink-0 font-bold" strokeWidth={3} />
-                <span className="font-bold text-gray-900">⭐ {locale === 'hr' ? 'Ne drž. ključe' : 'No keys'}</span>
-              </div>
+            {/* Nemojte zadržavati ključe */}
+            <div className="flex items-center gap-3">
+              <Lock className="w-5 h-5 text-black flex-shrink-0" strokeWidth={3} />
+              <span className="text-sm font-bold text-gray-900">{locale === 'hr' ? 'Ne drž. ključe' : 'No keys'}</span>
+            </div>
 
-              {/* Otvoreno 7-24 */}
-              <div className="flex items-center gap-2 bg-gray-50 px-2 py-2 rounded text-xs">
-                <Clock className="w-4 h-4 text-black flex-shrink-0 font-bold" strokeWidth={3} />
-                <span className="font-bold text-gray-900">⭐ 7-24</span>
-              </div>
-
-              {/* Otvoreno 24/7 */}
-              <div className="flex items-center gap-2 bg-gray-50 px-2 py-2 rounded text-xs">
-                <Zap className="w-4 h-4 text-black flex-shrink-0 font-bold" strokeWidth={3} />
-                <span className="font-bold text-gray-900">⭐ 24/7</span>
-              </div>
+            {/* Otvoreno 24/7 */}
+            <div className="flex items-center gap-3">
+              <Zap className="w-5 h-5 text-black flex-shrink-0" strokeWidth={3} />
+              <span className="text-sm font-bold text-gray-900">24/7</span>
             </div>
           </div>
 
@@ -93,35 +85,37 @@ export function ParkingLogoCard({
           <div className="px-6 py-3 border-b border-gray-200">
             <button
               onClick={onInfo}
-              className="text-[#5F3DFC] hover:text-purple-700 text-sm font-bold"
+              className="text-blue-600 hover:text-blue-700 text-sm font-bold"
             >
               {locale === 'hr' ? 'Više informacija' : 'More information'}
             </button>
           </div>
 
-          {/* Price Section - Right aligned with service fee modal */}
+          {/* Price Section - Right Side with Blue */}
           <div className="px-6 py-4 border-b border-gray-200 mt-auto">
-            <p className="text-xs text-gray-600 font-bold mb-1 uppercase tracking-wider">{locale === 'hr' ? `Cijena za ${selectedDays} ${selectedDays === 1 ? 'dan' : 'dana'}` : `Price for ${selectedDays} day${selectedDays !== 1 ? 's' : ''}`}</p>
+            <p className="text-xs text-gray-600 font-bold mb-2 uppercase tracking-wider">{locale === 'hr' ? `Cijena za ${selectedDays} ${selectedDays === 1 ? 'dan' : 'dana'}` : `Price for ${selectedDays} day${selectedDays !== 1 ? 's' : ''}`}</p>
             <div className="flex items-center justify-between">
-              <p className="text-3xl font-bold text-black">€{price.toFixed(2)}</p>
+              <div>
+                <p className="text-3xl font-bold text-blue-600">€{price.toFixed(2)}</p>
+                <p className="text-xs text-gray-600 mt-1 font-semibold">
+                  {listing.ticketingOnly ? (locale === 'hr' ? 'Plaćanje na dolasku' : 'Pay on arrival') : (locale === 'hr' ? 'Plaćanje online' : 'Pay online')}
+                </p>
+              </div>
               <button
                 onClick={() => setShowFeeModal(true)}
-                className="flex items-center justify-center p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="flex items-center justify-center p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
               >
-                <Info className="w-5 h-5 text-[#5F3DFC] font-bold" strokeWidth={3} />
+                <Info className="w-5 h-5 text-blue-600 font-bold" strokeWidth={3} />
               </button>
             </div>
-            <p className="text-xs text-gray-600 mt-1 font-semibold">
-              {listing.ticketingOnly ? (locale === 'hr' ? 'Plaćanje na dolasku' : 'Pay on arrival') : (locale === 'hr' ? 'Plaćanje online' : 'Pay online')}
-            </p>
           </div>
         </div>
 
-        {/* CTA Button - Parking Blue */}
+        {/* CTA Button - Stripe Blue */}
         <div className="px-6 py-4 border-t border-gray-200">
           <a
             href={checkoutUrl}
-            className="w-full inline-block text-center bg-[#5F3DFC] text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 active:scale-95 transition text-sm shadow-sm hover:shadow-md"
+            className="w-full inline-block text-center bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 active:scale-95 transition text-sm shadow-sm hover:shadow-md"
           >
             {locale === 'hr' ? 'Nastavi na Checkout' : 'Proceed to booking'}
           </a>
