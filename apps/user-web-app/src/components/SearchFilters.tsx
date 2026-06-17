@@ -13,6 +13,11 @@ interface SearchFiltersProps {
   onParkingTypeChange: (type: 'all' | 'self-park' | 'garage') => void;
   vehicleType: string;
   onVehicleTypeChange: (type: string) => void;
+  desktopViewMode?: 'list' | 'logo';
+  setDesktopViewMode?: (mode: 'list' | 'logo') => void;
+  showTotalPrice?: boolean;
+  setShowTotalPrice?: (show: boolean) => void;
+  locale?: 'en' | 'hr';
 }
 
 export function SearchFilters({
@@ -24,6 +29,11 @@ export function SearchFilters({
   onParkingTypeChange,
   vehicleType,
   onVehicleTypeChange,
+  desktopViewMode = 'list',
+  setDesktopViewMode,
+  showTotalPrice = false,
+  setShowTotalPrice,
+  locale = 'en',
 }: SearchFiltersProps) {
   const [expandedSections, setExpandedSections] = useState({
     price: true,
@@ -180,6 +190,48 @@ export function SearchFilters({
             ))}
           </div>
         )}
+      </div>
+
+      {/* Bottom Controls - Divider */}
+      <div className="border-t border-gray-200 pt-6 mt-6">
+        <div className="flex items-center justify-between gap-4">
+          {/* Show total price toggle - LEFT */}
+          {setShowTotalPrice && (
+            <div className="flex items-center gap-3 flex-1">
+              <span className="text-xs font-medium text-gray-700">{locale === 'en' ? 'Show total price' : 'Prikaži ukupnu cijenu'}</span>
+              <button
+                onClick={() => setShowTotalPrice(!showTotalPrice)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${
+                  showTotalPrice ? 'bg-black' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                    showTotalPrice ? 'translate-x-5' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          )}
+
+          {/* Prostori Popis Toggle - RIGHT */}
+          {setDesktopViewMode && (
+            <div className="flex items-center gap-1 bg-gray-100 border border-gray-300 rounded-lg p-0.5 flex-shrink-0">
+              <button
+                onClick={() => setDesktopViewMode('list')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${desktopViewMode === 'list' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+              >
+                {locale === 'en' ? 'List' : 'Popis'}
+              </button>
+              <button
+                onClick={() => setDesktopViewMode('logo')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${desktopViewMode === 'logo' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+              >
+                {locale === 'en' ? 'Lots' : 'Prostori'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

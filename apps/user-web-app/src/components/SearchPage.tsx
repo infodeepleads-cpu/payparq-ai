@@ -1886,26 +1886,8 @@ export function SearchPage() {
             </>
           )}
 
-          {/* Right: Popis Prostori Toggle + Show total price */}
-          <div className="ml-auto flex items-center gap-6">
-            {/* Popis Prostori Toggle - Desktop only */}
-            <div className="hidden md:flex items-center gap-1 bg-white border border-gray-300 rounded-lg p-0.5">
-              <button
-                onClick={() => setDesktopViewMode('list')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${desktopViewMode === 'list' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-              >
-                {locale === 'en' ? 'List' : 'Popis'}
-              </button>
-              <button
-                onClick={() => setDesktopViewMode('logo')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${desktopViewMode === 'logo' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-              >
-                {locale === 'en' ? 'Lots' : 'Prostori'}
-              </button>
-            </div>
-
-            {/* Show total price toggle */}
-            <div className="flex items-center gap-3">
+          {/* Right: Show total price toggle */}
+          <div className="ml-auto flex items-center gap-3">
               <span className="text-sm font-medium text-gray-700">Show total price with fees</span>
               <button
                 onClick={() => setShowTotalPrice(!showTotalPrice)}
@@ -2606,6 +2588,7 @@ export function SearchPage() {
                       locale={locale}
                       checkoutUrl={buildCheckoutUrl(listing)}
                       onInfo={() => { setSelectedListing(listing); setShowDetailsView(true); }}
+                      selectedDays={days}
                     />
                   );
                 })}

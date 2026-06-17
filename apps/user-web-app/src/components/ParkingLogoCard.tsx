@@ -29,7 +29,7 @@ export function ParkingLogoCard({
 
   return (
     <>
-      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow flex flex-col min-h-[550px]">
+      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow flex flex-col min-h-[420px] md:min-h-[550px]">
         {/* Header - Dark Blue */}
         <div className="px-6 py-5 bg-blue-600 border-b border-blue-700">
           <h3 className="font-black text-2xl text-white leading-tight">
@@ -41,11 +41,17 @@ export function ParkingLogoCard({
         <div className="flex-1 flex flex-col">
           {/* Reviews Section */}
           <div className="px-6 py-3 border-b border-gray-200 flex items-center gap-2">
-            <Star className="w-4 h-4 fill-amber-400 text-amber-400 flex-shrink-0" strokeWidth={3} />
-            <span className="text-sm font-bold text-gray-900">
-              {listing.rating || 4.8}
-              <span className="text-gray-600 font-normal"> ({listing.reviewCount || 0} reviews)</span>
-            </span>
+            {(listing.reviewCount || 0) > 0 ? (
+              <>
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400 flex-shrink-0" strokeWidth={3} />
+                <span className="text-sm font-bold text-gray-900">
+                  {listing.rating || 0}/10
+                  <span className="text-gray-600 font-normal"> ({listing.reviewCount || 0} {locale === 'hr' ? 'ocjena' : 'review'})</span>
+                </span>
+              </>
+            ) : (
+              <span className="text-sm font-bold text-gray-900">{locale === 'hr' ? 'Novi objekt' : 'New listing'}</span>
+            )}
           </div>
 
           {/* Shuttle or Walking Distance */}
