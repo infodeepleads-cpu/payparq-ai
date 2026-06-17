@@ -1888,20 +1888,19 @@ export function SearchPage() {
 
           {/* Right: Show total price toggle */}
           <div className="ml-auto flex items-center gap-3">
-              <span className="text-sm font-medium text-gray-700">Show total price with fees</span>
-              <button
-                onClick={() => setShowTotalPrice(!showTotalPrice)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  showTotalPrice ? 'bg-black' : 'bg-gray-300'
+            <span className="text-sm font-medium text-gray-700">Show total price with fees</span>
+            <button
+              onClick={() => setShowTotalPrice(!showTotalPrice)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                showTotalPrice ? 'bg-black' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  showTotalPrice ? 'translate-x-6' : 'translate-x-1'
                 }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    showTotalPrice ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
+              />
+            </button>
           </div>
         </div>
       </div>
