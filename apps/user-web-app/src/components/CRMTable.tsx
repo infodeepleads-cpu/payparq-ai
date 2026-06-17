@@ -27,12 +27,90 @@ const COLUMNS: { key: keyof CRMRow; label: string }[] = [
 ];
 
 type TemplateLanguage = 'serbian' | 'italian' | 'german' | 'spanish' | 'english';
+type ParkingLanguage = 'hr' | 'en' | 'de' | 'it' | 'fr';
 
 interface EmailTemplate {
   subjects: Record<TemplateLanguage, string>;
   bodies: Record<TemplateLanguage, (name: string) => string>;
   disclaimers: Record<TemplateLanguage, string>;
 }
+
+interface ParkingTemplate {
+  number: number;
+  subject: Record<ParkingLanguage, string>;
+  body: Record<ParkingLanguage, string>;
+}
+
+const PARKING_SEQUENCE_TEMPLATES: ParkingTemplate[] = [
+  {
+    number: 1,
+    subject: {
+      hr: '🅿️ Zaradite od svog parking mjesta',
+      en: '🅿️ Earn from your parking space',
+      de: '🅿️ Verdienen Sie mit Ihrem Parkplatz',
+      it: '🅿️ Guadagna dal tuo parcheggio',
+      fr: '🅿️ Gagnez avec votre parking'
+    },
+    body: {
+      hr: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Zaradite od svog parking mjesta</h1><p>Lijep Poz,</p><p>evo za Vaš parking ako želite pogledati na vrijeme za ovu sezonu</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/list-your-space" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Započnite sada →</a></p><p>Ako sta treba, javite ako imate jos interes, pa ću Vam objasniti.</p><p>Srdačno,<br>PayParq Tim</p></div></body></html>`,
+      en: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Earn from your parking space</h1><p>Hello,</p><p>Turn your parking space into steady income this season. Check out how it works:</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/list-your-space" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Get Started →</a></p><p>Have questions? Feel free to ask — we're here to help.</p><p>Best regards,<br>PayParq Team</p></div></body></html>`,
+      de: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Verdienen Sie mit Ihrem Parkplatz</h1><p>Hallo,</p><p>Verwandeln Sie Ihren Parkplatz diese Saison in stabiles Einkommen. Schauen Sie, wie es funktioniert:</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/list-your-space" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Jetzt beginnen →</a></p><p>Haben Sie Fragen? Kontaktieren Sie uns gerne — wir helfen Ihnen.</p><p>Mit freundlichen Grüßen,<br>PayParq Team</p></div></body></html>`,
+      it: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Guadagna dal tuo parcheggio</h1><p>Ciao,</p><p>Trasforma il tuo parcheggio in un reddito stabile questa stagione. Scopri come funziona:</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/list-your-space" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Inizia ora →</a></p><p>Hai domande? Non esitare a chiedere — siamo qui per aiutarti.</p><p>Cordiali saluti,<br>PayParq Team</p></div></body></html>`,
+      fr: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Gagnez avec votre parking</h1><p>Bonjour,</p><p>Transformez votre parking en revenu stable cette saison. Découvrez comment cela fonctionne:</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/list-your-space" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Commencer →</a></p><p>Des questions? N'hésitez pas à nous contacter — nous sommes là pour vous aider.</p><p>Cordialement,<br>PayParq Team</p></div></body></html>`
+    }
+  },
+  {
+    number: 2,
+    subject: {
+      hr: '🎯 Naš Agent je spreman pomoći s Onboardingom',
+      en: '🎯 Our Agent is ready to help with onboarding',
+      de: '🎯 Unser Agent ist bereit, bei der Onboarding-Hilfe',
+      it: '🎯 Il nostro Agente è pronto ad aiutare con l\'onboarding',
+      fr: '🎯 Notre Agent est prêt à aider avec l\'onboarding'
+    },
+    body: {
+      hr: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Agent je spreman pomagati</h1><p>Zdravo,</p><p>Naš Agent je spreman pomoći s Onboardingom, možemo učiniti sve za Vas. Da li biste pogledali draft? Sve sto nam treba je link Vase web stranice ili email adresa ako nemate web stranicu.</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/contact" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Kontaktirajte nas →</a></p><p>Čekamo Vas!</p></div></body></html>`,
+      en: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Agent ready to help</h1><p>Hi,</p><p>Our Agent is ready to help with onboarding — we can handle everything for you. Would you like to see a draft? All we need is your website link or email address.</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/contact" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Contact us →</a></p><p>Looking forward to it!</p></div></body></html>`,
+      de: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Agent bereit zu helfen</h1><p>Hallo,</p><p>Unser Agent ist bereit, Ihnen beim Onboarding zu helfen — wir können alles für Sie übernehmen. Möchten Sie einen Entwurf sehen? Wir benötigen nur Ihren Website-Link oder Ihre E-Mail-Adresse.</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/contact" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Kontaktieren Sie uns →</a></p><p>Wir freuen uns darauf!</p></div></body></html>`,
+      it: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Agente pronto ad aiutare</h1><p>Ciao,</p><p>Il nostro Agente è pronto ad aiutarti con l'onboarding — possiamo gestire tutto per te. Vuoi vedere una bozza? Abbiamo solo bisogno del link del tuo sito web o dell'indirizzo email.</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/contact" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Contattaci →</a></p><p>Non vediamo l'ora!</p></div></body></html>`,
+      fr: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Agent prêt à aider</h1><p>Bonjour,</p><p>Notre Agent est prêt à vous aider avec l'intégration — nous pouvons tout gérer pour vous. Voulez-vous voir un brouillon? Nous avons besoin de votre lien de site web ou de votre adresse email.</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/contact" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Nous contacter →</a></p><p>On a hâte!</p></div></body></html>`
+    }
+  },
+  {
+    number: 3,
+    subject: {
+      hr: '📱 Agent follow-up',
+      en: '📱 Following up on onboarding',
+      de: '📱 Verfolgung des Onboardings',
+      it: '📱 Seguendo l\'onboarding',
+      fr: '📱 Suivi de l\'intégration'
+    },
+    body: {
+      hr: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Nastavak razgovora</h1><p>Zdravo,</p><p>Malo nas je zabrinulo što nismo čuli od Vas. Možda ste bili zauzeti ili ste imali pitanja?</p><p>Slobodno nam javite - Agent čeka Vaš odgovor i spreman je odgovoriti na sve što Vas zanima!</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/contact" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Odgovori sada →</a></p></div></body></html>`,
+      en: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Checking in</h1><p>Hi,</p><p>We were wondering if you've had a chance to review our onboarding offer. Maybe you were busy or had some questions?</p><p>Feel free to reach out — our Agent is waiting for your response and ready to answer anything!</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/contact" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Reply now →</a></p></div></body></html>`,
+      de: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Nachverfolgung</h1><p>Hallo,</p><p>Wir fragten uns, ob Sie unsere Onboarding-Anfrage überprüft haben. Vielleicht waren Sie beschäftigt oder hatten Fragen?</p><p>Kontaktieren Sie uns gerne — unser Agent wartet auf Ihre Antwort!</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/contact" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Jetzt antworten →</a></p></div></body></html>`,
+      it: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Controllo</h1><p>Ciao,</p><p>Ci chiedevamo se hai avuto la possibilità di rivedere la nostra offerta di onboarding. Forse sei stato occupato o hai avuto domande?</p><p>Non esitare a contattarci — il nostro Agente aspetta la tua risposta!</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/contact" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Rispondi ora →</a></p></div></body></html>`,
+      fr: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Suivi</h1><p>Bonjour,</p><p>Nous nous demandions si vous aviez eu l'occasion d'examiner notre offre d'intégration. Peut-être étiez-vous occupé ou aviez-vous des questions?</p><p>N'hésitez pas à nous contacter — notre Agent attend votre réponse!</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/contact" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Répondre maintenant →</a></p></div></body></html>`
+    }
+  },
+  {
+    number: 4,
+    subject: {
+      hr: '🔔 Zadnji poziv za ovu sezonu!',
+      en: '🔔 Last Call for this Season!',
+      de: '🔔 Letzter Aufruf für diese Saison!',
+      it: '🔔 Ultima chiamata per questa stagione!',
+      fr: '🔔 Dernji appel pour cette saison!'
+    },
+    body: {
+      hr: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Zadnji poziv za ovu sezonu!</h1><p>Zdravo,</p><p>Zaradite sada — kliknite i pokreni svoj parking:</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/list-your-space" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Počni sada →</a></p><p>Ne propusti ovu priliku!</p></div></body></html>`,
+      en: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Last Call for this Season!</h1><p>Hi,</p><p>Earn now — click and start your parking:</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/list-your-space" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Start now →</a></p><p>Don't miss this opportunity!</p></div></body></html>`,
+      de: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Letzter Aufruf für diese Saison!</h1><p>Hallo,</p><p>Verdiene jetzt — klick und starte dein Parkplatz:</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/list-your-space" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Jetzt starten →</a></p><p>Verpasse diese Chance nicht!</p></div></body></html>`,
+      it: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Ultima chiamata per questa stagione!</h1><p>Ciao,</p><p>Guadagna ora — clicca e avvia il tuo parcheggio:</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/list-your-space" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Inizia ora →</a></p><p>Non perdere questa opportunità!</p></div></body></html>`,
+      fr: `<html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;"><div style="max-width: 600px; margin: 0 auto; padding: 20px;"><h1 style="color: #5F3DFC;">Dernier appel pour cette saison!</h1><p>Bonjour,</p><p>Gagnez maintenant — cliquez et lancez votre parking:</p><p style="text-align: center; margin: 30px 0;"><a href="https://www.payparq.com/list-your-space" style="background: #5F3DFC; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Commencer maintenant →</a></p><p>Ne manquez pas cette opportunité!</p></div></body></html>`
+    }
+  }
+];
 
 const TEMPLATES: Record<string, EmailTemplate> = {
   parking: {
@@ -128,6 +206,9 @@ export function CRMTable() {
   const [showSendSequenceModal, setShowSendSequenceModal] = useState(false);
   const [selectedRowsForSequence, setSelectedRowsForSequence] = useState<CRMRow[]>([]);
   const [enrollmentStatuses, setEnrollmentStatuses] = useState<Record<string, any>>({});
+  const [sendMode, setSendMode] = useState<'single' | 'sequence'>('single');
+  const [selectedParkingEmail, setSelectedParkingEmail] = useState(1);
+  const [parkingLanguage, setParkingLanguage] = useState<ParkingLanguage>('en');
 
   useEffect(() => {
     fetchCRM();
@@ -384,6 +465,9 @@ export function CRMTable() {
     setSendingProgress('');
     setSelectedTemplate('custom');
     setTemplateLanguage('serbian');
+    setSendMode('single');
+    setSelectedParkingEmail(1);
+    setParkingLanguage('en');
     setShowEmailModal(true);
   };
 
@@ -505,6 +589,98 @@ export function CRMTable() {
   };
 
   const handleSendEmails = async () => {
+    // Parking sequence mode
+    if (selectedTemplate === 'parking-sequence' && sendMode === 'sequence') {
+      if (emailRecipients.length === 0 && customEmails.length === 0) {
+        alert('Please select at least one recipient');
+        return;
+      }
+
+      try {
+        setSendingProgress('Enrolling in sequence...');
+        const allRecipients = [
+          ...emailRecipients.map((r) => ({ email: r.email, name: r.displayName })),
+          ...customEmails.map((email) => ({ email, name: 'Contact' })),
+        ];
+
+        const res = await fetch('/api/sequences/start-parking-sequence', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            emails: allRecipients,
+            language: parkingLanguage
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to enroll');
+
+        setSendingProgress(`✅ Enrolled ${data.enrolled} leads in parking sequence (${parkingLanguage.toUpperCase()})`);
+        setTimeout(() => {
+          handleCloseEmailModal();
+          setSendingProgress('');
+        }, 2000);
+        return;
+      } catch (error) {
+        alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        setSendingProgress('');
+        return;
+      }
+    }
+
+    // Parking sequence single email mode
+    if (selectedTemplate === 'parking-sequence' && sendMode === 'single') {
+      if (emailRecipients.length === 0 && customEmails.length === 0) {
+        alert('Please select at least one recipient');
+        return;
+      }
+
+      const emailTemplate = PARKING_SEQUENCE_TEMPLATES.find(e => e.number === selectedParkingEmail);
+      if (!emailTemplate) {
+        alert('Email template not found');
+        return;
+      }
+
+      try {
+        setSendingProgress('Sending emails...');
+        const allRecipients = [
+          ...emailRecipients.map((r) => ({ email: r.email, displayName: r.displayName })),
+          ...customEmails.map((email) => ({ email, displayName: 'Sir/Madam' })),
+        ];
+
+        let sentCount = 0;
+        for (const recipient of allRecipients) {
+          setSendingProgress(`Sending ${sentCount + 1}/${allRecipients.length}...`);
+
+          const res = await fetch('/api/send-outreach-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: recipient.email,
+              subject: emailTemplate.subject[parkingLanguage],
+              html: emailTemplate.body[parkingLanguage],
+              nameVariant: 'international'
+            })
+          });
+
+          if (!res.ok) throw new Error(`Failed to send to ${recipient.email}`);
+          sentCount++;
+        }
+
+        setSendingProgress(`✅ Sent email #${selectedParkingEmail} to ${sentCount} recipient(s)`);
+        setTimeout(() => {
+          handleCloseEmailModal();
+          setSendingProgress('');
+        }, 2000);
+        return;
+      } catch (error) {
+        alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        setSendingProgress('');
+        return;
+      }
+    }
+
+    // Regular email mode
     if (!emailSubject.trim() || !emailBody.trim() || (emailRecipients.length === 0 && customEmails.length === 0)) {
       alert('Please fill in all fields and select at least one recipient');
       return;
@@ -746,7 +922,7 @@ export function CRMTable() {
               {/* Templates */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Template</label>
-                <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="grid grid-cols-4 gap-2 mb-3">
                   <button
                     onClick={() => setSelectedTemplate('custom')}
                     className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
@@ -777,6 +953,16 @@ export function CRMTable() {
                   >
                     Parking (Bilingual)
                   </button>
+                  <button
+                    onClick={() => setSelectedTemplate('parking-sequence')}
+                    className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                      selectedTemplate === 'parking-sequence'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    🅿️ Sequence
+                  </button>
                 </div>
 
                 {(selectedTemplate === 'parking' || selectedTemplate === 'parking-bilingual') && (
@@ -805,6 +991,105 @@ export function CRMTable() {
                         {emailBody.split('\n').slice(0, 8).join('\n')}...
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {selectedTemplate === 'parking-sequence' && (
+                  <div className="space-y-3">
+                    {/* Email Number Selector */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">Email #:</label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[1, 2, 3, 4].map((num) => (
+                          <button
+                            key={num}
+                            onClick={() => setSelectedParkingEmail(num)}
+                            className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                              selectedParkingEmail === num
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            Email {num}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Language Selector */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">Language:</label>
+                      <div className="grid grid-cols-5 gap-1">
+                        {(['hr', 'en', 'de', 'it', 'fr'] as ParkingLanguage[]).map((lang) => {
+                          const langNames = { hr: 'HR', en: 'EN', de: 'DE', it: 'IT', fr: 'FR' };
+                          return (
+                            <button
+                              key={lang}
+                              onClick={() => setParkingLanguage(lang)}
+                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                parkingLanguage === lang
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                            >
+                              {langNames[lang]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Send Mode Toggle */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">Send Mode:</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setSendMode('single')}
+                          className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                            sendMode === 'single'
+                              ? 'bg-amber-600 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          📧 Send Single
+                        </button>
+                        <button
+                          onClick={() => setSendMode('sequence')}
+                          className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                            sendMode === 'sequence'
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          📨 Send Sequence
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Preview */}
+                    {(() => {
+                      const template = PARKING_SEQUENCE_TEMPLATES.find(e => e.number === selectedParkingEmail);
+                      if (!template) return null;
+                      return (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <p className="text-xs font-semibold text-blue-900 mb-1">📋 Preview:</p>
+                          <p className="text-xs font-medium text-blue-900 mb-2">{template.subject[parkingLanguage]}</p>
+                          <div className="bg-white rounded p-2 text-xs text-gray-700 whitespace-pre-wrap break-words max-h-32 overflow-y-auto font-mono">
+                            {template.body[parkingLanguage].split('<p>').slice(1, 3).join('<p>').replace(/<[^>]+>/g, '')}
+                          </div>
+                          {sendMode === 'sequence' && (
+                            <p className="text-xs text-blue-700 mt-2 font-semibold">
+                              ℹ️ Will send all 4 emails with 2-day spacing, skipping weekends
+                            </p>
+                          )}
+                          {sendMode === 'single' && (
+                            <p className="text-xs text-blue-700 mt-2 font-semibold">
+                              ℹ️ Will send only this email immediately
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -1090,10 +1375,26 @@ export function CRMTable() {
                 </button>
                 <button
                   onClick={handleSendEmails}
-                  disabled={!emailSubject.trim() || !emailBody.trim() || (emailRecipients.length === 0 && customEmails.length === 0) || !!sendingProgress}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                  disabled={
+                    !!sendingProgress ||
+                    (emailRecipients.length === 0 && customEmails.length === 0) ||
+                    (selectedTemplate !== 'parking-sequence' && (!emailSubject.trim() || !emailBody.trim()))
+                  }
+                  className={`flex-1 px-4 py-2 text-white rounded-lg font-medium transition-colors disabled:opacity-50 ${
+                    selectedTemplate === 'parking-sequence'
+                      ? sendMode === 'sequence'
+                        ? 'bg-purple-600 hover:bg-purple-700'
+                        : 'bg-amber-600 hover:bg-amber-700'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
                 >
-                  {sendingProgress ? 'Sending...' : `Send ${abTestEnabled ? '(A/B Test)' : ''} to ${emailRecipients.length + customEmails.length} recipient(s)`}
+                  {sendingProgress ? 'Processing...' : (
+                    selectedTemplate === 'parking-sequence'
+                      ? sendMode === 'sequence'
+                        ? `📨 Enroll in Sequence (${emailRecipients.length + customEmails.length})`
+                        : `📧 Send Email #${selectedParkingEmail} (${emailRecipients.length + customEmails.length})`
+                      : `Send ${abTestEnabled ? '(A/B Test)' : ''} to ${emailRecipients.length + customEmails.length} recipient(s)`
+                  )}
                 </button>
               </div>
             </div>
