@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,7 +8,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   try {
-    const { to, subject, text, html, nameVariant } = await req.json();
+    const { to, subject, text, html, nameVariant, variant, campaignId } = await req.json();
 
     let senderName = 'Karlo Zamic <team@info.payparq.com>';
     if (nameVariant === 'yugoslavia') {
@@ -32,7 +33,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, id: result.data?.id });
+    const emailId = result.data?.id;
+
+    // Track A/B test if variant is specified
+    if (variant && campaignId && supabaseAdmin && emailId) {
+      try {
+        // Create event record for tracking
+        await supabaseAdmin.from('email_campaign_events').upsert({
+          campaign_id: campaignId,
+          recipient_email: to.toLowerCase(),
+          variant: variant,
+          event_type: 'sent',
+          email_id: emailId,
+        }, { onConflict: 'campaign_id,recipient_email,event_type,variant', ignoreDuplicates: true });
+      } catch (trackingError) {
+        console.error('Error tracking campaign event:', trackingError);
+        // Don't fail the email send if tracking fails
+      }
+    }
+
+    return NextResponse.json({ success: true, id: emailId });
   } catch (error) {
     console.error('Error sending outreach email:', error);
     return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });

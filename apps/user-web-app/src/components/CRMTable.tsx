@@ -85,6 +85,9 @@ export function CRMTable() {
   const [selectedTemplate, setSelectedTemplate] = useState<'custom' | 'parking' | 'parking-bilingual'>('custom');
   const [templateLanguage, setTemplateLanguage] = useState<'serbian' | 'italian' | 'german' | 'spanish' | 'english'>('serbian');
   const [showDashboard, setShowDashboard] = useState(false);
+  const [abTestEnabled, setAbTestEnabled] = useState(false);
+  const [emailSubjectB, setEmailSubjectB] = useState('');
+  const [emailBodyB, setEmailBodyB] = useState('');
 
   useEffect(() => {
     fetchCRM();
@@ -391,6 +394,11 @@ export function CRMTable() {
       return;
     }
 
+    if (abTestEnabled && (!emailSubjectB.trim() || !emailBodyB.trim())) {
+      alert('Please fill in both A and B variants for A/B testing');
+      return;
+    }
+
     try {
       setSendingProgress('Starting...');
       const endpoint = senderType === 'transactional' ? '/api/send-email' : '/api/send-outreach-email';
@@ -409,17 +417,28 @@ export function CRMTable() {
         return;
       }
 
+      const midpoint = Math.ceil(totalRecipients / 2);
+      const variantASentTo: string[] = [];
+      const variantBSentTo: string[] = [];
+
       for (let i = 0; i < allRecipients.length; i++) {
         const recipient = allRecipients[i];
         const recipientName = recipient.displayName;
-        setSendingProgress(`Sending ${i + 1}/${totalRecipients} to ${recipientName}...`);
+        const isVariantA = !abTestEnabled || i < midpoint;
+        const variant = isVariantA ? 'A' : 'B';
 
-        const personalizedBody = emailBody.replace(/X/g, recipientName);
+        setSendingProgress(`Sending ${i + 1}/${totalRecipients} to ${recipientName} (Variant ${variant})...`);
+
+        const subject = isVariantA ? emailSubject : emailSubjectB;
+        const body = isVariantA ? emailBody : emailBodyB;
+        const personalizedBody = body.replace(/X/g, recipientName);
 
         const payload: any = {
           to: String(recipient.email),
-          subject: emailSubject,
+          subject: subject,
           html: personalizedBody,
+          variant: abTestEnabled ? variant : undefined,
+          campaignId: abTestEnabled ? `ab-${Date.now()}` : undefined,
         };
 
         if (senderType === 'outreach') {
@@ -442,13 +461,27 @@ export function CRMTable() {
           }
           throw new Error(`Failed to send to ${recipientName}: ${errorMsg}`);
         }
+
+        if (isVariantA) {
+          variantASentTo.push(recipient.email);
+        } else {
+          variantBSentTo.push(recipient.email);
+        }
       }
 
-      setSendingProgress('✅ All emails sent successfully!');
+      let successMsg = '✅ All emails sent successfully!';
+      if (abTestEnabled) {
+        successMsg += `\n\nVariant A: ${variantASentTo.length} recipients\nVariant B: ${variantBSentTo.length} recipients\n\nCheck Campaign Analytics widget for results.`;
+      }
+
+      setSendingProgress(successMsg);
       setTimeout(() => {
         handleCloseEmailModal();
         setSendingProgress('');
-      }, 2000);
+        setAbTestEnabled(false);
+        setEmailSubjectB('');
+        setEmailBodyB('');
+      }, 3000);
     } catch (error) {
       alert(`Error sending emails: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setSendingProgress('');
@@ -774,29 +807,124 @@ export function CRMTable() {
                 )}
               </div>
 
-              {/* Subject */}
+              {/* A/B Test Toggle */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">Subject</label>
-                <input
-                  type="text"
-                  value={emailSubject}
-                  onChange={(e) => setEmailSubject(e.target.value)}
-                  placeholder="Email subject"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900 bg-white"
-                />
+                <label className="flex items-center gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg cursor-pointer hover:bg-purple-100 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={abTestEnabled}
+                    onChange={(e) => {
+                      setAbTestEnabled(e.target.checked);
+                      if (!e.target.checked) {
+                        setEmailSubjectB('');
+                        setEmailBodyB('');
+                      } else {
+                        setEmailSubjectB(emailSubject);
+                        setEmailBodyB(emailBody);
+                      }
+                    }}
+                    className="w-4 h-4 cursor-pointer"
+                  />
+                  <div>
+                    <span className="font-semibold text-gray-900">A/B Test this email?</span>
+                    <p className="text-xs text-gray-600 mt-0.5">Send variant A and B, compare performance</p>
+                  </div>
+                </label>
               </div>
 
-              {/* Body */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">Message</label>
-                <textarea
-                  value={emailBody}
-                  onChange={(e) => setEmailBody(e.target.value)}
-                  placeholder="Email message"
-                  rows={6}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900 bg-white resize-none"
-                />
-              </div>
+              {/* Email Content - Single or Dual Layout */}
+              {!abTestEnabled ? (
+                <>
+                  {/* Subject */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Subject</label>
+                    <input
+                      type="text"
+                      value={emailSubject}
+                      onChange={(e) => setEmailSubject(e.target.value)}
+                      placeholder="Email subject"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900 bg-white"
+                    />
+                  </div>
+
+                  {/* Body */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Message</label>
+                    <textarea
+                      value={emailBody}
+                      onChange={(e) => setEmailBody(e.target.value)}
+                      placeholder="Email message"
+                      rows={6}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900 bg-white resize-none"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Dual Editors for A/B Test */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Email A */}
+                    <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
+                      <h3 className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
+                        <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-600 text-white rounded-full text-xs font-bold">A</span>
+                        Variant A (Original)
+                      </h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Subject A</label>
+                          <input
+                            type="text"
+                            value={emailSubject}
+                            onChange={(e) => setEmailSubject(e.target.value)}
+                            placeholder="Email subject"
+                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Message A</label>
+                          <textarea
+                            value={emailBody}
+                            onChange={(e) => setEmailBody(e.target.value)}
+                            placeholder="Email message"
+                            rows={5}
+                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900 bg-white resize-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Email B */}
+                    <div className="border-2 border-green-200 rounded-lg p-4 bg-green-50">
+                      <h3 className="text-sm font-bold text-green-900 mb-3 flex items-center gap-2">
+                        <span className="inline-flex items-center justify-center w-6 h-6 bg-green-600 text-white rounded-full text-xs font-bold">B</span>
+                        Variant B (Copy - Edit here)
+                      </h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Subject B</label>
+                          <input
+                            type="text"
+                            value={emailSubjectB}
+                            onChange={(e) => setEmailSubjectB(e.target.value)}
+                            placeholder="Email subject"
+                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-600 text-gray-900 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Message B</label>
+                          <textarea
+                            value={emailBodyB}
+                            onChange={(e) => setEmailBodyB(e.target.value)}
+                            placeholder="Email message"
+                            rows={5}
+                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-600 text-gray-900 bg-white resize-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Progress */}
               {sendingProgress && (
@@ -823,7 +951,7 @@ export function CRMTable() {
                   disabled={!emailSubject.trim() || !emailBody.trim() || (emailRecipients.length === 0 && customEmails.length === 0) || !!sendingProgress}
                   className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
-                  {sendingProgress ? 'Sending...' : `Send to ${emailRecipients.length + customEmails.length} recipient(s)`}
+                  {sendingProgress ? 'Sending...' : `Send ${abTestEnabled ? '(A/B Test)' : ''} to ${emailRecipients.length + customEmails.length} recipient(s)`}
                 </button>
               </div>
             </div>

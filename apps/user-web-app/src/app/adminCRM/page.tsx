@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { CRMTable } from '@/components/CRMTable';
+import { CampaignAnalyticsWidget } from '@/components/CampaignAnalyticsWidget';
 import { X } from 'lucide-react';
 
 export default function AdminCRMPage() {
@@ -92,7 +93,11 @@ export default function AdminCRMPage() {
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 space-y-6">
+          {/* Analytics Widget */}
+          <CampaignAnalyticsWidget />
+
+          {/* CRM Table */}
           <CRMTable />
         </div>
       </div>
