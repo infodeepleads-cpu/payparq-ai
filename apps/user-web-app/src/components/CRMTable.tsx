@@ -127,11 +127,33 @@ export function CRMTable() {
   const [enrollmentProgress, setEnrollmentProgress] = useState('');
   const [showSendSequenceModal, setShowSendSequenceModal] = useState(false);
   const [selectedRowsForSequence, setSelectedRowsForSequence] = useState<CRMRow[]>([]);
+  const [enrollmentStatuses, setEnrollmentStatuses] = useState<Record<string, any>>({});
 
   useEffect(() => {
     fetchCRM();
     fetchSequences();
   }, []);
+
+  useEffect(() => {
+    const cityRows = selectedCity ? rows.filter((r) => r.city === selectedCity) : [];
+    const emails = cityRows.map(r => r.email).filter(Boolean);
+    if (emails.length > 0) fetchEnrollmentStatuses(emails);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCity, rows]);
+
+  const fetchEnrollmentStatuses = async (emails: string[]) => {
+    if (!emails.length) return;
+    try {
+      const params = emails.map(e => `email=${encodeURIComponent(e)}`).join('&');
+      const res = await fetch(`/api/admin/enrollment-status?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setEnrollmentStatuses(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch enrollment statuses:', error);
+    }
+  };
 
   const fetchSequences = async () => {
     try {
@@ -1163,6 +1185,7 @@ export function CRMTable() {
                         {col.label}
                       </th>
                     ))}
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider w-36">Sequence</th>
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase tracking-wider w-16">Email</th>
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase tracking-wider w-16">Del</th>
                   </tr>
@@ -1206,6 +1229,28 @@ export function CRMTable() {
                           )}
                         </td>
                       ))}
+                      <td className="px-4 py-2">
+                        {(() => {
+                          const s = enrollmentStatuses[row.email];
+                          if (!s || s.status === 'none') return <span className="text-xs text-gray-400">—</span>;
+                          if (s.hasReplied || s.status === 'paused') return (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-semibold">
+                              ⚠️ Replied
+                            </span>
+                          );
+                          if (s.status === 'completed') return (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">
+                              ✅ Done
+                            </span>
+                          );
+                          if (s.status === 'active') return (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-semibold">
+                              📧 #{s.currentEmailNumber}
+                            </span>
+                          );
+                          return null;
+                        })()}
+                      </td>
                       <td className="px-4 py-2 text-center">
                         <button
                           onClick={() => handleOpenEmailModal(row)}
