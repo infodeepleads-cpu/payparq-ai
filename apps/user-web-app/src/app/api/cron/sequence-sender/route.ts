@@ -25,6 +25,26 @@ function getNextSendDate(delayDays: number): Date {
   return nextDate;
 }
 
+async function logEmailSend(enrollmentId: string, recipientEmail: string, emailNumber: number, sequenceId: string, subject: string, language: string = 'en') {
+  if (!supabaseAdmin) return;
+
+  try {
+    await supabaseAdmin
+      .from('email_sends')
+      .insert({
+        enrollment_id: enrollmentId,
+        recipient_email: recipientEmail,
+        email_number: emailNumber,
+        sequence_id: sequenceId,
+        subject: subject,
+        language: language,
+        status: 'sent'
+      });
+  } catch (err) {
+    console.error('Failed to log email send:', err);
+  }
+}
+
 export async function GET(req: NextRequest) {
   if (!supabaseAdmin) return NextResponse.json({ error: 'db_unavailable' }, { status: 500 });
 
@@ -80,12 +100,35 @@ export async function GET(req: NextRequest) {
           continue;
         }
 
+        // Check if enrollment has been paused due to reply
+        const { data: replies } = await supabaseAdmin
+          .from('email_replies')
+          .select('*')
+          .eq('enrollment_id', enrollment.id)
+          .limit(1);
+
+        if (replies && replies.length > 0) {
+          // Pause enrollment if reply detected
+          await supabaseAdmin
+            .from('sequence_enrollments')
+            .update({
+              status: 'paused',
+              paused_at: now,
+              reply_detected_at: replies[0].detected_at
+            })
+            .eq('id', enrollment.id);
+          continue;
+        }
+
         // Send email
+        const language = enrollment.language || 'en';
+        const languageEmailConfig = emailConfig.templates?.[language] || emailConfig.templates?.en || emailConfig;
+
         const result = await resend.emails.send({
           from: 'Karlo Žamić <team@info.payparq.com>',
           to: enrollment.recipient_email,
-          subject: emailConfig.subject,
-          html: emailConfig.html || `<p>${emailConfig.subject}</p>`,
+          subject: languageEmailConfig.subject || emailConfig.subject,
+          html: languageEmailConfig.html || emailConfig.html || `<p>${languageEmailConfig.subject}</p>`,
         });
 
         if (result.error) {
@@ -94,9 +137,19 @@ export async function GET(req: NextRequest) {
           continue;
         }
 
+        // Log email send
+        await logEmailSend(
+          enrollment.id,
+          enrollment.recipient_email,
+          emailNum,
+          enrollment.sequence_id,
+          languageEmailConfig.subject || emailConfig.subject,
+          language
+        );
+
         // Check if there's a next email
         const nextEmailNum = emailNum + 1;
-        const nextEmailDelay = seqData.config.emails[nextEmailNum - 1]?.delay_days || 3;
+        const nextEmailDelay = emailConfig.delayDays || 3;
 
         const nextSendDate = getNextSendDate(nextEmailDelay);
 

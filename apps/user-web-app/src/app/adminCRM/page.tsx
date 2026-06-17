@@ -3,14 +3,13 @@
 import { useState, useEffect } from 'react';
 import { CRMTable } from '@/components/CRMTable';
 import { CampaignAnalyticsWidget } from '@/components/CampaignAnalyticsWidget';
-import { SequencesEditor } from '@/components/SequencesEditor';
+import { EmailAnalyticsWidget } from '@/components/EmailAnalyticsWidget';
 import { X } from 'lucide-react';
 
 export default function AdminCRMPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'crm' | 'sequences'>('crm');
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,46 +92,18 @@ export default function AdminCRMPage() {
             </button>
           </div>
 
-          {/* Tabs */}
-          <div className="px-6 flex gap-4 border-t border-gray-200">
-            <button
-              onClick={() => setActiveTab('crm')}
-              className={`px-4 py-3 font-medium border-b-2 transition-colors ${
-                activeTab === 'crm'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              CRM & Campaigns
-            </button>
-            <button
-              onClick={() => setActiveTab('sequences')}
-              className={`px-4 py-3 font-medium border-b-2 transition-colors ${
-                activeTab === 'sequences'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Email Sequences
-            </button>
-          </div>
         </div>
 
         {/* Content */}
-        <div className="p-6">
-          {activeTab === 'crm' && (
-            <div className="space-y-6">
-              {/* Analytics Widget */}
-              <CampaignAnalyticsWidget />
+        <div className="p-6 space-y-6">
+          {/* Analytics Widgets */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CampaignAnalyticsWidget />
+            <EmailAnalyticsWidget />
+          </div>
 
-              {/* CRM Table */}
-              <CRMTable />
-            </div>
-          )}
-
-          {activeTab === 'sequences' && (
-            <SequencesEditor />
-          )}
+          {/* CRM Table */}
+          <CRMTable />
         </div>
       </div>
     </div>
