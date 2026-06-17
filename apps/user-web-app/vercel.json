@@ -10,10 +10,6 @@
                   {
                       "path":  "/api/scrape/airbnb-booking",
                       "schedule":  "0 2 * * *"
-                  },
-                  {
-                      "path":  "/api/cron/sequence-sender",
-                      "schedule":  "*/4 * * * *"
                   }
               ]
 }
