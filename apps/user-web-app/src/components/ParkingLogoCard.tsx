@@ -48,16 +48,25 @@ export function ParkingLogoCard({
             </span>
           </div>
 
-          {/* Walking Distance - 10 min hoda od terminala */}
+          {/* Shuttle or Walking Distance */}
           <div className="px-6 py-3 border-b border-gray-200 flex items-start gap-3">
-            <svg className="w-4 h-4 flex-shrink-0 text-black font-bold mt-0.5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2">
-              <circle cx="13" cy="3" r="2"/>
-              <path d="M11 6.5L8 12l3 1"/>
-              <path d="M13 6.5l1.5 3-3 2.5 1 5.5"/>
-              <path d="M11 14l-2 6"/>
-              <path d="M16 9l2 2"/>
-            </svg>
-            <p className="text-sm font-bold text-gray-900">10 min hoda od terminala</p>
+            {listing.shuttle ? (
+              <>
+                <div className="w-4 h-4 flex-shrink-0 text-black font-bold mt-0.5">🚌</div>
+                <p className="text-sm font-bold text-gray-900">{locale === 'hr' ? 'Uključen prijevoz' : 'Shuttle included'}</p>
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4 flex-shrink-0 text-black font-bold mt-0.5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2">
+                  <circle cx="13" cy="3" r="2"/>
+                  <path d="M11 6.5L8 12l3 1"/>
+                  <path d="M13 6.5l1.5 3-3 2.5 1 5.5"/>
+                  <path d="M11 14l-2 6"/>
+                  <path d="M16 9l2 2"/>
+                </svg>
+                <p className="text-sm font-bold text-gray-900">{Math.round(listing.distance * 12)} min {locale === 'hr' ? 'hoda od terminala' : 'walk from terminal'}</p>
+              </>
+            )}
           </div>
 
           {/* Premium Categories - Vertical Stack */}
@@ -144,7 +153,7 @@ export function ParkingLogoCard({
               </div>
               <div className="border-t border-gray-200 pt-3 flex justify-between">
                 <span className="font-bold text-gray-900">{locale === 'hr' ? 'Ukupno' : 'Total'}</span>
-                <span className="text-xl font-bold text-[#5F3DFC]">€{total.toFixed(2)}</span>
+                <span className="text-xl font-bold text-blue-600">€{total.toFixed(2)}</span>
               </div>
             </div>
           </div>
