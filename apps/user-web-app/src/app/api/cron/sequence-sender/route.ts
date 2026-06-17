@@ -1,14 +1,33 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { Resend } from 'resend';
 
 export const dynamic = 'force-dynamic';
 
-const FROM = process.env.EMAIL_FROM || 'Payparq <team@info.payparq.com>';
-const DAILY_LIMIT = 10;
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-export async function GET(req: Request) {
-  // Allow Vercel cron (no auth header) OR external cron with secret token
+function getNextSendDate(delayDays: number): Date {
+  const now = new Date();
+  const minDelay = Math.floor(delayDays * 0.66);
+  const maxDelay = Math.ceil(delayDays * 1.33);
+  const randomDelay = minDelay + Math.random() * (maxDelay - minDelay);
+
+  const nextDate = new Date(now);
+  nextDate.setDate(nextDate.getDate() + randomDelay);
+
+  const dayOfWeek = nextDate.getDay();
+  if (dayOfWeek === 6) {
+    nextDate.setDate(nextDate.getDate() + 2);
+  } else if (dayOfWeek === 0) {
+    nextDate.setDate(nextDate.getDate() + 1);
+  }
+
+  return nextDate;
+}
+
+export async function GET(req: NextRequest) {
+  if (!supabaseAdmin) return NextResponse.json({ error: 'db_unavailable' }, { status: 500 });
+
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret) {
     const authHeader = req.headers.get('authorization');
@@ -19,93 +38,90 @@ export async function GET(req: Request) {
     }
   }
 
-  const client = supabaseAdmin;
-  if (!client) return NextResponse.json({ error: 'db_unavailable' }, { status: 500 });
+  try {
+    const now = new Date().toISOString();
 
-  const resendKey = process.env.RESEND_API_KEY;
-  if (!resendKey) return NextResponse.json({ error: 'resend_not_configured' }, { status: 500 });
+    // Get all enrollments due to send
+    const { data: dueEnrollments } = await supabaseAdmin
+      .from('sequence_enrollments')
+      .select('*')
+      .eq('status', 'active')
+      .lte('next_send_at', now)
+      .order('next_send_at', { ascending: true })
+      .limit(50);
 
-  const resend = new Resend(resendKey);
-  const now = new Date().toISOString();
-
-  // Get up to 10 enrollments due for sending
-  const { data: due } = await client
-    .from('email_sequence_enrollments')
-    .select('*')
-    .eq('status', 'active')
-    .lte('next_send_at', now)
-    .order('next_send_at', { ascending: true })
-    .limit(DAILY_LIMIT);
-
-  if (!due || due.length === 0) return NextResponse.json({ sent: 0 });
-
-  let sent = 0;
-
-  for (const enrollment of due) {
-    const emailNum = enrollment.next_email_number;
-
-    // Get the template for this email number
-    const { data: template } = await client
-      .from('email_sequence_templates')
-      .select('subject, html_content, delay_days')
-      .eq('sequence_name', enrollment.sequence_name)
-      .eq('email_number', emailNum)
-      .single();
-
-    if (!template) {
-      await client
-        .from('email_sequence_enrollments')
-        .update({ status: 'completed' })
-        .eq('id', enrollment.id);
-      continue;
+    if (!dueEnrollments || dueEnrollments.length === 0) {
+      return NextResponse.json({ sent: 0 });
     }
 
-    const { error } = await resend.emails.send({
-      from: FROM,
-      to: enrollment.recipient_email,
-      subject: template.subject,
-      html: template.html_content,
-    });
+    let sent = 0;
+    let failed = 0;
 
-    if (error) {
-      console.error(`Resend error for ${enrollment.recipient_email}:`, error);
-      continue;
+    for (const enrollment of dueEnrollments) {
+      try {
+        // Get sequence config
+        const { data: seqData } = await supabaseAdmin
+          .from('email_sequences')
+          .select('config')
+          .eq('id', enrollment.sequence_id)
+          .single();
+
+        if (!seqData?.config?.emails) continue;
+
+        const emailNum = enrollment.current_email_number;
+        const emailConfig = seqData.config.emails[emailNum - 1];
+
+        if (!emailConfig) {
+          // Sequence complete
+          await supabaseAdmin
+            .from('sequence_enrollments')
+            .update({ status: 'completed', updated_at: now })
+            .eq('id', enrollment.id);
+          continue;
+        }
+
+        // Send email
+        const result = await resend.emails.send({
+          from: 'Karlo Žamić <team@info.payparq.com>',
+          to: enrollment.recipient_email,
+          subject: emailConfig.subject,
+          html: emailConfig.html || `<p>${emailConfig.subject}</p>`,
+        });
+
+        if (result.error) {
+          console.error(`Send failed for ${enrollment.recipient_email}:`, result.error);
+          failed++;
+          continue;
+        }
+
+        // Check if there's a next email
+        const nextEmailNum = emailNum + 1;
+        const nextEmailDelay = seqData.config.emails[nextEmailNum - 1]?.delay_days || 3;
+
+        const nextSendDate = getNextSendDate(nextEmailDelay);
+
+        // Update enrollment
+        await supabaseAdmin
+          .from('sequence_enrollments')
+          .update({
+            current_email_number: nextEmailNum,
+            last_sent_at: now,
+            next_send_at: nextEmailNum > seqData.config.emails.length ? null : nextSendDate.toISOString(),
+            status: nextEmailNum > seqData.config.emails.length ? 'completed' : 'active',
+            updated_at: now,
+          })
+          .eq('id', enrollment.id);
+
+        sent++;
+      } catch (err) {
+        console.error(`Error processing enrollment ${enrollment.id}:`, err);
+        failed++;
+      }
     }
 
-    sent++;
-
-    // Check if there's a next email in the sequence
-    const { data: nextTemplate } = await client
-      .from('email_sequence_templates')
-      .select('email_number, delay_days')
-      .eq('sequence_name', enrollment.sequence_name)
-      .eq('email_number', emailNum + 1)
-      .single();
-
-    if (nextTemplate) {
-      // Schedule next email
-      const nextSendAt = new Date();
-      nextSendAt.setDate(nextSendAt.getDate() + (nextTemplate.delay_days || 3));
-
-      await client
-        .from('email_sequence_enrollments')
-        .update({
-          next_email_number: emailNum + 1,
-          last_sent_at: now,
-          next_send_at: nextSendAt.toISOString(),
-        })
-        .eq('id', enrollment.id);
-    } else {
-      // Last email sent — mark completed
-      await client
-        .from('email_sequence_enrollments')
-        .update({
-          status: 'completed',
-          last_sent_at: now,
-        })
-        .eq('id', enrollment.id);
-    }
+    return NextResponse.json({ sent, failed, checked: dueEnrollments.length });
+  } catch (error) {
+    console.error('Sequence sender error:', error);
+    return NextResponse.json({ error: String(error) }, { status: 500 });
   }
-
-  return NextResponse.json({ sent, checked: due.length });
 }

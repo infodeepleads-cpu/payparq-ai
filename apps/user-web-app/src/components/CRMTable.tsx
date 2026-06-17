@@ -88,10 +88,25 @@ export function CRMTable() {
   const [abTestEnabled, setAbTestEnabled] = useState(false);
   const [emailSubjectB, setEmailSubjectB] = useState('');
   const [emailBodyB, setEmailBodyB] = useState('');
+  const [showSequenceEnrollModal, setShowSequenceEnrollModal] = useState(false);
+  const [sequences, setSequences] = useState<any[]>([]);
+  const [selectedSequence, setSelectedSequence] = useState('');
+  const [enrollmentProgress, setEnrollmentProgress] = useState('');
 
   useEffect(() => {
     fetchCRM();
+    fetchSequences();
   }, []);
+
+  const fetchSequences = async () => {
+    try {
+      const res = await fetch('/api/sequences');
+      const data = await res.json();
+      setSequences(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching sequences:', error);
+    }
+  };
 
   const fetchCRM = async () => {
     try {
@@ -322,6 +337,50 @@ export function CRMTable() {
     setCustomEmails([]);
     setEmailSubject('');
     setEmailBody('');
+  };
+
+  const handleEnrollInSequence = async () => {
+    if (!selectedSequence) {
+      alert('Please select a sequence');
+      return;
+    }
+
+    const sequence = sequences.find(s => s.id === selectedSequence);
+    if (!sequence) return;
+
+    try {
+      setEnrollmentProgress('Enrolling...');
+
+      const toEnroll = filteredRows.map(row => ({
+        email: row.email,
+        name: row.company || row.contact || 'Unknown',
+      }));
+
+      const res = await fetch('/api/sequences/enroll', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emails: toEnroll,
+          sequenceId: sequence.id,
+          sequenceName: sequence.name,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.error || 'Enrollment failed');
+      }
+
+      setEnrollmentProgress(`✅ Enrolled ${result.enrolled} leads in "${sequence.name}"`);
+      setTimeout(() => {
+        setShowSequenceEnrollModal(false);
+        setEnrollmentProgress('');
+        setSelectedSequence('');
+      }, 2000);
+    } catch (error) {
+      setEnrollmentProgress(`❌ ${error instanceof Error ? error.message : 'Error'}`);
+    }
   };
 
   const handleApplyTemplate = (templateName: string, language: TemplateLanguage) => {
@@ -556,6 +615,14 @@ export function CRMTable() {
         >
           <BarChart2 size={16} />
           Dashboard
+        </button>
+        <button
+          onClick={() => setShowSequenceEnrollModal(true)}
+          disabled={!selectedCity || filteredRows.length === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+        >
+          📧
+          Enroll in Sequence
         </button>
         <button
           onClick={handleAddRow}
@@ -1119,6 +1186,83 @@ export function CRMTable() {
             Click any cell to edit inline. Changes auto-save. {filteredRows.length} entries in {selectedCity}
           </div>
         </>
+      )}
+
+      {/* Enrollment Modal */}
+      {showSequenceEnrollModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Enroll in Sequence</h2>
+              <button
+                onClick={() => setShowSequenceEnrollModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-4">
+                  Enroll {filteredRows.length} leads from <strong>{selectedCity}</strong> into a sequence
+                </p>
+
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Select Sequence</label>
+                <select
+                  value={selectedSequence}
+                  onChange={(e) => setSelectedSequence(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 bg-white text-gray-900"
+                >
+                  <option value="">Choose a sequence...</option>
+                  {sequences.map((seq) => (
+                    <option key={seq.id} value={seq.id}>
+                      {seq.name}
+                    </option>
+                  ))}
+                </select>
+
+                {selectedSequence && (
+                  <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-900">
+                    <p className="font-semibold">Sequence Details</p>
+                    <p className="text-xs mt-1">
+                      Emails will be sent automatically with 2-4 day intervals, respecting weekends.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {enrollmentProgress && (
+                <div className={`p-3 rounded-lg text-sm ${
+                  enrollmentProgress.includes('✅')
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : enrollmentProgress.includes('❌')
+                    ? 'bg-red-50 text-red-700 border border-red-200'
+                    : 'bg-blue-50 text-blue-700 border border-blue-200'
+                }`}>
+                  {enrollmentProgress}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setShowSequenceEnrollModal(false)}
+                  disabled={!!enrollmentProgress}
+                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-medium transition-colors disabled:opacity-50"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={handleEnrollInSequence}
+                  disabled={!selectedSequence || !!enrollmentProgress}
+                  className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                >
+                  {enrollmentProgress ? 'Processing...' : `Enroll ${filteredRows.length}`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
