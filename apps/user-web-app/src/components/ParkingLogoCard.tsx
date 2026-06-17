@@ -30,11 +30,22 @@ export function ParkingLogoCard({
   return (
     <>
       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow flex flex-col min-h-[420px] md:min-h-[550px]">
-        {/* Header - Dark Blue */}
-        <div className="px-6 py-5 bg-blue-600 border-b border-blue-700">
-          <h3 className="font-black text-2xl text-white leading-tight">
+        {/* Header - Dark Blue with Title Left + Logo Right */}
+        <div className="px-6 py-5 bg-blue-600 border-b border-blue-700 flex items-center justify-between gap-4">
+          <h3 className="font-black text-lg text-white leading-tight flex-1">
             {listing.name}
           </h3>
+          {/* Logo on Right */}
+          <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-white">
+            <img
+              src={listing.logo || listing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=100'}
+              alt="logo"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = listing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=100';
+              }}
+            />
+          </div>
         </div>
 
         {/* Content - flex-1 to push CTA to bottom */}

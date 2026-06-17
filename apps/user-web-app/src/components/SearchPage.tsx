@@ -1946,6 +1946,24 @@ export function SearchPage() {
                   </label>
                 ))}
 
+                {/* Prostori Popis Toggle */}
+                <div className="pt-4 pb-2 flex items-center justify-between gap-2 border-t border-gray-200">
+                  <div className="flex items-center gap-1 bg-gray-100 border border-gray-300 rounded-lg p-0.5">
+                    <button
+                      onClick={() => setDesktopViewMode('list')}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${desktopViewMode === 'list' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                    >
+                      {locale === 'en' ? 'List' : 'Popis'}
+                    </button>
+                    <button
+                      onClick={() => setDesktopViewMode('logo')}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${desktopViewMode === 'logo' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                    >
+                      {locale === 'en' ? 'Lots' : 'Prostori'}
+                    </button>
+                  </div>
+                </div>
+
                 {/* Show price toggle */}
                 <div className="pt-2 flex items-center gap-3">
                   <button
