@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     // For each campaign, calculate metrics
     const analytics = await Promise.all(
       (campaigns || []).map(async (campaign) => {
-        const { data: events } = await supabaseAdmin
+        const { data: events } = await supabaseAdmin!
           .from('email_campaign_events')
           .select('*')
           .eq('campaign_id', campaign.id);

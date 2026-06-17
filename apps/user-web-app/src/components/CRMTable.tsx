@@ -28,16 +28,32 @@ const COLUMNS: { key: keyof CRMRow; label: string }[] = [
 type TemplateLanguage = 'serbian' | 'italian' | 'german' | 'spanish' | 'english';
 
 interface EmailTemplate {
-  subject: string;
-  body: (name: string) => string;
+  subjects: Record<TemplateLanguage, string>;
+  bodies: Record<TemplateLanguage, (name: string) => string>;
   disclaimers: Record<TemplateLanguage, string>;
 }
 
 const TEMPLATES: Record<string, EmailTemplate> = {
   parking: {
-    subject: 'Parking Space Inquiry',
-    body: (name: string) =>
-      `<p><b>Poštovani predstavnici ${name},</b></p><p>Da li imate višak praznog parking mjesta?</p><p>Mi smo digitalna parking trgovina, oglašavamo prazna mjesta u Vašim terminima po Vašim cijenama, maržu (service fee) plaća kupac.</p><p>Zainteresirani?</p><p style="margin-top:24px;"><b>Karlo Žamić, mag.oec.</b><br />Managing Partner, payparq<br />payparq.com<br />+385915963139</p>`,
+    subjects: {
+      serbian: 'Upit za parking mjesta',
+      italian: 'Richiesta di Spazi Parcheggio',
+      german: 'Anfrage zum Parken',
+      spanish: 'Consulta de Espacios de Estacionamiento',
+      english: 'Parking Space Inquiry',
+    },
+    bodies: {
+      serbian: (name: string) =>
+        `<p><b>Poštovani predstavnici ${name},</b></p><p>Da li imate višak praznog parking mjesta?</p><p>Mi smo digitalna parking trgovina, oglašavamo prazna mjesta u Vašim terminima po Vašim cijenama, maržu (service fee) plaća kupac.</p><p>Zainteresirani?</p><p style="margin-top:24px;"><b>Karlo Žamić, mag.oec.</b><br />Managing Partner, payparq<br />payparq.com<br />+385915963139</p>`,
+      italian: (name: string) =>
+        `<p><b>Egregi rappresentanti di ${name},</b></p><p>Avete posti auto vuoti in eccesso?</p><p>Siamo una piattaforma digitale per parcheggi, pubblicizziamo spazi liberi secondo i vostri orari e prezzi, la commissione viene pagata dal cliente.</p><p>Interessati?</p><p style="margin-top:24px;"><b>Karlo Žamić, mag.oec.</b><br />Managing Partner, payparq<br />payparq.com<br />+385915963139</p>`,
+      german: (name: string) =>
+        `<p><b>Sehr geehrte Damen und Herren von ${name},</b></p><p>Haben Sie überschüssige leere Parkplätze?</p><p>Wir sind ein digitales Parkplatz-Marktplatz, wir bewerben freie Plätze zu Ihren Bedingungen und Preisen, die Gebühr zahlt der Käufer.</p><p>Interessiert?</p><p style="margin-top:24px;"><b>Karlo Žamić, mag.oec.</b><br />Managing Partner, payparq<br />payparq.com<br />+385915963139</p>`,
+      spanish: (name: string) =>
+        `<p><b>Estimados representantes de ${name},</b></p><p>¿Tienen espacios de estacionamiento vacíos en exceso?</p><p>Somos una plataforma digital de estacionamiento, publicitamos espacios vacíos en sus términos y precios, la tarifa de servicio la paga el comprador.</p><p>¿Interesados?</p><p style="margin-top:24px;"><b>Karlo Žamić, mag.oec.</b><br />Managing Partner, payparq<br />payparq.com<br />+385915963139</p>`,
+      english: (name: string) =>
+        `<p><b>Dear representatives of ${name},</b></p><p>Do you have excess empty parking spaces?</p><p>We are a digital parking marketplace, we advertise empty spaces on your terms and prices, the service fee is paid by the buyer.</p><p>Interested?</p><p style="margin-top:24px;"><b>Karlo Žamić, mag.oec.</b><br />Managing Partner, payparq<br />payparq.com<br />+385915963139</p>`,
+    },
     disclaimers: {
       serbian: `IZJAVA O ODRICANJU ODGOVORNOSTI: Sadržaj ove poruke i eventualno priloženih datoteka je povjerljiv i namijenjen je samo osobama ili subjektima koji su navedeni u adresi. Ukoliko ste primili ovu poruku greškom, molimo Vas, obavijestite pošiljatelja, a poruku i sve njene privitke odmah, bez čitanja, trajno uklonite s računala. Bilo kakvo prenošenje, kopiranje ili distribucija informacija sadržanih u poruci trećim osobama je zabranjeno i može biti zakonski kažnjivo. Sadržaj, stavovi i mišljenja izneseni u poruci su autorovi i ne predstavljaju nužno stavove PayParq Grupe. PayParq Group ne prihvaća nikakvu odgovornost za eventualnu štetu nastalu primitkom ove poruke i priloga sadržanih u poruci.`,
       italian: `DISCLAIMER: Il contenuto di questa email e eventuali allegati è riservato e destinato esclusivamente alle persone o entità indicate come destinatari. Se hai ricevuto questo messaggio per errore, ti preghiamo di notificarlo al mittente e di eliminare permanentemente il messaggio e tutti gli allegati dal tuo computer senza leggerli. Qualsiasi divulgazione, copia o distribuzione delle informazioni contenute in questo messaggio a terzi è proibita e potrebbe essere illegale. Le opinioni espresse in questo messaggio sono solo quelle dell'autore e non rappresentano necessariamente le opinioni di PayParq Group. PayParq Group non assume alcuna responsabilità per eventuali danni causati da questo messaggio.`,
@@ -47,9 +63,25 @@ const TEMPLATES: Record<string, EmailTemplate> = {
     },
   },
   'parking-bilingual': {
-    subject: 'Parking Space Inquiry',
-    body: (name: string) =>
-      `<p><b>Poštovani predstavnici ${name},</b></p><p>Da li imate višak praznog parking mjesta?</p><p>Mi smo digitalna parking trgovina, oglašavamo prazna mjesta u Vašim terminima po Vašim cijenama, maržu (service fee) plaća kupac.</p><p>Zainteresirani?</p><p style="margin-top:24px;"><b>Karlo Žamić, mag.oec.</b><br />Managing Partner, payparq<br />payparq.com<br />+385915963139</p>`,
+    subjects: {
+      serbian: 'Upit za parking mjesta',
+      italian: 'Richiesta di Spazi Parcheggio',
+      german: 'Anfrage zum Parken',
+      spanish: 'Consulta de Espacios de Estacionamiento',
+      english: 'Parking Space Inquiry',
+    },
+    bodies: {
+      serbian: (name: string) =>
+        `<p><b>Poštovani predstavnici ${name},</b></p><p>Da li imate višak praznog parking mjesta?</p><p>Mi smo digitalna parking trgovina, oglašavamo prazna mjesta u Vašim terminima po Vašim cijenama, maržu (service fee) plaća kupac.</p><p>Zainteresirani?</p><p style="margin-top:24px;"><b>Karlo Žamić, mag.oec.</b><br />Managing Partner, payparq<br />payparq.com<br />+385915963139</p>`,
+      italian: (name: string) =>
+        `<p><b>Egregi rappresentanti di ${name},</b></p><p>Avete posti auto vuoti in eccesso?</p><p>Siamo una piattaforma digitale per parcheggi, pubblicizziamo spazi liberi secondo i vostri orari e prezzi, la commissione viene pagata dal cliente.</p><p>Interessati?</p><p style="margin-top:24px;"><b>Karlo Žamić, mag.oec.</b><br />Managing Partner, payparq<br />payparq.com<br />+385915963139</p>`,
+      german: (name: string) =>
+        `<p><b>Sehr geehrte Damen und Herren von ${name},</b></p><p>Haben Sie überschüssige leere Parkplätze?</p><p>Wir sind ein digitales Parkplatz-Marktplatz, wir bewerben freie Plätze zu Ihren Bedingungen und Preisen, die Gebühr zahlt der Käufer.</p><p>Interessiert?</p><p style="margin-top:24px;"><b>Karlo Žamić, mag.oec.</b><br />Managing Partner, payparq<br />payparq.com<br />+385915963139</p>`,
+      spanish: (name: string) =>
+        `<p><b>Estimados representantes de ${name},</b></p><p>¿Tienen espacios de estacionamiento vacíos en exceso?</p><p>Somos una plataforma digital de estacionamiento, publicitamos espacios vacíos en sus términos y precios, la tarifa de servicio la paga el comprador.</p><p>¿Interesados?</p><p style="margin-top:24px;"><b>Karlo Žamić, mag.oec.</b><br />Managing Partner, payparq<br />payparq.com<br />+385915963139</p>`,
+      english: (name: string) =>
+        `<p><b>Dear representatives of ${name},</b></p><p>Do you have excess empty parking spaces?</p><p>We are a digital parking marketplace, we advertise empty spaces on your terms and prices, the service fee is paid by the buyer.</p><p>Interested?</p><p style="margin-top:24px;"><b>Karlo Žamić, mag.oec.</b><br />Managing Partner, payparq<br />payparq.com<br />+385915963139</p>`,
+    },
     disclaimers: {
       serbian: `<p style="color: #666;">IZJAVA O ODRICANJU ODGOVORNOSTI: Sadržaj ove poruke i eventualno priloženih datoteka je povjerljiv i namijenjen je samo osobama ili subjektima koji su navedeni u adresi. Ukoliko ste primili ovu poruku greškom, molimo Vas, obavijestite pošiljatelja, a poruku i sve njene privitke odmah, bez čitanja, trajno uklonite s računala. Bilo kakvo prenošenje, kopiranje ili distribucija informacija sadržanih u poruci trećim osobama je zabranjeno i može biti zakonski kažnjivo. Sadržaj, stavovi i mišljenja izneseni u poruci su autorovi i ne predstavljaju nužno stavove PayParq Grupe. PayParq Group ne prihvaća nikakvu odgovornost za eventualnu štetu nastalu primitkom ove poruke i priloga sadržanih u poruci.</p><p style="color: #666;">DISCLAIMER: The contents of this email as well as any files attached to it are confidential and intended solely for individuals or entities to which they are addressed. If you have received this email message in error, please notify the sender and permanently remove the message and all attached files from your computer without reading them. Any disclosure, copying or distribution of all or part of information contained herein to third parties is prohibited and may be unlawful. Please note that any views or opinions presented in this message are solely those of the author and do not necessarily represent the views and opinions of PayParq Group. PayParq Group accepts no liability for any potential damage caused by this message.</p>`,
       italian: `<p style="color: #666;">DISCLAIMER: Il contenuto di questa email e eventuali allegati è riservato e destinato esclusivamente alle persone o entità indicate come destinatari. Se hai ricevuto questo messaggio per errore, ti preghiamo di notificarlo al mittente e di eliminare permanentemente il messaggio e tutti gli allegati dal tuo computer senza leggerli. Qualsiasi divulgazione, copia o distribuzione delle informazioni contenute in questo messaggio a terzi è proibita e potrebbe essere illegale. Le opinioni espresse in questo messaggio sono solo quelle dell'autore e non rappresentano necessariamente le opinioni di PayParq Group. PayParq Group non assume alcuna responsabilità per eventuali danni causati da questo messaggio.</p><p style="color: #666;">DISCLAIMER: The contents of this email as well as any files attached to it are confidential and intended solely for individuals or entities to which they are addressed. If you have received this email message in error, please notify the sender and permanently remove the message and all attached files from your computer without reading them. Any disclosure, copying or distribution of all or part of information contained herein to third parties is prohibited and may be unlawful. Please note that any views or opinions presented in this message are solely those of the author and do not necessarily represent the views and opinions of PayParq Group. PayParq Group accepts no liability for any potential damage caused by this message.</p>`,
@@ -388,9 +420,9 @@ export function CRMTable() {
     if (template) {
       setSelectedTemplate(templateName as 'custom' | 'parking');
       setTemplateLanguage(language);
-      setEmailSubject(template.subject);
+      setEmailSubject(template.subjects[language]);
       const disclaimer = template.disclaimers[language];
-      const bodyWithDisclaimer = `${template.body('X')}\n\n${disclaimer}`;
+      const bodyWithDisclaimer = `${template.bodies[language]('X')}\n\n${disclaimer}`;
       setEmailBody(bodyWithDisclaimer);
     }
   };
