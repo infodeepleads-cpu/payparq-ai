@@ -257,6 +257,8 @@ export function SearchPage() {
   const [selectedListing, setSelectedListing] = useState<Parking | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const isAppRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/app');
+  const isGoogleApp = typeof navigator !== 'undefined' && /google|android.*app/i.test(navigator.userAgent);
+  const isMobileView = typeof window !== 'undefined' && (window.innerWidth < 768 || isGoogleApp);
   const [showMobileMap, setShowMobileMap] = useState(isAppRoute);
   const [desktopViewMode, setDesktopViewMode] = useState<'list' | 'logo'>('list');
   const [loading, setLoading] = useState(true);

@@ -1035,6 +1035,7 @@ function PaidCheckoutForm({
             <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6 space-y-4 overflow-hidden">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">{checkoutT('Način plaćanja', locale)}</p>
               <ExpressCheckoutElement
+                key={`express-${email}-${phone}-${plate}`}
                 options={{ wallets: { googlePay: 'always', applePay: 'always' } }}
                 onConfirm={async () => {
                   if (!stripe || !elements) return;
