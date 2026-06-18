@@ -2,6 +2,9 @@
 import { useState, useEffect } from 'react';
 import { Trash2, Plus, RefreshCw, Upload, X, AlertCircle, Mail, BarChart2 } from 'lucide-react';
 import { ManagementDashboard } from '@/components/ManagementDashboard';
+import { EmailInboxTab } from '@/components/EmailInboxTab';
+
+type CRMTab = 'crm' | 'email';
 
 interface CRMRow {
   id: string;
@@ -169,6 +172,7 @@ const TEMPLATES: Record<string, EmailTemplate> = {
 };
 
 export function CRMTable() {
+  const [activeTab, setActiveTab] = useState<CRMTab>('crm');
   const [rows, setRows] = useState<CRMRow[]>([]);
   const [selectedCity, setSelectedCity] = useState('');
   const [cities, setCities] = useState<string[]>([]);
@@ -818,6 +822,35 @@ export function CRMTable() {
 
   return (
     <div className="space-y-4">
+      {/* Tab Navigation */}
+      <div className="flex gap-2 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('crm')}
+          className={`px-4 py-3 font-medium border-b-2 transition-colors ${
+            activeTab === 'crm'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          CRM
+        </button>
+        <button
+          onClick={() => setActiveTab('email')}
+          className={`px-4 py-3 font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'email'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <Mail size={16} />
+          Email Inbox
+        </button>
+      </div>
+
+      {activeTab === 'email' ? (
+        <EmailInboxTab />
+      ) : (
+        <>
       {/* Setup Error */}
       {setupError && (
         <div className="bg-red-50 border border-red-300 rounded-lg p-4 flex items-start gap-3">
