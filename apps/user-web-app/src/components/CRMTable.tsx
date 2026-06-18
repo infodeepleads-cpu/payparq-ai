@@ -1760,6 +1760,8 @@ export function CRMTable() {
             </div>
           </>
         )}
-      </div>
+        </>
+      )}
+    </div>
   );
 }
