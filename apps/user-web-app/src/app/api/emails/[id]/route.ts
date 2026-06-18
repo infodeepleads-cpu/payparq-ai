@@ -3,14 +3,14 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   if (!supabaseAdmin) {
     return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
   }
 
   try {
-    const { id } = params;
+    const { id } = await params;
 
     await supabaseAdmin.from('email_sequence_events').delete().eq('id', id);
 
