@@ -1219,7 +1219,7 @@ export function CRMTable() {
                       <option value="">Select a contact...</option>
                       {availableRecipients.map((r) => (
                         <option key={r.id} value={r.id}>
-                          {r.contact} ({r.company})
+                          {r.company} ({r.email})
                         </option>
                       ))}
                     </select>
