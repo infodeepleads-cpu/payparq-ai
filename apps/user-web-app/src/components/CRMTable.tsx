@@ -6,7 +6,6 @@ import { ManagementDashboard } from '@/components/ManagementDashboard';
 interface CRMRow {
   id: string;
   company: string;
-  contact: string;
   email: string;
   status: string;
   nextAction: string;
@@ -17,7 +16,6 @@ interface CRMRow {
 
 const COLUMNS: { key: keyof CRMRow; label: string }[] = [
   { key: 'company', label: 'Tvrtka' },
-  { key: 'contact', label: 'Contact' },
   { key: 'email', label: 'Email' },
   { key: 'status', label: 'Status' },
   { key: 'nextAction', label: 'Next Action' },
@@ -206,6 +204,11 @@ export function CRMTable() {
   const [sendMode, setSendMode] = useState<'single' | 'sequence'>('single');
   const [selectedParkingEmail, setSelectedParkingEmail] = useState(1);
   const [parkingLanguage, setParkingLanguage] = useState<ParkingLanguage>('en');
+  const [sequenceDaySpacing, setSequenceDaySpacing] = useState(2);
+  const [skipWeekends, setSkipWeekends] = useState(true);
+  const [showBulkPasteModal, setShowBulkPasteModal] = useState(false);
+  const [bulkPasteData, setBulkPasteData] = useState('');
+  const [selectedBulkColumn, setSelectedBulkColumn] = useState<keyof CRMRow>('email');
 
   useEffect(() => {
     fetchCRM();
@@ -309,7 +312,6 @@ export function CRMTable() {
     const newRow: CRMRow = {
       id: `${selectedCity}-${Date.now()}`,
       company: '',
-      contact: '',
       email: '',
       status: '',
       nextAction: '',
@@ -376,16 +378,14 @@ export function CRMTable() {
         }
 
         const company = parts[0] || '';
-        const contact = parts[1] || '';
-        const status = parts[2] || '';
-        const nextAction = parts[3] || '';
-        const date = parts[4] || '';
-        const notes = parts[5] || '';
+        const status = parts[1] || '';
+        const nextAction = parts[2] || '';
+        const date = parts[3] || '';
+        const notes = parts[4] || '';
 
         if (company) {
           csvRows.push({
             company,
-            contact,
             status,
             nextAction,
             date,
@@ -444,6 +444,39 @@ export function CRMTable() {
     setRows(updated);
     saveCRM(updated);
     setSelectedCity(newCityName);
+  };
+
+  const handleBulkPaste = () => {
+    if (!bulkPasteData.trim() || !selectedCity) {
+      alert('Please paste data and select a city');
+      return;
+    }
+
+    const lines = bulkPasteData.trim().split('\n');
+    const updatedRows = [...filteredRows];
+
+    lines.forEach((line, index) => {
+      if (index < updatedRows.length) {
+        const value = line.trim();
+        updatedRows[index] = { ...updatedRows[index], [selectedBulkColumn]: value };
+      }
+    });
+
+    const allUpdated = rows.map((r) =>
+      r.city === selectedCity ? updatedRows.find((ur) => ur.id === r.id) || r : r
+    );
+
+    setRows(allUpdated);
+    saveCRM(allUpdated);
+    setShowBulkPasteModal(false);
+    setBulkPasteData('');
+    alert(`Updated ${Math.min(lines.length, updatedRows.length)} entries`);
+  };
+
+  const handleCopyColumn = () => {
+    const columnData = filteredRows.map((r) => r[selectedBulkColumn]).join('\n');
+    navigator.clipboard.writeText(columnData);
+    alert(`Copied ${filteredRows.length} ${selectedBulkColumn} values to clipboard`);
   };
 
   const handleOpenEmailModal = (row: CRMRow) => {
@@ -536,8 +569,6 @@ export function CRMTable() {
   const extractDisplayName = (row: CRMRow): string => {
     const company = row.company?.trim() || '';
     if (company && !company.includes('@')) return company;
-    const contact = row.contact?.trim() || '';
-    if (contact && !contact.includes('@')) return contact;
     return 'Sir/Madam';
   };
 
@@ -863,6 +894,13 @@ export function CRMTable() {
           Import CSV
         </button>
         <button
+          onClick={() => setShowBulkPasteModal(true)}
+          disabled={saving || !selectedCity || filteredRows.length === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+        >
+          📋 Bulk Paste
+        </button>
+        <button
           onClick={fetchCRM}
           disabled={saving || loading}
           className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-medium transition-colors disabled:opacity-50"
@@ -975,16 +1013,23 @@ export function CRMTable() {
                           <button
                             key={num}
                             onClick={() => setSelectedParkingEmail(num)}
+                            disabled={num === 1 && sendMode === 'sequence'}
                             className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
                               selectedParkingEmail === num
                                 ? 'bg-blue-600 text-white'
+                                : num === 1 && sendMode === 'sequence'
+                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
+                            title={num === 1 && sendMode === 'sequence' ? 'Email 1 is always sent in parking sequence' : ''}
                           >
                             Email {num}
                           </button>
                         ))}
                       </div>
+                      {sendMode === 'sequence' && (
+                        <p className="text-xs text-blue-600 mt-2 font-medium">🔒 Email 1 (Parking template) is required and always sent first</p>
+                      )}
                     </div>
 
                     {/* Language Selector */}
@@ -1036,6 +1081,61 @@ export function CRMTable() {
                         </button>
                       </div>
                     </div>
+
+                    {sendMode === 'sequence' && (
+                      <>
+                        {/* Day Spacing Customization */}
+                        <div className="border-t border-gray-200 pt-3">
+                          <label className="block text-xs font-semibold text-gray-700 mb-2">Email Spacing:</label>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="range"
+                                min="1"
+                                max="10"
+                                value={sequenceDaySpacing}
+                                onChange={(e) => setSequenceDaySpacing(parseInt(e.target.value))}
+                                className="flex-1"
+                              />
+                              <span className="text-sm font-bold text-gray-900 w-12 text-right">{sequenceDaySpacing}d</span>
+                            </div>
+                            <p className="text-xs text-gray-600">Send each email {sequenceDaySpacing} day{sequenceDaySpacing !== 1 ? 's' : ''} apart</p>
+                          </div>
+                        </div>
+
+                        {/* Skip Weekends Toggle */}
+                        <div>
+                          <label className="flex items-center gap-3 p-2 bg-blue-50 border border-blue-200 rounded cursor-pointer hover:bg-blue-100 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={skipWeekends}
+                              onChange={(e) => setSkipWeekends(e.target.checked)}
+                              className="w-4 h-4 cursor-pointer"
+                            />
+                            <div>
+                              <span className="font-semibold text-gray-900 text-xs">Never send on weekends</span>
+                              <p className="text-xs text-gray-600">Emails skip Sat/Sun</p>
+                            </div>
+                          </label>
+                        </div>
+
+                        {/* Timeline Preview */}
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                          <p className="text-xs font-semibold text-gray-700 mb-2">📅 Send Timeline:</p>
+                          <div className="space-y-1 text-xs text-gray-600">
+                            {[1, 2, 3, 4].map((email) => {
+                              let daysFromStart = (email - 1) * sequenceDaySpacing;
+                              let adjustedDays = daysFromStart;
+                              if (skipWeekends) {
+                                const weekendDays = Math.floor(daysFromStart / 7) * 2;
+                                adjustedDays = daysFromStart + weekendDays;
+                              }
+                              return <div key={email}>📧 Email {email}: +{adjustedDays}d</div>;
+                            })}
+                          </div>
+                        </div>
+                      </>
+                    )}
 
                     {/* Preview */}
                     {(() => {
@@ -1225,7 +1325,7 @@ export function CRMTable() {
                   />
                   <div>
                     <span className="font-semibold text-gray-900">A/B Test this email?</span>
-                    <p className="text-xs text-gray-600 mt-0.5">Send variant A and B, compare performance</p>
+                    <p className="text-xs text-gray-600 mt-0.5">Variant A (left) is required. Variant B (right) is optional.</p>
                   </div>
                 </label>
               </div>
@@ -1349,7 +1449,9 @@ export function CRMTable() {
                   disabled={
                     !!sendingProgress ||
                     (emailRecipients.length === 0 && customEmails.length === 0) ||
-                    (selectedTemplate !== 'parking-sequence' && (!emailSubject.trim() || !emailBody.trim()))
+                    (selectedTemplate !== 'parking-sequence' && (!emailSubject.trim() || !emailBody.trim())) ||
+                    (abTestEnabled && !emailSubjectB.trim()) ||
+                    (abTestEnabled && !emailBodyB.trim())
                   }
                   className={`flex-1 px-4 py-2 text-white rounded-lg font-medium transition-colors disabled:opacity-50 ${
                     selectedTemplate === 'parking-sequence'
@@ -1399,7 +1501,7 @@ export function CRMTable() {
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">CSV File</label>
                 <p className="text-xs text-gray-600 mb-3">
-                  Upload a CSV with columns: Company | Contact | Status | Next Action | Date | Notes
+                  Upload a CSV with columns: Company | Status | Next Action | Date | Notes
                 </p>
                 <div className={`block px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
                   importCity
@@ -1434,6 +1536,75 @@ export function CRMTable() {
                   Close
                 </button>
                 {importLoading && <span className="text-sm text-gray-600">Processing...</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Paste Modal */}
+      {showBulkPasteModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Bulk Paste Column Data</h2>
+              <button onClick={() => setShowBulkPasteModal(false)} className="text-gray-500 hover:text-gray-700">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Select Column</label>
+                <select
+                  value={selectedBulkColumn}
+                  onChange={(e) => setSelectedBulkColumn(e.target.value as keyof CRMRow)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-600 bg-white text-gray-900"
+                >
+                  {COLUMNS.map((col) => (
+                    <option key={col.key} value={col.key}>
+                      {col.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-semibold text-gray-900">Paste Data (one per line)</label>
+                  <button
+                    onClick={handleCopyColumn}
+                    className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded font-medium"
+                  >
+                    Copy existing
+                  </button>
+                </div>
+                <p className="text-xs text-gray-600 mb-3">
+                  Paste {filteredRows.length} values, one per line. Will update rows in order.
+                </p>
+                <textarea
+                  value={bulkPasteData}
+                  onChange={(e) => setBulkPasteData(e.target.value)}
+                  placeholder="value1&#10;value2&#10;value3&#10;..."
+                  rows={8}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-600 bg-white text-gray-900 font-mono text-sm resize-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setShowBulkPasteModal(false)}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBulkPaste}
+                  disabled={!bulkPasteData.trim()}
+                  className="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                >
+                  Apply to {filteredRows.length} entries
+                </button>
               </div>
             </div>
           </div>

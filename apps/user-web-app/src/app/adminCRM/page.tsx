@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react';
 import { CRMTable } from '@/components/CRMTable';
 import { CampaignAnalyticsWidget } from '@/components/CampaignAnalyticsWidget';
 import { EmailAnalyticsWidget } from '@/components/EmailAnalyticsWidget';
-import { X } from 'lucide-react';
+import { X, BarChart3 } from 'lucide-react';
 
 export default function AdminCRMPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,15 +97,42 @@ export default function AdminCRMPage() {
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Analytics Widgets */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <CampaignAnalyticsWidget />
-            <EmailAnalyticsWidget />
-          </div>
+          {/* Analytics Button */}
+          <button
+            onClick={() => setShowAnalyticsModal(true)}
+            className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold shadow-md transition-all hover:shadow-lg"
+          >
+            <BarChart3 size={20} />
+            📊 View Analytics
+          </button>
 
           {/* CRM Table */}
           <CRMTable />
         </div>
+
+        {/* Analytics Modal */}
+        {showAnalyticsModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                  <BarChart3 size={24} />
+                  Campaign & Email Analytics
+                </h2>
+                <button onClick={() => setShowAnalyticsModal(false)} className="text-gray-500 hover:text-gray-700">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <CampaignAnalyticsWidget />
+                  <EmailAnalyticsWidget />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
