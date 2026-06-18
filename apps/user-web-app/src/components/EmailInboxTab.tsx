@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Mail, RefreshCw, Trash2, RotateCcw } from 'lucide-react';
 
 interface EmailMessage {
   id: string;
@@ -70,12 +69,12 @@ export function EmailInboxTab() {
     : emails;
 
   const statusColors: Record<string, string> = {
-    sent: 'bg-blue-100 text-blue-700',
-    opened: 'bg-blue-100 text-blue-700',
-    clicked: 'bg-blue-100 text-blue-700',
-    bounced: 'bg-black text-white',
-    replied: 'bg-blue-100 text-blue-700',
-    draft: 'bg-gray-200 text-gray-900',
+    sent: 'text-blue-600',
+    opened: 'text-blue-600',
+    clicked: 'text-blue-600',
+    bounced: 'text-black',
+    replied: 'text-blue-600',
+    draft: 'text-black',
   };
 
   return (
@@ -102,9 +101,8 @@ export function EmailInboxTab() {
         <button
           onClick={() => fetchEmails()}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
         >
-          <RefreshCw size={16} />
           Refresh
         </button>
 
@@ -171,42 +169,38 @@ export function EmailInboxTab() {
                       {email.subject || '(no subject)'}
                     </td>
                     <td className="px-6 py-4 text-sm">
-                      <span
-                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium capitalize ${
-                          statusColors[email.status] || 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
+                      <span className={`font-medium capitalize ${statusColors[email.status] || 'text-gray-700'}`}>
                         {email.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {new Date(email.sent_at).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 text-sm flex items-center gap-2">
+                    <td className="px-6 py-4 text-sm flex items-center gap-3">
                       {email.status === 'draft' && (
                         <button
                           onClick={() => retrySend(email.id)}
-                          className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                          className="text-blue-600 hover:text-blue-700 font-medium"
                           title="Send draft"
                         >
-                          <Mail size={14} />
+                          Send
                         </button>
                       )}
                       {email.status === 'bounced' && (
                         <button
                           onClick={() => retrySend(email.id)}
-                          className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                          className="text-blue-600 hover:text-blue-700 font-medium"
                           title="Retry send"
                         >
-                          <RotateCcw size={14} />
+                          Retry
                         </button>
                       )}
                       <button
                         onClick={() => deleteEmail(email.id)}
-                        className="text-black hover:text-gray-700"
+                        className="text-black hover:text-gray-700 font-medium"
                         title="Delete"
                       >
-                        <Trash2 size={14} />
+                        Delete
                       </button>
                     </td>
                   </tr>
