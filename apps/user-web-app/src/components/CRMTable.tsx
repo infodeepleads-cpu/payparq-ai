@@ -800,13 +800,12 @@ export function CRMTable() {
         </button>
         <button
           onClick={() => setActiveTab('email')}
-          className={`px-4 py-3 font-medium border-b-2 transition-colors flex items-center gap-2 ${
+          className={`px-4 py-3 font-medium border-b-2 transition-colors ${
             activeTab === 'email'
               ? 'border-blue-600 text-blue-600'
               : 'border-transparent text-gray-600 hover:text-gray-900'
           }`}
         >
-          <Mail size={16} />
           Email Inbox
         </button>
       </div>
