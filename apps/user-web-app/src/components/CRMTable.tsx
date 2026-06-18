@@ -851,65 +851,64 @@ export function CRMTable() {
         <EmailInboxTab />
       ) : (
         <>
-      {/* Setup Error */}
-      {setupError && (
-        <div className="bg-red-50 border border-red-300 rounded-lg p-4 flex items-start gap-3">
-          <AlertCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-semibold text-red-800">Database error: {setupError}</p>
-            <p className="text-xs text-red-700 mt-1">
-              You need to create the <code className="bg-red-100 px-1 rounded">crm_entries</code> table in Supabase.
-              Go to <strong>Supabase → SQL Editor</strong> and run the SQL from <code>sql/create_crm_table.sql</code>.
-            </p>
+          {setupError && (
+            <div className="bg-red-50 border border-red-300 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-red-800">Database error: {setupError}</p>
+                <p className="text-xs text-red-700 mt-1">
+                  You need to create the <code className="bg-red-100 px-1 rounded">crm_entries</code> table in Supabase.
+                  Go to <strong>Supabase → SQL Editor</strong> and run the SQL from <code>sql/create_crm_table.sql</code>.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* City Selector */}
+          <div className="flex items-center gap-3 flex-wrap bg-white p-4 rounded-lg border border-gray-200">
+            <label className="text-sm font-semibold text-gray-900">City:</label>
+            <select
+              value={selectedCity}
+              onChange={(e) => setSelectedCity(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white text-gray-900"
+            >
+              <option value="">Select a city...</option>
+              {cities.map((city) => (
+                <option key={city} value={city}>
+                  {city} ({rows.filter((r) => r.city === city).length})
+                </option>
+              ))}
+            </select>
+            {selectedCity && (
+              <>
+                <span className="text-xs text-gray-600">
+                  {filteredRows.length} entries
+                </span>
+                <button
+                  onClick={handleRenameCity}
+                  className="px-3 py-1.5 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded font-medium transition-colors"
+                >
+                  Rename
+                </button>
+                <button
+                  onClick={handleDeleteCity}
+                  className="px-3 py-1.5 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded font-medium transition-colors"
+                >
+                  Delete City
+                </button>
+              </>
+            )}
           </div>
-        </div>
-      )}
 
-      {/* City Selector */}
-      <div className="flex items-center gap-3 flex-wrap bg-white p-4 rounded-lg border border-gray-200">
-        <label className="text-sm font-semibold text-gray-900">City:</label>
-        <select
-          value={selectedCity}
-          onChange={(e) => setSelectedCity(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white text-gray-900"
-        >
-          <option value="">Select a city...</option>
-          {cities.map((city) => (
-            <option key={city} value={city}>
-              {city} ({rows.filter((r) => r.city === city).length})
-            </option>
-          ))}
-        </select>
-        {selectedCity && (
-          <>
-            <span className="text-xs text-gray-600">
-              {filteredRows.length} entries
-            </span>
+          {/* Toolbar */}
+          <div className="flex items-center gap-3 flex-wrap">
             <button
-              onClick={handleRenameCity}
-              className="px-3 py-1.5 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded font-medium transition-colors"
+              onClick={() => setShowDashboard(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
             >
-              Rename
+              <BarChart2 size={16} />
+              Dashboard
             </button>
-            <button
-              onClick={handleDeleteCity}
-              className="px-3 py-1.5 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded font-medium transition-colors"
-            >
-              Delete City
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <button
-          onClick={() => setShowDashboard(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
-        >
-          <BarChart2 size={16} />
-          Dashboard
-        </button>
         <button
           onClick={handleAddRow}
           disabled={saving || !selectedCity}
@@ -1756,12 +1755,11 @@ export function CRMTable() {
             </div>
           )}
 
-          <div className="text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded-lg p-3">
-            Click any cell to edit inline. Changes auto-save. {filteredRows.length} entries in {selectedCity}
-          </div>
-        </>
-      )}
-
-    </div>
+            <div className="text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              Click any cell to edit inline. Changes auto-save. {filteredRows.length} entries in {selectedCity}
+            </div>
+          </>
+        )}
+      </div>
   );
 }
