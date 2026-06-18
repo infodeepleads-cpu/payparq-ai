@@ -2778,7 +2778,7 @@ export function SearchPage() {
           </div>
         )}
 
-        {/* Mobile List/Map - Hidden when details open */}
+        {/* Mobile List/Map/Prostori - Hidden when details open */}
         {!showMobileDetails && (showMobileMap ? (
           <div className="flex-1 overflow-hidden w-full relative">
             {isLoaded ? (
@@ -2883,6 +2883,31 @@ export function SearchPage() {
               </svg>
             </button>
             )}
+          </div>
+        ) : desktopViewMode === 'logo' ? (
+          <div className="flex-1 overflow-y-auto w-full">
+            <div className="p-3 space-y-3">
+              {filteredListings.length === 0 ? (
+                <div className="overflow-y-auto px-4 py-4">
+                  <div className="w-full">
+                    <p className="text-gray-600 font-medium">{t('Nema pronađenih parkirnih mjesta', locale)}</p>
+                    <p className="text-sm text-gray-500 mt-1">{t('Pokušajte prilagoditi svoje filtre', locale)}</p>
+                  </div>
+                </div>
+              ) : (
+                filteredListings.map((lot) => (
+                  <div key={lot.id} className="transition-all duration-200 rounded-2xl">
+                    <ParkingLogoCard
+                      lot={lot}
+                      onSelect={() => {
+                        setSelectedListing(lot);
+                        setShowMobileDetails(true);
+                      }}
+                    />
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto w-full h-full">
