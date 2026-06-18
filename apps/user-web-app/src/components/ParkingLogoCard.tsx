@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Star, MapPin, Clock, AlertCircle, Eye, Lock, Zap, Info, X } from 'lucide-react';
+import { openCheckout } from '@/lib/capacitorBrowser';
 
 interface ParkingLogoCardProps {
   listing: any;
@@ -139,12 +140,12 @@ export function ParkingLogoCard({
 
         {/* CTA Button - Stripe Blue */}
         <div className="px-6 py-4 border-t border-gray-200">
-          <a
-            href={checkoutUrl}
+          <button
+            onClick={() => openCheckout(checkoutUrl)}
             className="w-full inline-block text-center bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 active:scale-95 transition text-sm shadow-sm hover:shadow-md"
           >
             {locale === 'hr' ? 'Nastavi na Checkout' : 'Proceed to booking'}
-          </a>
+          </button>
         </div>
       </div>
 

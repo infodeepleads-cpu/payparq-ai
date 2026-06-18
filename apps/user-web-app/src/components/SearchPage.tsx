@@ -17,6 +17,7 @@ import { HomeBookingFlow } from './HomeBookingFlow';
 import { useLocale } from './LocaleProvider';
 import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle, List, DollarSign, Globe } from 'lucide-react';
 import { resolveScannerTruthPriceEuro, getViablePrice, getTieredDailyConfig, calculateTieredDailyPrice } from '@/lib/locationPricing';
+import { openCheckout } from '@/lib/capacitorBrowser';
 import { AMENITIES_LIST, normalizeAmenityLabels } from '@/lib/amenities';
 import { LOCALE_COOKIE_NAME } from '@/lib/locale';
 import { AmenitiesChips } from './AmenitiesChips';
@@ -2378,12 +2379,12 @@ export function SearchPage() {
                 </div>
 
                 {/* CTA Button - Stripe checkout */}
-                <a
-                  href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
+                <button
+                  onClick={() => selectedListing && openCheckout(buildCheckoutUrl(selectedListing))}
                   className="inline-block px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   {t('Rezervirajte sada', locale)} — €{subtotal.toFixed(2)}
-                </a>
+                </button>
 
                 {/* Green Box */}
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
@@ -3442,12 +3443,12 @@ export function SearchPage() {
 
             {/* Sticky Footer - Book Now Button */}
             <div className="sticky bottom-0 px-6 py-6 border-t border-gray-200 bg-white flex items-center justify-center">
-              <a
-                href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
+              <button
+                onClick={() => selectedListing && openCheckout(buildCheckoutUrl(selectedListing))}
                 className="block w-full px-5 py-5 bg-blue-500 text-white text-base font-bold rounded-lg hover:bg-blue-700 transition-colors text-center"
               >
                 {t('Rezervirajte sada', locale)} — €{subtotal.toFixed(2)}
-              </a>
+              </button>
             </div>
           </div>
         </div>
@@ -3629,12 +3630,12 @@ export function SearchPage() {
                 <p className="text-lg font-bold text-gray-900">€{totalPrice.toFixed(2)}</p>
               </div>
 
-              <a
-                href={buildCheckoutUrl(selectedListing)}
+              <button
+                onClick={() => openCheckout(buildCheckoutUrl(selectedListing))}
                 className="block w-full mt-2 px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
               >
                 {t('Rezervirajte sada', locale)} — €{totalPrice.toFixed(2)}
-              </a>
+              </button>
               <button
                 onClick={() => setShowPriceBreakdown(false)}
                 className="w-full px-4 py-2 bg-gray-200 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-300 transition-colors"
