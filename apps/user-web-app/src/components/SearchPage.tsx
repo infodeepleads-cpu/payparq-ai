@@ -2895,17 +2895,22 @@ export function SearchPage() {
                   </div>
                 </div>
               ) : (
-                filteredListings.map((lot) => (
-                  <div key={lot.id} className="transition-all duration-200 rounded-2xl">
-                    <ParkingLogoCard
-                      lot={lot}
-                      onSelect={() => {
-                        setSelectedListing(lot);
-                        setShowMobileDetails(true);
-                      }}
-                    />
-                  </div>
-                ))
+                filteredListings.map((listing) => {
+                  const totalPrice = getDisplayPrice(listing, durationHours, reservationType);
+                  const price = parseFloat((showTotalPrice ? totalPrice + Math.min(1.99, 0.99 + (totalPrice * 0.10)) : totalPrice).toFixed(2));
+                  return (
+                    <div key={listing.id} className="transition-all duration-200 rounded-2xl cursor-pointer" onClick={() => { setSelectedListing(listing); setShowMobileDetails(true); }}>
+                      <ParkingLogoCard
+                        listing={listing}
+                        price={price}
+                        durationLabel={reservationType}
+                        locale={locale}
+                        checkoutUrl={buildCheckoutUrl(listing)}
+                        onInfo={() => {}}
+                      />
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
