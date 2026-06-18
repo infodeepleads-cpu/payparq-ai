@@ -446,38 +446,6 @@ export function CRMTable() {
     setSelectedCity(newCityName);
   };
 
-  const handleBulkPaste = () => {
-    if (!bulkPasteData.trim() || !selectedCity) {
-      alert('Please paste data and select a city');
-      return;
-    }
-
-    const lines = bulkPasteData.trim().split('\n');
-    const updatedRows = [...filteredRows];
-
-    lines.forEach((line, index) => {
-      if (index < updatedRows.length) {
-        const value = line.trim();
-        updatedRows[index] = { ...updatedRows[index], [selectedBulkColumn]: value };
-      }
-    });
-
-    const allUpdated = rows.map((r) =>
-      r.city === selectedCity ? updatedRows.find((ur) => ur.id === r.id) || r : r
-    );
-
-    setRows(allUpdated);
-    saveCRM(allUpdated);
-    setShowBulkPasteModal(false);
-    setBulkPasteData('');
-    alert(`Updated ${Math.min(lines.length, updatedRows.length)} entries`);
-  };
-
-  const handleCopyColumn = () => {
-    const columnData = filteredRows.map((r) => r[selectedBulkColumn]).join('\n');
-    navigator.clipboard.writeText(columnData);
-    alert(`Copied ${filteredRows.length} ${selectedBulkColumn} values to clipboard`);
-  };
 
   const handleOpenEmailModal = (row: CRMRow) => {
     setEmailRecipients([{
