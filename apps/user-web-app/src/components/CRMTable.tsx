@@ -524,7 +524,7 @@ export function CRMTable() {
 
       const toEnroll = filteredRows.map(row => ({
         email: row.email,
-        name: row.company || row.contact || 'Unknown',
+        name: row.company || 'Unknown',
       }));
 
       const res = await fetch('/api/sequences/enroll', {
