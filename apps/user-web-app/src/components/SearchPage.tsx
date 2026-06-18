@@ -2604,7 +2604,13 @@ export function SearchPage() {
                       durationLabel={durationLabel}
                       locale={locale}
                       checkoutUrl={buildCheckoutUrl(listing)}
-                      onInfo={() => { setSelectedListing(listing); setShowDetailsView(true); }}
+                      onInfo={() => {
+                        setSelectedListing(listing);
+                        setShowDetailsView(true);
+                        if (desktopViewMode === 'logo') {
+                          setDesktopViewMode('list');
+                        }
+                      }}
                       selectedDays={days}
                     />
                   );
