@@ -108,10 +108,6 @@ export async function POST(req: NextRequest) {
     // Feature 5: Airport Lot
     const airportLotEnabled       = formData.get('airportLotEnabled') === 'true';
 
-    // Feature 6: Valet Configuration
-    const valetAsSeparateCardEnabled = formData.get('valetAsSeparateCardEnabled') === 'true';
-    const valetPriceIncrease         = parseFloat((formData.get('valetPriceIncrease') as string) || '0');
-
     // Partnership toggles
     const wantPartnership      = formData.get('wantPartnership') === 'true';
     const wantQR               = formData.get('wantQR') === 'true';
@@ -222,6 +218,7 @@ export async function POST(req: NextRequest) {
           personal_brand_name: personalBrandingEnabled ? personalBrandName : null,
           // Feature 2: Shuttle/Valet Info
           shuttle_valet_info: shuttleValetInfo || null,
+          shuttle_enabled: addons.includes('Shuttle'),
           // Feature 3: Free Cancellation
           free_cancellation_enabled: freeCancellationEnabled,
           free_cancellation_days: freeCancellationEnabled ? freeCancellationDays : null,
@@ -230,9 +227,6 @@ export async function POST(req: NextRequest) {
           online_payment_enabled: onlinePaymentEnabled,
           // Feature 5: Airport Lot
           airport_lot_enabled: airportLotEnabled,
-          // Feature 6: Valet Configuration
-          valet_as_separate_card_enabled: valetAsSeparateCardEnabled,
-          valet_price_increase: valetAsSeparateCardEnabled ? valetPriceIncrease : 0,
           // Partnership toggles
           want_partnership: wantPartnership,
           want_qr_pay: wantQR,

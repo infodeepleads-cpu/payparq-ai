@@ -179,8 +179,6 @@ const expandListingsToCardVariants = (listings: any[]): CardVariant[] => {
     const metadata = listing.verification_metadata || {};
     const ticketingEnabled = metadata.ticketing_enabled !== false;
     const onlinePaymentEnabled = metadata.online_payment_enabled !== false;
-    const valetAsSeparateCard = metadata.valet_as_separate_card_enabled;
-    const valetPriceIncrease = metadata.valet_price_increase || 0;
 
     // Add ticketing variant if enabled
     if (ticketingEnabled) {
@@ -202,28 +200,6 @@ const expandListingsToCardVariants = (listings: any[]): CardVariant[] => {
         priceMultiplier: 1,
         label: 'Online',
       });
-    }
-
-    // Add valet variants if enabled as separate card
-    if (valetAsSeparateCard && valetPriceIncrease > 0) {
-      if (ticketingEnabled) {
-        variants.push({
-          listingId: listing.id,
-          originalListing: listing,
-          variantType: 'valet',
-          priceMultiplier: 1 + (valetPriceIncrease / 100),
-          label: 'Valet',
-        });
-      }
-      if (onlinePaymentEnabled) {
-        variants.push({
-          listingId: listing.id,
-          originalListing: listing,
-          variantType: 'valet',
-          priceMultiplier: 1 + (valetPriceIncrease / 100),
-          label: 'Valet',
-        });
-      }
     }
   });
   return variants;
@@ -2251,15 +2227,14 @@ export function SearchPage() {
                   }
                 }
 
-                return expandListingsToCardVariants(filteredListings).map((variant, idx) => {
-                  const listing = variant.originalListing;
+                return getPrimaryVariantPerListing(filteredListings).map((listing, idx) => {
                   const badgeText = badgeMap.get(listing.id);
                   const isSelected = selectedListing?.id === listing.id;
                   const liveRef = searchLocationPin || mapCenter;
                   const liveListing = { ...listing, distance: parseFloat(haversineKm(liveRef.lat, liveRef.lng, listing.lat, listing.lng).toFixed(1)) };
                   return (
                     <div
-                      key={`${listing.id}-${variant.variantType}`}
+                      key={listing.id}
                       data-lot-id={listing.id}
                       className={`transition-all duration-200 rounded-2xl ${isSelected ? 'ring-2 ring-blue-500 shadow-lg' : ''}`}
                     >

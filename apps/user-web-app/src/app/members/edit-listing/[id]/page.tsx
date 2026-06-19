@@ -501,6 +501,7 @@ export default function EditListingPage() {
             accessInstructions,
             addons,
             features: addons,
+            shuttle_enabled: addons.includes('Shuttle service') || addons.includes('Shuttle'),
             is247,
             available24_7: is247,
             openDays: abbreviatedDays,

@@ -123,8 +123,6 @@ const HOST_TRANSLATIONS = {
   'Ticketing Only': { en: 'Ticketing Only', hr: 'Samo karte' },
   'Online Payment': { en: 'Online Payment', hr: 'Plaćanje Online' },
   'Airport Lot': { en: 'Airport Lot', hr: 'Parking pri Zračnoj Luci' },
-  'Show valet as separate card': { en: 'Show valet as separate card', hr: 'Prikaži valet kao posebnu karticu' },
-  'Valet price increase %': { en: 'Valet price increase %', hr: 'Povećanje cijene valeta %' },
 } as const;
 
 const hostT = (key: string, locale: string): string => {
@@ -789,10 +787,6 @@ export default function HostPage() {
   // Feature 5: Airport Lot
   const [airportLotEnabled, setAirportLotEnabled] = useState(false);
 
-  // Feature 6: Valet Configuration
-  const [valetAsSeparateCardEnabled, setValetAsSeparateCardEnabled] = useState(false);
-  const [valetPriceIncrease, setValetPriceIncrease] = useState('');
-
   // Photos
   const [photos, setPhotos] = useState<File[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -899,9 +893,6 @@ export default function HostPage() {
     fd.append('onlinePaymentEnabled', String(onlinePaymentEnabled));
     // Feature 5: Airport Lot
     fd.append('airportLotEnabled', String(airportLotEnabled));
-    // Feature 6: Valet Configuration
-    fd.append('valetAsSeparateCardEnabled', String(valetAsSeparateCardEnabled));
-    fd.append('valetPriceIncrease', valetPriceIncrease);
     // Partnership toggles
     fd.append('wantPartnership', String(wantPartnership));
     fd.append('wantQR', String(wantQR));
@@ -1398,29 +1389,6 @@ export default function HostPage() {
                     </div>
                     <Toggle checked={airportLotEnabled} onChange={setAirportLotEnabled} />
                   </div>
-                </div>
-
-                {/* Feature 6: Valet Configuration */}
-                <div className="space-y-3 pt-4 border-t border-gray-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="text-xs font-semibold text-gray-800">{hostT('Show valet as separate card', locale)}</p>
-                      <p className="text-xs text-gray-400">{locale === 'en' ? 'Show valet as a premium option card' : 'Prikaži valet kao opciju premium kartice'}</p>
-                    </div>
-                    <Toggle checked={valetAsSeparateCardEnabled} onChange={setValetAsSeparateCardEnabled} />
-                  </div>
-                  {valetAsSeparateCardEnabled && (
-                    <input
-                      type="number"
-                      placeholder="25"
-                      min="0"
-                      max="100"
-                      step="0.5"
-                      value={valetPriceIncrease}
-                      onChange={(e) => setValetPriceIncrease(e.target.value)}
-                      className={inputClass}
-                    />
-                  )}
                 </div>
 
                 {true && (
