@@ -13,6 +13,7 @@ interface ParkingLogoCardProps {
   onInfo: () => void;
   selectedDays?: number;
   variantType?: 'ticketing' | 'online' | 'valet';
+  airportSurcharge?: number;
 }
 
 export function ParkingLogoCard({
@@ -24,6 +25,7 @@ export function ParkingLogoCard({
   onInfo,
   selectedDays = 1,
   variantType = 'online',
+  airportSurcharge = 0,
 }: ParkingLogoCardProps) {
   const [showFeeModal, setShowFeeModal] = useState(false);
   const isOnlinePayment = variantType === 'online';
@@ -31,13 +33,12 @@ export function ParkingLogoCard({
   const isValet = variantType === 'valet';
   const serviceFee = Math.min(1.99, 0.99 + (price * 0.10));
   const total = price + serviceFee;
-  const airportSurcharge = listing.verification_metadata?.airport_lot_enabled ? 2.49 : 0;
 
   let paymentMethodLabel = 'Pay online';
   let paymentMethodLabelHr = 'Plaćanje online';
   if (isTicketing) {
-    paymentMethodLabel = `Secure spot for €${price.toFixed(2)}, pay the rest on arrival`;
-    paymentMethodLabelHr = `Osiguraj mjesto za €${price.toFixed(2)}, plati ostatak na dolasku`;
+    paymentMethodLabel = `Secure spot for €${serviceFee.toFixed(2)}, pay the rest on arrival`;
+    paymentMethodLabelHr = `Osiguraj mjesto za €${serviceFee.toFixed(2)}, plati ostatak na dolasku`;
   } else if (isValet) {
     paymentMethodLabel = isOnlinePayment ? 'Valet (Pay online)' : 'Valet (Pay on arrival)';
     paymentMethodLabelHr = isOnlinePayment ? 'Valet (Plaćanje online)' : 'Valet (Plaćanje na dolasku)';
@@ -144,7 +145,7 @@ export function ParkingLogoCard({
                 </p>
                 {airportSurcharge > 0 && (
                   <p className="text-xs text-orange-600 mt-1 font-semibold">
-                    {locale === 'hr' ? '+2.49€ naknada' : '+2.49€ airport fee'}
+                    {locale === 'hr' ? `+€${airportSurcharge.toFixed(2)} naknada` : `+€${airportSurcharge.toFixed(2)} airport fee`}
                   </p>
                 )}
               </div>

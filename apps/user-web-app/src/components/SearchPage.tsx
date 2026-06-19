@@ -2669,7 +2669,7 @@ export function SearchPage() {
                   const livePricedListing = { ...liveListing, pricePerHour: rates.hourly, pricePerDay: rates.daily };
                   const rawPrice = getDisplayPrice(livePricedListing, durationHours, reservationType);
                   const valetMultiplier = variant.priceMultiplier;
-                  const airportSurcharge = listing.verification_metadata?.airport_lot_enabled ? 2.49 : 0;
+                  const airportSurcharge = listing.verification_metadata?.airport_lot_enabled ? parseFloat((0.99 + (rawPrice * 0.03)).toFixed(2)) : 0;
                   const priceWithValet = parseFloat((rawPrice * valetMultiplier).toFixed(2));
                   const priceWithAirport = parseFloat((priceWithValet + airportSurcharge).toFixed(2));
                   const price = parseFloat((showTotalPrice ? priceWithAirport + Math.min(1.99, 0.99 + priceWithAirport * 0.10) : priceWithAirport).toFixed(2));
@@ -2694,6 +2694,7 @@ export function SearchPage() {
                       }}
                       selectedDays={days}
                       variantType={variant.variantType}
+                      airportSurcharge={airportSurcharge}
                     />
                   );
                 })}
@@ -2737,7 +2738,7 @@ export function SearchPage() {
             {filteredListings.map((listing) => {
               const totalPrice = getDisplayPrice(listing, durationHours, reservationType);
               const subtotal = parseFloat(totalPrice.toFixed(2));
-              const airportSurcharge = listing.verification_metadata?.airport_lot_enabled ? 2.49 : 0;
+              const airportSurcharge = listing.verification_metadata?.airport_lot_enabled ? parseFloat((0.99 + (subtotal * 0.03)).toFixed(2)) : 0;
               const priceWithAirport = parseFloat((subtotal + airportSurcharge).toFixed(2));
               const price = parseFloat((showTotalPrice ? priceWithAirport + Math.min(1.99, 0.99 + (priceWithAirport * 0.10)) : priceWithAirport).toFixed(2));
               const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
@@ -2892,7 +2893,7 @@ export function SearchPage() {
                 {getPrimaryVariantPerListing(filteredListings).map((listing) => {
                   const totalPrice = getDisplayPrice(listing, durationHours, reservationType);
                   const subtotal = parseFloat(totalPrice.toFixed(2));
-                  const airportSurcharge = listing.verification_metadata?.airport_lot_enabled ? 2.49 : 0;
+                  const airportSurcharge = listing.verification_metadata?.airport_lot_enabled ? parseFloat((0.99 + (subtotal * 0.03)).toFixed(2)) : 0;
                   const priceWithAirport = parseFloat((subtotal + airportSurcharge).toFixed(2));
                   const price = parseFloat((showTotalPrice ? priceWithAirport + Math.min(1.99, 0.99 + (priceWithAirport * 0.10)) : priceWithAirport).toFixed(2));
                   const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
@@ -2991,7 +2992,7 @@ export function SearchPage() {
                   const listing = variant.originalListing;
                   const totalPrice = getDisplayPrice(listing, durationHours, reservationType);
                   const valetMultiplier = variant.priceMultiplier;
-                  const airportSurcharge = listing.verification_metadata?.airport_lot_enabled ? 2.49 : 0;
+                  const airportSurcharge = listing.verification_metadata?.airport_lot_enabled ? parseFloat((0.99 + (totalPrice * 0.03)).toFixed(2)) : 0;
                   const priceWithValet = parseFloat((totalPrice * valetMultiplier).toFixed(2));
                   const priceWithAirport = parseFloat((priceWithValet + airportSurcharge).toFixed(2));
                   const price = parseFloat((showTotalPrice ? priceWithAirport + Math.min(1.99, 0.99 + priceWithAirport * 0.10) : priceWithAirport).toFixed(2));
@@ -3005,6 +3006,7 @@ export function SearchPage() {
                         checkoutUrl={buildCheckoutUrl(listing)}
                         onInfo={() => {}}
                         variantType={variant.variantType}
+                        airportSurcharge={airportSurcharge}
                       />
                     </div>
                   );

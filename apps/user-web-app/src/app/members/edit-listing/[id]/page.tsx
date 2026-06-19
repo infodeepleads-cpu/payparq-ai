@@ -325,6 +325,9 @@ export default function EditListingPage() {
   // Feature 4: Ticketing Only
   const [ticketingOnlyEnabled, setTicketingOnlyEnabled] = useState(false);
 
+  // Feature 5: Airport Lot
+  const [airportLotEnabled, setAirportLotEnabled] = useState(false);
+
   const [photos, setPhotos] = useState<File[]>([]);
   const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -419,6 +422,9 @@ export default function EditListingPage() {
 
       // Feature 4: Ticketing Only
       setTicketingOnlyEnabled(meta.ticketing_only_enabled ?? false);
+
+      // Feature 5: Airport Lot
+      setAirportLotEnabled(meta.airport_lot_enabled ?? false);
 
       setExistingPhotos(data.verification_photos || []);
       setExistingLogoUrl(data.logo_url || '');
@@ -532,6 +538,8 @@ export default function EditListingPage() {
             free_cancellation_days: freeCancellationEnabled ? (freeCancellationDays ? parseFloat(freeCancellationDays) : null) : null,
             // Feature 4: Ticketing Only
             ticketing_only_enabled: ticketingOnlyEnabled,
+            // Feature 5: Airport Lot
+            airport_lot_enabled: airportLotEnabled,
           },
         }),
       });
@@ -863,6 +871,17 @@ export default function EditListingPage() {
                     <p className="text-xs text-gray-400">{locale === 'en' ? 'Customers pay only service fee at checkout' : 'Kupci plaćaju samo naknadu za uslugu pri kupnji'}</p>
                   </div>
                   <Toggle checked={ticketingOnlyEnabled} onChange={setTicketingOnlyEnabled} />
+                </div>
+              </div>
+
+              {/* Feature 5: Airport Lot */}
+              <div className="space-y-3 pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800">{locale === 'en' ? 'Airport Lot' : 'Parking pri Zračnoj Luci'}</p>
+                    <p className="text-xs text-gray-400">{locale === 'en' ? 'Add dynamic airport surcharge (0.99€ + 3% of total)' : 'Dodaj dinamičku naknadu za parking (0.99€ + 3% ukupno)'}</p>
+                  </div>
+                  <Toggle checked={airportLotEnabled} onChange={setAirportLotEnabled} />
                 </div>
               </div>
 
