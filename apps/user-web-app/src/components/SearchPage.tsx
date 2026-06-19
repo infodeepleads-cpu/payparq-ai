@@ -2250,6 +2250,7 @@ export function SearchPage() {
                   const isSelected = selectedListing?.id === listing.id;
                   const liveRef = searchLocationPin || mapCenter;
                   const liveListing = { ...listing, distance: parseFloat(haversineKm(liveRef.lat, liveRef.lng, listing.lat, listing.lng).toFixed(1)) };
+                  const soldOut = isSoldOut(listing, startTime, endTime);
                   return (
                     <div
                       key={listing.id}
@@ -2271,6 +2272,7 @@ export function SearchPage() {
                         showFee={showTotalPrice}
                         spots={liveListing.spots}
                         reservationType={reservationType}
+                        isSoldOut={soldOut}
                       />
                     </div>
                   );
@@ -3140,6 +3142,7 @@ export function SearchPage() {
                   const isSelected = selectedListing?.id === listing.id;
                   const liveRef = searchLocationPin || mapCenter;
                   const liveListing = { ...listing, distance: parseFloat(haversineKm(liveRef.lat, liveRef.lng, listing.lat, listing.lng).toFixed(1)) };
+                  const soldOut = isSoldOut(listing, startTime, endTime);
                   return (
                     <div
                       key={listing.id}
@@ -3164,6 +3167,7 @@ export function SearchPage() {
                         hideDetailsButton={true}
                         spots={liveListing.spots}
                         reservationType={reservationType}
+                        isSoldOut={soldOut}
                       />
                     </div>
                   );

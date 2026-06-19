@@ -65,9 +65,10 @@ interface ListingCardProps {
   hideDetailsButton?: boolean;
   spots?: number;
   reservationType?: string;
+  isSoldOut?: boolean;
 }
 
-export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText, checkoutUrl, durationHours = 1, showFee = false, hideDetailsButton = false, spots, reservationType = 'Satna/dnevna' }: ListingCardProps) {
+export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText, checkoutUrl, durationHours = 1, showFee = false, hideDetailsButton = false, spots, reservationType = 'Satna/dnevna', isSoldOut = false }: ListingCardProps) {
   const { locale } = useLocale();
   const getSpacesText = (count: number): string => {
     if (locale === 'en') {
@@ -142,10 +143,16 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
 
       {/* Content RIGHT */}
       <div className="flex-1 flex flex-col relative">
-        {/* Price - Top Right */}
+        {/* Price - Top Right or Sold Out */}
         <div className="absolute top-0 right-0 z-10 flex flex-col items-end">
-          <span className="font-bold text-gray-900" style={{ fontSize: '20px' }}>€{total.toFixed(2)}</span>
-          <span className="text-xs text-gray-500 border-b border-gray-400 pb-0.5">Ukupno</span>
+          {isSoldOut ? (
+            <span className="font-bold text-red-600" style={{ fontSize: '16px' }}>{locale === 'hr' ? 'Rasprodano' : 'SOLD OUT'}</span>
+          ) : (
+            <>
+              <span className="font-bold text-gray-900" style={{ fontSize: '20px' }}>€{total.toFixed(2)}</span>
+              <span className="text-xs text-gray-500 border-b border-gray-400 pb-0.5">Ukupno</span>
+            </>
+          )}
         </div>
 
         {/* Address & Info */}
@@ -212,13 +219,19 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
           )}
           <button
             onClick={(e) => {
+              if (isSoldOut) return;
               e.stopPropagation();
               e.preventDefault();
               if (checkoutUrl) {
                 window.location.href = checkoutUrl;
               }
             }}
-            className="px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors whitespace-nowrap cursor-pointer"
+            disabled={isSoldOut}
+            className={`px-4 py-3 text-sm font-semibold rounded-lg whitespace-nowrap cursor-pointer transition-colors ${
+              isSoldOut
+                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                : 'bg-blue-500 text-white hover:bg-blue-700 active:bg-blue-800'
+            }`}
           >
             {locale === 'en' ? 'Book now' : 'Rezervirajte sada'}
           </button>
