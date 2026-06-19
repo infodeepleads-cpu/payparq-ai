@@ -12,6 +12,7 @@ interface ParkingLogoCardProps {
   checkoutUrl: string;
   onInfo: () => void;
   selectedDays?: number;
+  variantType?: 'ticketing' | 'online' | 'valet';
 }
 
 export function ParkingLogoCard({
@@ -22,11 +23,25 @@ export function ParkingLogoCard({
   checkoutUrl,
   onInfo,
   selectedDays = 1,
+  variantType = 'online',
 }: ParkingLogoCardProps) {
   const [showFeeModal, setShowFeeModal] = useState(false);
-  const isOnlinePayment = listing.verification_metadata?.personal_branding_enabled;
+  const isOnlinePayment = variantType === 'online';
+  const isTicketing = variantType === 'ticketing';
+  const isValet = variantType === 'valet';
   const serviceFee = Math.min(1.99, 0.99 + (price * 0.10));
   const total = price + serviceFee;
+  const airportSurcharge = listing.verification_metadata?.airport_lot_enabled ? 2.49 : 0;
+
+  let paymentMethodLabel = 'Pay online';
+  let paymentMethodLabelHr = 'Plaćanje online';
+  if (isTicketing) {
+    paymentMethodLabel = 'Secure your spot';
+    paymentMethodLabelHr = 'Osiguraj svoje mjesto';
+  } else if (isValet) {
+    paymentMethodLabel = isOnlinePayment ? 'Valet (Pay online)' : 'Valet (Pay on arrival)';
+    paymentMethodLabelHr = isOnlinePayment ? 'Valet (Plaćanje online)' : 'Valet (Plaćanje na dolasku)';
+  }
 
   return (
     <>
@@ -125,8 +140,13 @@ export function ParkingLogoCard({
               <div>
                 <p className="text-3xl font-bold text-blue-600">€{price.toFixed(2)}</p>
                 <p className="text-xs text-gray-600 mt-1 font-semibold">
-                  {listing.ticketingOnly ? (locale === 'hr' ? 'Plaćanje na dolasku' : 'Pay on arrival') : (locale === 'hr' ? 'Plaćanje online' : 'Pay online')}
+                  {locale === 'hr' ? paymentMethodLabelHr : paymentMethodLabel}
                 </p>
+                {airportSurcharge > 0 && (
+                  <p className="text-xs text-orange-600 mt-1 font-semibold">
+                    {locale === 'hr' ? '+2.49€ naknada' : '+2.49€ airport fee'}
+                  </p>
+                )}
               </div>
               <button
                 onClick={() => setShowFeeModal(true)}

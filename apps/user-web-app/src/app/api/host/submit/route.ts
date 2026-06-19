@@ -101,8 +101,16 @@ export async function POST(req: NextRequest) {
     const freeCancellationEnabled = formData.get('freeCancellationEnabled') === 'true';
     const freeCancellationDays    = parseFloat((formData.get('freeCancellationDays') as string) || '0');
 
-    // Feature 4: Ticketing Only
-    const ticketingOnlyEnabled    = formData.get('ticketingOnlyEnabled') === 'true';
+    // Feature 4: Ticketing + Online Payment
+    const ticketingEnabled        = formData.get('ticketingEnabled') === 'true';
+    const onlinePaymentEnabled    = formData.get('onlinePaymentEnabled') === 'true';
+
+    // Feature 5: Airport Lot
+    const airportLotEnabled       = formData.get('airportLotEnabled') === 'true';
+
+    // Feature 6: Valet Configuration
+    const valetAsSeparateCardEnabled = formData.get('valetAsSeparateCardEnabled') === 'true';
+    const valetPriceIncrease         = parseFloat((formData.get('valetPriceIncrease') as string) || '0');
 
     // Partnership toggles
     const wantPartnership      = formData.get('wantPartnership') === 'true';
@@ -217,8 +225,14 @@ export async function POST(req: NextRequest) {
           // Feature 3: Free Cancellation
           free_cancellation_enabled: freeCancellationEnabled,
           free_cancellation_days: freeCancellationEnabled ? freeCancellationDays : null,
-          // Feature 4: Ticketing Only
-          ticketing_only_enabled: ticketingOnlyEnabled,
+          // Feature 4: Ticketing + Online Payment
+          ticketing_enabled: ticketingEnabled,
+          online_payment_enabled: onlinePaymentEnabled,
+          // Feature 5: Airport Lot
+          airport_lot_enabled: airportLotEnabled,
+          // Feature 6: Valet Configuration
+          valet_as_separate_card_enabled: valetAsSeparateCardEnabled,
+          valet_price_increase: valetAsSeperateCardEnabled ? valetPriceIncrease : 0,
           // Partnership toggles
           want_partnership: wantPartnership,
           want_qr_pay: wantQR,

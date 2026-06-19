@@ -121,6 +121,10 @@ const HOST_TRANSLATIONS = {
   'Days before arrival': { en: 'Days before arrival', hr: 'Dana prije dolaska' },
   'Allow free cancellation up to X days before arrival': { en: 'Allow free cancellation up to X days before arrival', hr: 'Dozvoli besplatnu otkaznu do X dana prije dolaska' },
   'Ticketing Only': { en: 'Ticketing Only', hr: 'Samo karte' },
+  'Online Payment': { en: 'Online Payment', hr: 'Plaćanje Online' },
+  'Airport Lot': { en: 'Airport Lot', hr: 'Parking pri Zračnoj Luci' },
+  'Show valet as separate card': { en: 'Show valet as separate card', hr: 'Prikaži valet kao posebnu karticu' },
+  'Valet price increase %': { en: 'Valet price increase %', hr: 'Povećanje cijene valeta %' },
 } as const;
 
 const hostT = (key: string, locale: string): string => {
@@ -778,8 +782,16 @@ export default function HostPage() {
   const [freeCancellationEnabled, setFreeCancellationEnabled] = useState(false);
   const [freeCancellationDays, setFreeCancellationDays] = useState('');
 
-  // Feature 4: Ticketing Only
-  const [ticketingOnlyEnabled, setTicketingOnlyEnabled] = useState(false);
+  // Feature 4: Ticketing Only (now multi-select with Online Payment)
+  const [ticketingEnabled, setTicketingEnabled] = useState(true);
+  const [onlinePaymentEnabled, setOnlinePaymentEnabled] = useState(true);
+
+  // Feature 5: Airport Lot
+  const [airportLotEnabled, setAirportLotEnabled] = useState(false);
+
+  // Feature 6: Valet Configuration
+  const [valetAsSeparateCardEnabled, setValetAsSeparateCardEnabled] = useState(false);
+  const [valetPriceIncrease, setValetPriceIncrease] = useState('');
 
   // Photos
   const [photos, setPhotos] = useState<File[]>([]);
@@ -882,8 +894,14 @@ export default function HostPage() {
     // Feature 3: Free Cancellation
     fd.append('freeCancellationEnabled', String(freeCancellationEnabled));
     fd.append('freeCancellationDays', freeCancellationDays);
-    // Feature 4: Ticketing Only
-    fd.append('ticketingOnlyEnabled', String(ticketingOnlyEnabled));
+    // Feature 4: Ticketing + Online Payment
+    fd.append('ticketingEnabled', String(ticketingEnabled));
+    fd.append('onlinePaymentEnabled', String(onlinePaymentEnabled));
+    // Feature 5: Airport Lot
+    fd.append('airportLotEnabled', String(airportLotEnabled));
+    // Feature 6: Valet Configuration
+    fd.append('valetAsSeparateCardEnabled', String(valetAsSeparateCardEnabled));
+    fd.append('valetPriceIncrease', valetPriceIncrease);
     // Partnership toggles
     fd.append('wantPartnership', String(wantPartnership));
     fd.append('wantQR', String(wantQR));
@@ -1322,15 +1340,87 @@ export default function HostPage() {
                   )}
                 </div>
 
-                {/* Feature 4: Ticketing Only */}
+                {/* Feature 4: Ticketing + Online Payment (Multi-select) */}
+                <div className="space-y-3 pt-4 border-t border-gray-100">
+                  <p className="text-xs font-semibold text-gray-800">{hostT('Payment Options', locale)}</p>
+                  <p className="text-xs text-gray-400">{locale === 'en' ? 'Choose which payment options to offer (select at least one)' : 'Odaberite opcije plaćanja za ponudu (odaberite najmanje jednu)'}</p>
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (ticketingEnabled && !onlinePaymentEnabled) return;
+                        setTicketingEnabled(!ticketingEnabled);
+                      }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-colors ${
+                        ticketingEnabled ? 'border-gray-900 bg-gray-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                        ticketingEnabled ? 'border-gray-900 bg-gray-900' : 'border-gray-300'
+                      }`}>
+                        {ticketingEnabled && <span className="text-white text-xs font-bold">✓</span>}
+                      </div>
+                      <div className="text-left flex-1">
+                        <p className="text-xs font-semibold text-gray-900">{hostT('Ticketing Only', locale)}</p>
+                        <p className="text-xs text-gray-500">{locale === 'en' ? 'Secure spot (0.99-1.99€ + rest on arrival)' : 'Osiguraj mjesto (0.99-1.99€ + ostatak pri dolasku)'}</p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onlinePaymentEnabled && !ticketingEnabled) return;
+                        setOnlinePaymentEnabled(!onlinePaymentEnabled);
+                      }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-colors ${
+                        onlinePaymentEnabled ? 'border-gray-900 bg-gray-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                        onlinePaymentEnabled ? 'border-gray-900 bg-gray-900' : 'border-gray-300'
+                      }`}>
+                        {onlinePaymentEnabled && <span className="text-white text-xs font-bold">✓</span>}
+                      </div>
+                      <div className="text-left flex-1">
+                        <p className="text-xs font-semibold text-gray-900">{hostT('Online Payment', locale)}</p>
+                        <p className="text-xs text-gray-500">{locale === 'en' ? 'Pay in full online' : 'Plaćanje u cijelosti online'}</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Feature 5: Airport Lot */}
                 <div className="space-y-3 pt-4 border-t border-gray-100">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-semibold text-gray-800">{hostT('Ticketing Only', locale)}</p>
-                      <p className="text-xs text-gray-400">{locale === 'en' ? 'Customers pay only service fee at checkout' : 'Kupci plaćaju samo naknadu za uslugu pri kupnji'}</p>
+                      <p className="text-xs font-semibold text-gray-800">{hostT('Airport Lot', locale)}</p>
+                      <p className="text-xs text-gray-400">{locale === 'en' ? 'Add 2.49€ airport surcharge to all payment options' : 'Dodaj 2.49€ naknadu za parking pri zračnoj luci'}</p>
                     </div>
-                    <Toggle checked={ticketingOnlyEnabled} onChange={setTicketingOnlyEnabled} />
+                    <Toggle checked={airportLotEnabled} onChange={setAirportLotEnabled} />
                   </div>
+                </div>
+
+                {/* Feature 6: Valet Configuration */}
+                <div className="space-y-3 pt-4 border-t border-gray-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-800">{hostT('Show valet as separate card', locale)}</p>
+                      <p className="text-xs text-gray-400">{locale === 'en' ? 'Show valet as a premium option card' : 'Prikaži valet kao opciju premium kartice'}</p>
+                    </div>
+                    <Toggle checked={valetAsSeparateCardEnabled} onChange={setValetAsSeparateCardEnabled} />
+                  </div>
+                  {valetAsSeparateCardEnabled && (
+                    <input
+                      type="number"
+                      placeholder="25"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={valetPriceIncrease}
+                      onChange={(e) => setValetPriceIncrease(e.target.value)}
+                      className={inputClass}
+                    />
+                  )}
                 </div>
 
                 {true && (

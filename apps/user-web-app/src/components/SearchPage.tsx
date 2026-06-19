@@ -165,6 +165,78 @@ const getSpacesText = (count: number, locale: 'en' | 'hr'): string => {
   return `${count} preostalih mjesta`;
 };
 
+interface CardVariant {
+  listingId: string;
+  originalListing: any;
+  variantType: 'ticketing' | 'online' | 'valet';
+  priceMultiplier: number;
+  label: string;
+}
+
+const expandListingsToCardVariants = (listings: any[]): CardVariant[] => {
+  const variants: CardVariant[] = [];
+  listings.forEach((listing) => {
+    const metadata = listing.verification_metadata || {};
+    const ticketingEnabled = metadata.ticketing_enabled !== false;
+    const onlinePaymentEnabled = metadata.online_payment_enabled !== false;
+    const valetAsSeparateCard = metadata.valet_as_separate_card_enabled;
+    const valetPriceIncrease = metadata.valet_price_increase || 0;
+
+    // Add ticketing variant if enabled
+    if (ticketingEnabled) {
+      variants.push({
+        listingId: listing.id,
+        originalListing: listing,
+        variantType: 'ticketing',
+        priceMultiplier: 1,
+        label: 'Ticketing',
+      });
+    }
+
+    // Add online payment variant if enabled
+    if (onlinePaymentEnabled) {
+      variants.push({
+        listingId: listing.id,
+        originalListing: listing,
+        variantType: 'online',
+        priceMultiplier: 1,
+        label: 'Online',
+      });
+    }
+
+    // Add valet variants if enabled as separate card
+    if (valetAsSeparateCard && valetPriceIncrease > 0) {
+      if (ticketingEnabled) {
+        variants.push({
+          listingId: listing.id,
+          originalListing: listing,
+          variantType: 'valet',
+          priceMultiplier: 1 + (valetPriceIncrease / 100),
+          label: 'Valet',
+        });
+      }
+      if (onlinePaymentEnabled) {
+        variants.push({
+          listingId: listing.id,
+          originalListing: listing,
+          variantType: 'valet',
+          priceMultiplier: 1 + (valetPriceIncrease / 100),
+          label: 'Valet',
+        });
+      }
+    }
+  });
+  return variants;
+};
+
+const getPrimaryVariantPerListing = (listings: any[]): any[] => {
+  return listings.map((listing) => {
+    const metadata = listing.verification_metadata || {};
+    const onlinePaymentEnabled = metadata.online_payment_enabled !== false;
+    return onlinePaymentEnabled ? { ...listing, preferredVariant: 'online' } : { ...listing, preferredVariant: 'ticketing' };
+  });
+};
+
 const HOTSPOTS_BY_REGION: Record<string, Array<{ name: string; lat: number; lng: number; type: string }>> = {
   split: [
     { name: 'Riva', lat: 43.5088, lng: 16.4406, type: 'landmark' },
@@ -2179,14 +2251,15 @@ export function SearchPage() {
                   }
                 }
 
-                return filteredListings.map((listing) => {
+                return expandListingsToCardVariants(filteredListings).map((variant, idx) => {
+                  const listing = variant.originalListing;
                   const badgeText = badgeMap.get(listing.id);
                   const isSelected = selectedListing?.id === listing.id;
                   const liveRef = searchLocationPin || mapCenter;
                   const liveListing = { ...listing, distance: parseFloat(haversineKm(liveRef.lat, liveRef.lng, listing.lat, listing.lng).toFixed(1)) };
                   return (
                     <div
-                      key={listing.id}
+                      key={`${listing.id}-${variant.variantType}`}
                       data-lot-id={listing.id}
                       className={`transition-all duration-200 rounded-2xl ${isSelected ? 'ring-2 ring-blue-500 shadow-lg' : ''}`}
                     >
@@ -2613,22 +2686,27 @@ export function SearchPage() {
             // Logo/Prostori Grid - 3 columns on desktop, 1 on mobile, scrollable
             <div className="w-full overflow-y-auto" style={{ height: 'calc(100vh - 80px)' }}>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 max-w-7xl mx-auto">
-                {filteredListings.map((listing) => {
+                {expandListingsToCardVariants(filteredListings).map((variant, idx) => {
+                  const listing = variant.originalListing;
                   const liveRef = searchLocationPin || mapCenter;
                   const liveListing = { ...listing, distance: parseFloat(haversineKm(liveRef.lat, liveRef.lng, listing.lat, listing.lng).toFixed(1)) };
                   const rates = resolveRatesForDate(listing, startTime);
                   const livePricedListing = { ...liveListing, pricePerHour: rates.hourly, pricePerDay: rates.daily };
                   const rawPrice = getDisplayPrice(livePricedListing, durationHours, reservationType);
-                  const price = parseFloat((showTotalPrice ? rawPrice + Math.min(1.99, 0.99 + rawPrice * 0.10) : rawPrice).toFixed(2));
+                  const valetMultiplier = variant.priceMultiplier;
+                  const airportSurcharge = listing.verification_metadata?.airport_lot_enabled ? 2.49 : 0;
+                  const priceWithValet = parseFloat((rawPrice * valetMultiplier).toFixed(2));
+                  const priceWithAirport = parseFloat((priceWithValet + airportSurcharge).toFixed(2));
+                  const price = parseFloat((showTotalPrice ? priceWithAirport + Math.min(1.99, 0.99 + priceWithAirport * 0.10) : priceWithAirport).toFixed(2));
                   const days = Math.round(durationHours / 24) || 1;
                   const durationLabel = reservationType === 'Mjesečna'
                     ? (locale === 'en' ? 'Monthly' : 'Mjesečno')
                     : `${locale === 'en' ? 'Price for' : 'Cijena za'} ${days} ${locale === 'en' ? (days === 1 ? 'day' : 'days') : (days === 1 ? 'dan' : 'dana')}`;
                   return (
                     <ParkingLogoCard
-                      key={listing.id}
+                      key={`${listing.id}-${variant.variantType}`}
                       listing={liveListing as any}
-                      price={price}
+                      price={priceWithAirport}
                       durationLabel={durationLabel}
                       locale={locale}
                       checkoutUrl={buildCheckoutUrl(listing)}
@@ -2640,6 +2718,7 @@ export function SearchPage() {
                         }
                       }}
                       selectedDays={days}
+                      variantType={variant.variantType}
                     />
                   );
                 })}
@@ -2683,7 +2762,9 @@ export function SearchPage() {
             {filteredListings.map((listing) => {
               const totalPrice = getDisplayPrice(listing, durationHours, reservationType);
               const subtotal = parseFloat(totalPrice.toFixed(2));
-              const price = parseFloat((showTotalPrice ? subtotal + Math.min(1.99, 0.99 + (subtotal * 0.10)) : subtotal).toFixed(2));
+              const airportSurcharge = listing.verification_metadata?.airport_lot_enabled ? 2.49 : 0;
+              const priceWithAirport = parseFloat((subtotal + airportSurcharge).toFixed(2));
+              const price = parseFloat((showTotalPrice ? priceWithAirport + Math.min(1.99, 0.99 + (priceWithAirport * 0.10)) : priceWithAirport).toFixed(2));
               const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
               const shouldShowIntegerOnly = showTotalPrice && (reservationType === 'Mjesečna' || price >= 100);
               const mapLabel = shouldShowIntegerOnly ? `€${Math.floor(price)}` : label;
@@ -2833,10 +2914,12 @@ export function SearchPage() {
                   mapRef.current = map;
                 }}
               >
-                {filteredListings.map((listing) => {
+                {getPrimaryVariantPerListing(filteredListings).map((listing) => {
                   const totalPrice = getDisplayPrice(listing, durationHours, reservationType);
                   const subtotal = parseFloat(totalPrice.toFixed(2));
-                  const price = parseFloat((showTotalPrice ? subtotal + Math.min(1.99, 0.99 + (subtotal * 0.10)) : subtotal).toFixed(2));
+                  const airportSurcharge = listing.verification_metadata?.airport_lot_enabled ? 2.49 : 0;
+                  const priceWithAirport = parseFloat((subtotal + airportSurcharge).toFixed(2));
+                  const price = parseFloat((showTotalPrice ? priceWithAirport + Math.min(1.99, 0.99 + (priceWithAirport * 0.10)) : priceWithAirport).toFixed(2));
                   const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
                   const shouldShowIntegerOnly = showTotalPrice && (reservationType === 'Mjesečna' || price >= 100);
                   const mapLabel = shouldShowIntegerOnly ? `€${Math.floor(price)}` : label;
@@ -2929,18 +3012,24 @@ export function SearchPage() {
                   </div>
                 </div>
               ) : (
-                filteredListings.map((listing) => {
+                expandListingsToCardVariants(filteredListings).map((variant, idx) => {
+                  const listing = variant.originalListing;
                   const totalPrice = getDisplayPrice(listing, durationHours, reservationType);
-                  const price = parseFloat((showTotalPrice ? totalPrice + Math.min(1.99, 0.99 + (totalPrice * 0.10)) : totalPrice).toFixed(2));
+                  const valetMultiplier = variant.priceMultiplier;
+                  const airportSurcharge = listing.verification_metadata?.airport_lot_enabled ? 2.49 : 0;
+                  const priceWithValet = parseFloat((totalPrice * valetMultiplier).toFixed(2));
+                  const priceWithAirport = parseFloat((priceWithValet + airportSurcharge).toFixed(2));
+                  const price = parseFloat((showTotalPrice ? priceWithAirport + Math.min(1.99, 0.99 + priceWithAirport * 0.10) : priceWithAirport).toFixed(2));
                   return (
-                    <div key={listing.id} className="transition-all duration-200 rounded-2xl cursor-pointer" onClick={() => { setSelectedListing(listing); setShowMobileDetails(true); }}>
+                    <div key={`${listing.id}-${variant.variantType}`} className="transition-all duration-200 rounded-2xl cursor-pointer" onClick={() => { setSelectedListing(listing); setShowMobileDetails(true); }}>
                       <ParkingLogoCard
                         listing={listing}
-                        price={price}
+                        price={priceWithAirport}
                         durationLabel={reservationType}
                         locale={locale}
                         checkoutUrl={buildCheckoutUrl(listing)}
                         onInfo={() => {}}
+                        variantType={variant.variantType}
                       />
                     </div>
                   );
