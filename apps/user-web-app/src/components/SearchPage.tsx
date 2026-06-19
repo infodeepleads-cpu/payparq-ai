@@ -2757,7 +2757,7 @@ export function SearchPage() {
               ],
             }}
           >
-            {/* Parking lot location markers - Cloud with price (native Marker, no twitch) */}
+            {/* Parking lot location markers - Cloud with price or sold out */}
             {filteredListings.map((listing) => {
               const totalPrice = getDisplayPrice(listing, durationHours, reservationType);
               const subtotal = parseFloat(totalPrice.toFixed(2));
@@ -2768,12 +2768,14 @@ export function SearchPage() {
               const shouldShowIntegerOnly = showTotalPrice && (reservationType === 'Mjesečna' || price >= 100);
               const mapLabel = shouldShowIntegerOnly ? `€${Math.floor(price)}` : label;
               const isSelected = selectedListing?.id === listing.id;
+              const soldOut = isSoldOut(listing, startTime, endTime);
+              const displayLabel = soldOut ? (locale === 'hr' ? 'RASPRODANO' : 'SOLD OUT') : mapLabel;
               const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="48.75" height="56.0625">
                 <path d="M 50,8 C 73,8 92,22 92,38 C 92,54 73,68 58,70 Q 54,79 50,88 Q 46,79 42,70 C 27,68 8,54 8,38 C 8,22 27,8 50,8 Z"
-                  fill="${isSelected ? '#3b82f6' : 'white'}"/>
+                  fill="${soldOut ? '#dc2626' : (isSelected ? '#3b82f6' : 'white')}"/>
                 <text x="50" y="41" text-anchor="middle" dominant-baseline="middle"
-                  font-family="Arial,sans-serif" font-size="31.2" font-weight="bold"
-                  fill="${isSelected ? 'white' : 'black'}">${mapLabel}</text>
+                  font-family="Arial,sans-serif" font-size="${soldOut ? '12' : '31.2'}" font-weight="bold"
+                  fill="${soldOut ? 'white' : (isSelected ? 'white' : 'black')}">${displayLabel}</text>
               </svg>`;
               const iconUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgStr)}`;
               const scaledWidth = 150;
