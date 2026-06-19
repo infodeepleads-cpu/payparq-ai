@@ -831,6 +831,8 @@ export function SearchPage() {
               verification_metadata: metadata,
               ticketingOnlyEnabled: metadata?.ticketing_only_enabled === true,
               logo_url: loc.logo_url || undefined,
+              shuttle_enabled: loc.shuttle_enabled === true,
+              shuttleValet: (metadata.shuttle_valet_info as string | undefined) || undefined,
             };
           });
 
