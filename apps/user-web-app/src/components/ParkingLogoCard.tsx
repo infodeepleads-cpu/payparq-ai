@@ -68,7 +68,7 @@ export function ParkingLogoCard({
 
           {/* Shuttle or Walking Distance */}
           <div className="px-6 py-3 border-b border-gray-200 flex items-start gap-3">
-            {listing.shuttle ? (
+            {listing.shuttle_enabled || listing.shuttleValet ? (
               <>
                 <div className="w-4 h-4 flex-shrink-0 text-black font-bold mt-0.5">🚌</div>
                 <p className="text-sm font-bold text-gray-900">{locale === 'hr' ? 'Uključen prijevoz' : 'Shuttle included'}</p>

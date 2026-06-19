@@ -24,7 +24,7 @@ export async function GET() {
       const meta = (loc.verification_metadata ?? {}) as Record<string, unknown>;
       return {
         ...loc,
-        thingsToKnow: meta.things_to_know as string | undefined,
+        thingsToKnow: (meta.ownerComment || meta.description || meta.things_to_know) as string | undefined,
         accessHours: meta.access_hours as string | undefined,
         gettingThere: meta.getting_there as string | undefined,
         shuttleValet: meta.shuttle_valet_info as string | undefined,
