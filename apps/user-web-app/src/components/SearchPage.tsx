@@ -795,7 +795,7 @@ export function SearchPage() {
             const photoUrl = verificationPhotos.length > 0 ? verificationPhotos[0] : (loc.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=400');
 
             const accessHoursText = (metadata.access_hours as string | undefined) || 'pon – pet: 6:00 – 23:00\nsub – ned: 7:00 – 23:00';
-            const thingsToKnowText = (metadata.things_to_know as string | undefined) || UNIVERSAL_THINGS_TO_KNOW;
+            const thingsToKnowText = (metadata.ownerComment || metadata.description || metadata.things_to_know) as string | undefined || UNIVERSAL_THINGS_TO_KNOW;
             const gettingThereText = (metadata.getting_there as string | undefined) || 'Unesite adresu lokacije u navigaciju. Ulaz je označen znakom za parkiranje.';
             const howItWorksText = (metadata.how_it_works as string | undefined) || '1. Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju\n2. Samo uđite ako nema nikoga\n3. Odvezite se kad budete spremni otići';
 
