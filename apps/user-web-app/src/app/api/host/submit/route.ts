@@ -232,7 +232,7 @@ export async function POST(req: NextRequest) {
           airport_lot_enabled: airportLotEnabled,
           // Feature 6: Valet Configuration
           valet_as_separate_card_enabled: valetAsSeparateCardEnabled,
-          valet_price_increase: valetAsSeperateCardEnabled ? valetPriceIncrease : 0,
+          valet_price_increase: valetAsSeparateCardEnabled ? valetPriceIncrease : 0,
           // Partnership toggles
           want_partnership: wantPartnership,
           want_qr_pay: wantQR,
