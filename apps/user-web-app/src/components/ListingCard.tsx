@@ -15,6 +15,7 @@ import {
   ParkingCircle,
   Repeat2,
   Info,
+  Van,
 } from 'lucide-react';
 
 const AMENITY_ICONS: Record<string, React.ReactNode> = {
@@ -47,6 +48,8 @@ interface Parking {
   features: string[];
   type: 'self-park' | 'garage' | 'valet' | 'lot';
   verification_metadata?: Record<string, unknown>;
+  shuttle_enabled?: boolean;
+  shuttleValet?: string;
 }
 
 interface ListingCardProps {
@@ -163,18 +166,27 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
             )}
           </div>
 
-          {/* Walking Distance */}
+          {/* Shuttle or Walking Distance */}
           <div className="flex items-center gap-1 text-xs font-semibold text-gray-900">
-            <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="13" cy="3" r="2"/>
-              <path d="M11 6.5L8 12l3 1"/>
-              <path d="M13 6.5l1.5 3-3 2.5 1 5.5"/>
-              <path d="M11 14l-2 6"/>
-              <path d="M16 9l2 2"/>
-            </svg>
-            <span>
-              {Math.round(listing.distance * 12)} min ({listing.distance.toFixed(1)} km)
-            </span>
+            {listing.shuttle_enabled || listing.shuttleValet ? (
+              <>
+                <Van className="w-3 h-3 flex-shrink-0 text-blue-600" strokeWidth={3} />
+                <span className="text-blue-600">{locale === 'hr' ? 'Prijevoz uključen' : 'Shuttle included'}</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="13" cy="3" r="2"/>
+                  <path d="M11 6.5L8 12l3 1"/>
+                  <path d="M13 6.5l1.5 3-3 2.5 1 5.5"/>
+                  <path d="M11 14l-2 6"/>
+                  <path d="M16 9l2 2"/>
+                </svg>
+                <span>
+                  {Math.round(listing.distance * 12)} min ({listing.distance.toFixed(1)} km)
+                </span>
+              </>
+            )}
           </div>
         </div>
 

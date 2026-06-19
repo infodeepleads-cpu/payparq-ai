@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Star, MapPin, Clock, AlertCircle, Eye, Lock, Zap, Info, X } from 'lucide-react';
+import { Star, MapPin, Clock, AlertCircle, Eye, Lock, Zap, Info, X, Van } from 'lucide-react';
 import { openCheckout } from '@/lib/capacitorBrowser';
 
 interface ParkingLogoCardProps {
@@ -70,8 +70,8 @@ export function ParkingLogoCard({
           <div className="px-6 py-3 border-b border-gray-200 flex items-start gap-3">
             {listing.shuttle_enabled || listing.shuttleValet ? (
               <>
-                <div className="w-4 h-4 flex-shrink-0 text-black font-bold mt-0.5">🚌</div>
-                <p className="text-sm font-bold text-gray-900">{locale === 'hr' ? 'Uključen prijevoz' : 'Shuttle included'}</p>
+                <Van className="w-4 h-4 flex-shrink-0 text-black mt-0.5" strokeWidth={3} />
+                <p className="text-sm font-bold text-gray-900">{locale === 'hr' ? 'Prijevoz Uključen' : 'Shuttle included'}</p>
               </>
             ) : (
               <>
