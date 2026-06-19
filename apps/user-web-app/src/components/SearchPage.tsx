@@ -230,6 +230,8 @@ interface Parking {
   amenities?: string;
   thingsToKnow?: string;
   gettingThere?: string;
+  shuttleValet?: string;
+  shuttle_enabled?: boolean;
   verification_metadata?: Record<string, unknown>;
   ticketingOnlyEnabled?: boolean;
   howItWorks?: string;
