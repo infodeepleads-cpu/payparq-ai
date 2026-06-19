@@ -31,8 +31,10 @@ export function ParkingLogoCard({
   const isOnlinePayment = variantType === 'online';
   const isTicketing = variantType === 'ticketing';
   const isValet = variantType === 'valet';
-  const serviceFee = Math.min(1.99, 0.99 + (price * 0.10));
-  const total = price + serviceFee;
+  const dailyPrice = price / selectedDays;
+  const serviceFee = Math.min(1.99, 0.99 + (dailyPrice * 0.10));
+  const displayPrice = isTicketing ? serviceFee : price;
+  const total = price + serviceFee + airportSurcharge;
 
   let paymentMethodLabel = 'Pay online';
   let paymentMethodLabelHr = 'Plaćanje online';
@@ -139,7 +141,7 @@ export function ParkingLogoCard({
             <p className="text-xs text-gray-600 font-bold mb-2 uppercase tracking-wider">{locale === 'hr' ? `Cijena za ${selectedDays} ${selectedDays === 1 ? 'dan' : 'dana'}` : `Price for ${selectedDays} day${selectedDays !== 1 ? 's' : ''}`}</p>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-3xl font-bold text-blue-600">€{price.toFixed(2)}</p>
+                <p className="text-3xl font-bold text-blue-600">€{displayPrice.toFixed(2)}</p>
                 <p className="text-xs text-gray-600 mt-1 font-semibold">
                   {locale === 'hr' ? paymentMethodLabelHr : paymentMethodLabel}
                 </p>
@@ -190,6 +192,12 @@ export function ParkingLogoCard({
                 <span className="text-gray-600">{locale === 'hr' ? 'Naknad za uslugu' : 'Service Fee'}</span>
                 <span className="font-bold text-gray-900">€{serviceFee.toFixed(2)}</span>
               </div>
+              {airportSurcharge > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">{locale === 'hr' ? 'Naknada aerodroma' : 'Airport Fee'}</span>
+                  <span className="font-bold text-gray-900">€{airportSurcharge.toFixed(2)}</span>
+                </div>
+              )}
               <div className="border-t border-gray-200 pt-3 flex justify-between">
                 <span className="font-bold text-gray-900">{locale === 'hr' ? 'Ukupno' : 'Total'}</span>
                 <span className="text-xl font-bold text-blue-600">€{total.toFixed(2)}</span>
