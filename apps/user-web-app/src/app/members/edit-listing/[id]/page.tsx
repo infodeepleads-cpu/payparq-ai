@@ -497,6 +497,7 @@ export default function EditListingPage() {
             exoticVehicles,
             ownerComment,
             description: ownerComment,
+            things_to_know: ownerComment,
             accessInstructions,
             addons,
             features: addons,
