@@ -180,6 +180,10 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
     setSaveStatus('saving');
 
     try {
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
