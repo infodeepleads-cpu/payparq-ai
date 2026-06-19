@@ -36,8 +36,8 @@ export function ParkingLogoCard({
   let paymentMethodLabel = 'Pay online';
   let paymentMethodLabelHr = 'Plaćanje online';
   if (isTicketing) {
-    paymentMethodLabel = 'Secure your spot';
-    paymentMethodLabelHr = 'Osiguraj svoje mjesto';
+    paymentMethodLabel = `Secure spot for €${price.toFixed(2)}, pay the rest on arrival`;
+    paymentMethodLabelHr = `Osiguraj mjesto za €${price.toFixed(2)}, plati ostatak na dolasku`;
   } else if (isValet) {
     paymentMethodLabel = isOnlinePayment ? 'Valet (Pay online)' : 'Valet (Pay on arrival)';
     paymentMethodLabelHr = isOnlinePayment ? 'Valet (Plaćanje online)' : 'Valet (Plaćanje na dolasku)';

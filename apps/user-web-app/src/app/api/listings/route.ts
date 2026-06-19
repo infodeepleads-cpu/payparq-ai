@@ -22,8 +22,14 @@ export async function GET() {
 
     const enriched = (locations || []).map((loc: any) => {
       const meta = (loc.verification_metadata ?? {}) as Record<string, unknown>;
+      const addons = (meta.addons ?? meta.features ?? []) as string[];
+      const syncedShuttleEnabled = addons.includes('Shuttle') || addons.includes('Shuttle service');
       return {
         ...loc,
+        verification_metadata: {
+          ...meta,
+          shuttle_enabled: syncedShuttleEnabled,
+        },
         thingsToKnow: (meta.ownerComment || meta.description || meta.things_to_know) as string | undefined,
         accessHours: meta.access_hours as string | undefined,
         gettingThere: meta.getting_there as string | undefined,
