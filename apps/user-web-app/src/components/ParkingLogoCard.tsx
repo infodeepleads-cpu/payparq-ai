@@ -15,6 +15,7 @@ interface ParkingLogoCardProps {
   durationHours?: number;
   variantType?: 'ticketing' | 'online' | 'valet';
   airportSurcharge?: number;
+  isSoldOut?: boolean;
 }
 
 export function ParkingLogoCard({
@@ -28,6 +29,7 @@ export function ParkingLogoCard({
   durationHours = 24,
   variantType = 'online',
   airportSurcharge = 0,
+  isSoldOut = false,
 }: ParkingLogoCardProps) {
   const [showFeeModal, setShowFeeModal] = useState(false);
   const isOnlinePayment = variantType === 'online';
@@ -51,7 +53,7 @@ export function ParkingLogoCard({
 
   return (
     <>
-      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow flex flex-col min-h-[420px] md:min-h-[550px]">
+      <div className={`bg-white border border-gray-200 rounded-2xl overflow-hidden ${!isSoldOut ? 'hover:shadow-lg' : ''} transition-shadow flex flex-col min-h-[420px] md:min-h-[550px] ${isSoldOut ? 'opacity-60 cursor-not-allowed' : ''}`}>
         {/* Header - Dark Blue with Title Left + Logo Right */}
         <div className="px-6 py-5 bg-blue-600 border-b border-blue-700 flex items-center justify-between gap-4">
           <h3 className="font-black text-lg text-white leading-tight flex-1">
@@ -141,38 +143,51 @@ export function ParkingLogoCard({
 
           {/* Price Section - Right Side with Blue */}
           <div className="px-6 py-4 border-b border-gray-200 mt-auto">
-            <p className="text-xs text-gray-600 font-bold mb-2 uppercase tracking-wider">
-              {showHours
-                ? (locale === 'hr' ? `Cijena za ${Math.round(durationHours)} sata` : `Price for ${Math.round(durationHours)} hour${Math.round(durationHours) !== 1 ? 's' : ''}`)
-                : (locale === 'hr' ? `Cijena za ${displayDays} ${displayDays === 1 ? 'dan' : 'dana'}` : `Price for ${displayDays} day${displayDays !== 1 ? 's' : ''}`)}
-            </p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-3xl font-bold text-blue-600">€{price.toFixed(2)}</p>
-                <p className="text-xs text-gray-600 mt-1 font-semibold">
-                  {locale === 'hr' ? paymentMethodLabelHr : paymentMethodLabel}
-                </p>
-                {airportSurcharge > 0 && (
-                  <p className="text-xs text-orange-600 mt-1 font-semibold">
-                    {locale === 'hr' ? `+€${airportSurcharge.toFixed(2)} naknada` : `+€${airportSurcharge.toFixed(2)} airport fee`}
-                  </p>
-                )}
+            {isSoldOut ? (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-2xl font-bold text-red-600">{locale === 'hr' ? 'Rasprodano' : 'SOLD OUT'}</p>
               </div>
-              <button
-                onClick={() => setShowFeeModal(true)}
-                className="flex items-center justify-center p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
-              >
-                <Info className="w-5 h-5 text-blue-600 font-bold" strokeWidth={3} />
-              </button>
-            </div>
+            ) : (
+              <>
+                <p className="text-xs text-gray-600 font-bold mb-2 uppercase tracking-wider">
+                  {showHours
+                    ? (locale === 'hr' ? `Cijena za ${Math.round(durationHours)} sata` : `Price for ${Math.round(durationHours)} hour${Math.round(durationHours) !== 1 ? 's' : ''}`)
+                    : (locale === 'hr' ? `Cijena za ${displayDays} ${displayDays === 1 ? 'dan' : 'dana'}` : `Price for ${displayDays} day${displayDays !== 1 ? 's' : ''}`)}
+                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-3xl font-bold text-blue-600">€{price.toFixed(2)}</p>
+                    <p className="text-xs text-gray-600 mt-1 font-semibold">
+                      {locale === 'hr' ? paymentMethodLabelHr : paymentMethodLabel}
+                    </p>
+                    {airportSurcharge > 0 && (
+                      <p className="text-xs text-orange-600 mt-1 font-semibold">
+                        {locale === 'hr' ? `+€${airportSurcharge.toFixed(2)} naknada` : `+€${airportSurcharge.toFixed(2)} airport fee`}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setShowFeeModal(true)}
+                    className="flex items-center justify-center p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+                  >
+                    <Info className="w-5 h-5 text-blue-600 font-bold" strokeWidth={3} />
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         {/* CTA Button - Stripe Blue */}
         <div className="px-6 py-4 border-t border-gray-200">
           <button
-            onClick={() => openCheckout(checkoutUrl)}
-            className="w-full inline-block text-center bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 active:scale-95 transition text-sm shadow-sm hover:shadow-md"
+            onClick={() => !isSoldOut && openCheckout(checkoutUrl)}
+            disabled={isSoldOut}
+            className={`w-full inline-block text-center font-bold py-3 px-4 rounded-lg active:scale-95 transition text-sm shadow-sm ${
+              isSoldOut
+                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md'
+            }`}
           >
             {locale === 'hr' ? 'Nastavi na Checkout' : 'Proceed to booking'}
           </button>

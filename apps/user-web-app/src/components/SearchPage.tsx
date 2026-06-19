@@ -290,6 +290,23 @@ interface Parking {
   logo_url?: string;
 }
 
+const isSoldOut = (listing: Parking, startTime: string, endTime: string): boolean => {
+  const dateConfigs = listing.verification_metadata?.dateConfigs as Record<string, { isOpen?: boolean }> | undefined;
+  if (!dateConfigs || Object.keys(dateConfigs).length === 0) return false;
+
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+
+  for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const config = dateConfigs[dateStr];
+    if (config && config.isOpen === false) {
+      return true;
+    }
+  }
+  return false;
+};
+
 export function SearchPage() {
   const { locale, setLocale } = useLocale();
   const searchParams = useSearchParams();
@@ -2678,6 +2695,7 @@ export function SearchPage() {
                   const durationLabel = reservationType === 'Mjesečna'
                     ? (locale === 'en' ? 'Monthly' : 'Mjesečno')
                     : `${locale === 'en' ? 'Price for' : 'Cijena za'} ${days} ${locale === 'en' ? (days === 1 ? 'day' : 'days') : (days === 1 ? 'dan' : 'dana')}`;
+                  const soldOut = isSoldOut(listing, startTime, endTime);
                   return (
                     <ParkingLogoCard
                       key={`${listing.id}-${variant.variantType}`}
@@ -2697,6 +2715,7 @@ export function SearchPage() {
                       durationHours={durationHours}
                       variantType={variant.variantType}
                       airportSurcharge={airportSurcharge}
+                      isSoldOut={soldOut}
                     />
                   );
                 })}
@@ -2998,6 +3017,7 @@ export function SearchPage() {
                   const priceWithValet = parseFloat((totalPrice * valetMultiplier).toFixed(2));
                   const priceWithAirport = parseFloat((priceWithValet + airportSurcharge).toFixed(2));
                   const price = parseFloat((showTotalPrice ? priceWithAirport + Math.min(1.99, 0.99 + priceWithAirport * 0.10) : priceWithAirport).toFixed(2));
+                  const soldOut = isSoldOut(listing, startTime, endTime);
                   return (
                     <div key={`${listing.id}-${variant.variantType}`} className="transition-all duration-200 rounded-2xl cursor-pointer" onClick={() => { setSelectedListing(listing); setShowMobileDetails(true); }}>
                       <ParkingLogoCard
@@ -3010,6 +3030,7 @@ export function SearchPage() {
                         durationHours={durationHours}
                         variantType={variant.variantType}
                         airportSurcharge={airportSurcharge}
+                        isSoldOut={soldOut}
                       />
                     </div>
                   );

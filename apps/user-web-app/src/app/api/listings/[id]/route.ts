@@ -85,6 +85,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'supabase_not_configured' }, { status: 500 });
     }
 
+    const authHeader = req.headers.get('authorization') || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+    if (!token) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    }
+
+    const { data: { user }, error: authError } = await client.auth.getUser(token);
+    if (authError || !user) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    }
+
     const body = await req.json();
     const { dateConfigs } = body;
 
@@ -94,15 +106,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const { data: existing, error: fetchErr } = await client
       .from('locations')
-      .select('verification_metadata')
+      .select('owner_id, verification_metadata')
       .eq('id', id)
       .single();
 
-    if (fetchErr) {
+    if (fetchErr || !existing) {
       return NextResponse.json({ error: 'not_found' }, { status: 404 });
     }
 
-    const meta = existing?.verification_metadata || {};
+    if (existing.owner_id !== user.id) {
+      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    }
+
+    const meta = existing.verification_metadata || {};
 
     // Check if any manually-priced date config exists — update base price columns so search reflects the change
     const today = new Date().toISOString().slice(0, 10);

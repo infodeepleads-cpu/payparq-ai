@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Clock, X } from 'lucide-react';
 import { useLocale } from './LocaleProvider';
 import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
+import { supabase } from '@/lib/supabase';
 
 interface LotCalendarPricingProps {
   lotId: string;
@@ -179,9 +180,19 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
     setSaveStatus('saving');
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
       const res = await fetch(`/api/listings/${lotId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ dateConfigs: newConfigs }),
       });
 
