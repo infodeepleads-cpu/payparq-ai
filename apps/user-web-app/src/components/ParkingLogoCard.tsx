@@ -33,14 +33,13 @@ export function ParkingLogoCard({
   const isValet = variantType === 'valet';
   const dailyPrice = price / selectedDays;
   const serviceFee = Math.min(1.99, 0.99 + (dailyPrice * 0.10));
-  const displayPrice = isTicketing ? serviceFee : price;
   const total = price + serviceFee + airportSurcharge;
 
   let paymentMethodLabel = 'Pay online';
   let paymentMethodLabelHr = 'Plaćanje online';
   if (isTicketing) {
-    paymentMethodLabel = `Secure spot for €${serviceFee.toFixed(2)}, pay the rest on arrival`;
-    paymentMethodLabelHr = `Osiguraj mjesto za €${serviceFee.toFixed(2)}, plati ostatak na dolasku`;
+    paymentMethodLabel = `Service fee: €${serviceFee.toFixed(2)}, pay balance on arrival`;
+    paymentMethodLabelHr = `Naknad za uslugu: €${serviceFee.toFixed(2)}, plati ostatak na dolasku`;
   } else if (isValet) {
     paymentMethodLabel = isOnlinePayment ? 'Valet (Pay online)' : 'Valet (Pay on arrival)';
     paymentMethodLabelHr = isOnlinePayment ? 'Valet (Plaćanje online)' : 'Valet (Plaćanje na dolasku)';
@@ -138,14 +137,10 @@ export function ParkingLogoCard({
 
           {/* Price Section - Right Side with Blue */}
           <div className="px-6 py-4 border-b border-gray-200 mt-auto">
-            <p className="text-xs text-gray-600 font-bold mb-2 uppercase tracking-wider">
-              {isTicketing
-                ? (locale === 'hr' ? 'Plaćanja sada' : 'Pay now')
-                : (locale === 'hr' ? `Cijena za ${selectedDays} ${selectedDays === 1 ? 'dan' : 'dana'}` : `Price for ${selectedDays} day${selectedDays !== 1 ? 's' : ''}`)}
-            </p>
+            <p className="text-xs text-gray-600 font-bold mb-2 uppercase tracking-wider">{locale === 'hr' ? `Cijena za ${selectedDays} ${selectedDays === 1 ? 'dan' : 'dana'}` : `Price for ${selectedDays} day${selectedDays !== 1 ? 's' : ''}`}</p>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-3xl font-bold text-blue-600">€{displayPrice.toFixed(2)}</p>
+                <p className="text-3xl font-bold text-blue-600">€{price.toFixed(2)}</p>
                 <p className="text-xs text-gray-600 mt-1 font-semibold">
                   {locale === 'hr' ? paymentMethodLabelHr : paymentMethodLabel}
                 </p>
