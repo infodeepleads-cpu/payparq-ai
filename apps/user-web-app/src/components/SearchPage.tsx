@@ -2694,6 +2694,7 @@ export function SearchPage() {
                         }
                       }}
                       selectedDays={days}
+                      durationHours={durationHours}
                       variantType={variant.variantType}
                       airportSurcharge={airportSurcharge}
                     />
@@ -3006,6 +3007,7 @@ export function SearchPage() {
                         locale={locale}
                         checkoutUrl={buildCheckoutUrl(listing)}
                         onInfo={() => {}}
+                        durationHours={durationHours}
                         variantType={variant.variantType}
                         airportSurcharge={airportSurcharge}
                       />

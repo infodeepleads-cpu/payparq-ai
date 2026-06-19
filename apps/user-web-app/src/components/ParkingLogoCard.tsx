@@ -12,6 +12,7 @@ interface ParkingLogoCardProps {
   checkoutUrl: string;
   onInfo: () => void;
   selectedDays?: number;
+  durationHours?: number;
   variantType?: 'ticketing' | 'online' | 'valet';
   airportSurcharge?: number;
 }
@@ -24,6 +25,7 @@ export function ParkingLogoCard({
   checkoutUrl,
   onInfo,
   selectedDays = 1,
+  durationHours = 24,
   variantType = 'online',
   airportSurcharge = 0,
 }: ParkingLogoCardProps) {
@@ -31,7 +33,9 @@ export function ParkingLogoCard({
   const isOnlinePayment = variantType === 'online';
   const isTicketing = variantType === 'ticketing';
   const isValet = variantType === 'valet';
-  const dailyPrice = price / selectedDays;
+  const showHours = durationHours < 24;
+  const displayDays = Math.ceil(durationHours / 24);
+  const dailyPrice = price / Math.max(displayDays, 1);
   const serviceFee = Math.min(1.99, 0.99 + (dailyPrice * 0.10));
   const total = price + serviceFee + airportSurcharge;
 
@@ -137,7 +141,11 @@ export function ParkingLogoCard({
 
           {/* Price Section - Right Side with Blue */}
           <div className="px-6 py-4 border-b border-gray-200 mt-auto">
-            <p className="text-xs text-gray-600 font-bold mb-2 uppercase tracking-wider">{locale === 'hr' ? `Cijena za ${selectedDays} ${selectedDays === 1 ? 'dan' : 'dana'}` : `Price for ${selectedDays} day${selectedDays !== 1 ? 's' : ''}`}</p>
+            <p className="text-xs text-gray-600 font-bold mb-2 uppercase tracking-wider">
+              {showHours
+                ? (locale === 'hr' ? `Cijena za ${Math.round(durationHours)} sata` : `Price for ${Math.round(durationHours)} hour${Math.round(durationHours) !== 1 ? 's' : ''}`)
+                : (locale === 'hr' ? `Cijena za ${displayDays} ${displayDays === 1 ? 'dan' : 'dana'}` : `Price for ${displayDays} day${displayDays !== 1 ? 's' : ''}`)}
+            </p>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-3xl font-bold text-blue-600">€{price.toFixed(2)}</p>
