@@ -20,7 +20,18 @@ export async function GET() {
       return NextResponse.json({ locations: [], error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ locations: locations || [] });
+    const enriched = (locations || []).map((loc: any) => {
+      const meta = (loc.verification_metadata ?? {}) as Record<string, unknown>;
+      return {
+        ...loc,
+        thingsToKnow: meta.things_to_know as string | undefined,
+        accessHours: meta.access_hours as string | undefined,
+        gettingThere: meta.getting_there as string | undefined,
+        shuttleValet: meta.shuttle_valet_info as string | undefined,
+      };
+    });
+
+    return NextResponse.json({ locations: enriched });
   } catch (error) {
     console.error('Listings API error:', error);
     return NextResponse.json({ locations: [], error: 'Internal server error' }, { status: 500 });

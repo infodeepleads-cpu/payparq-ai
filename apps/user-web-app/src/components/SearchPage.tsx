@@ -15,7 +15,7 @@ import { DestinationPickerWidget } from './DestinationPickerWidget';
 import { ScrollableDateTimePicker } from './ScrollableDateTimePicker';
 import { HomeBookingFlow } from './HomeBookingFlow';
 import { useLocale } from './LocaleProvider';
-import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle, List, DollarSign, Globe } from 'lucide-react';
+import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle, List, DollarSign, Globe, Van } from 'lucide-react';
 import { resolveScannerTruthPriceEuro, getViablePrice, getTieredDailyConfig, calculateTieredDailyPrice } from '@/lib/locationPricing';
 import { openCheckout } from '@/lib/capacitorBrowser';
 import { AMENITIES_LIST, normalizeAmenityLabels } from '@/lib/amenities';
@@ -57,6 +57,7 @@ const TRANSLATIONS = {
   'Učitavanje parkinga...': { en: 'Loading parking...', hr: 'Učitavanje parkinga...' },
   'Vaša rezervacija je produžena bez dodatnih troškova!': { en: 'Your reservation has been extended at no extra cost!', hr: 'Vaša rezervacija je produžena bez dodatnih troškova!' },
   'Things You Should Know': { en: 'Things You Should Know', hr: 'Važne informacije' },
+  'Informacije o Shuttle/Valet uslugama': { en: 'Shuttle/Valet Services Information', hr: 'Informacije o Shuttle/Valet uslugama' },
   'Valet': { en: 'Valet', hr: 'Valet' },
   'Prijevoz': { en: 'Shuttle', hr: 'Prijevoz' },
   'EV Punjenje': { en: 'EV Charging', hr: 'EV Punjenje' },
@@ -2106,9 +2107,16 @@ export function SearchPage() {
                                 <div className="text-sm font-semibold text-gray-900">{lot.name}</div>
                                 <div className="text-xs text-gray-500">{lot.verification_metadata?.personal_branding_enabled ? ((lot.verification_metadata?.personal_brand_name as string) || lot.address) : lot.address}</div>
                                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
-                                  <span className="flex items-center gap-1">
-                                    {lot.distance.toFixed(1)} km
-                                  </span>
+                                  {lot.shuttle_enabled || lot.shuttleValet ? (
+                                    <span className="flex items-center gap-1 text-blue-600 font-medium">
+                                      <Van className="w-4 h-4" />
+                                      Shuttle included
+                                    </span>
+                                  ) : (
+                                    <span className="flex items-center gap-1">
+                                      {lot.distance.toFixed(1)} km
+                                    </span>
+                                  )}
                                   <span className="flex items-center gap-1">
                                     €
                                     {lot.pricePerHour?.toFixed(2)}/h
@@ -2412,6 +2420,19 @@ export function SearchPage() {
                 <div className="pt-2">
                   <p className="text-xs text-gray-600">{t('Sigurna plaćanja omogućuje Stripe', locale)}</p>
                 </div>
+
+                {/* Shuttle/Valet Info */}
+                {selectedListing.shuttleValet && (
+                  <div className="pt-6 border-t border-gray-200 mt-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Van className="w-5 h-5 text-blue-600" />
+                      <p className="text-base font-bold text-gray-900">{t('Informacije o Shuttle/Valet uslugama', locale)}</p>
+                    </div>
+                    <div className="space-y-2 text-sm text-gray-900 leading-relaxed ml-7">
+                      {selectedListing.shuttleValet.split('\n\n').map((p, i) => <p key={i}>{p}</p>)}
+                    </div>
+                  </div>
+                )}
 
                 {/* Things You Should Know */}
                 <div className="pt-6 border-t border-gray-200 mt-6">
@@ -2952,9 +2973,16 @@ export function SearchPage() {
                                 <div className="text-sm font-semibold text-gray-900">{lot.name}</div>
                                 <div className="text-xs text-gray-500">{lot.verification_metadata?.personal_branding_enabled ? ((lot.verification_metadata?.personal_brand_name as string) || lot.address) : lot.address}</div>
                                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
-                                  <span className="flex items-center gap-1">
-                                    {lot.distance.toFixed(1)} km
-                                  </span>
+                                  {lot.shuttle_enabled || lot.shuttleValet ? (
+                                    <span className="flex items-center gap-1 text-blue-600 font-medium">
+                                      <Van className="w-4 h-4" />
+                                      Shuttle included
+                                    </span>
+                                  ) : (
+                                    <span className="flex items-center gap-1">
+                                      {lot.distance.toFixed(1)} km
+                                    </span>
+                                  )}
                                   <span className="flex items-center gap-1">
                                     €
                                     {lot.pricePerHour?.toFixed(2)}/h
@@ -3291,6 +3319,19 @@ export function SearchPage() {
                   <p className="text-xs text-gray-600">{t('Sigurna plaćanja omogućuje Stripe', locale)}</p>
                 </div>
               </div>
+
+              {/* Shuttle/Valet Info */}
+              {selectedListing.shuttleValet && (
+                <div className="pt-3 border-t border-gray-200 mb-4 px-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Van className="w-5 h-5 text-blue-600" />
+                    <p className="text-sm font-bold text-gray-900">{t('Informacije o Shuttle/Valet uslugama', locale)}</p>
+                  </div>
+                  <div className="space-y-2 text-xs text-gray-900 leading-relaxed ml-6">
+                    {selectedListing.shuttleValet.split('\n\n').map((p, i) => <p key={i}>{p}</p>)}
+                  </div>
+                </div>
+              )}
 
               {/* Things You Should Know */}
               <div className="pt-3 border-t border-gray-200 mb-4 px-4">
