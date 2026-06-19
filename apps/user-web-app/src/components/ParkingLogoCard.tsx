@@ -138,7 +138,11 @@ export function ParkingLogoCard({
 
           {/* Price Section - Right Side with Blue */}
           <div className="px-6 py-4 border-b border-gray-200 mt-auto">
-            <p className="text-xs text-gray-600 font-bold mb-2 uppercase tracking-wider">{locale === 'hr' ? `Cijena za ${selectedDays} ${selectedDays === 1 ? 'dan' : 'dana'}` : `Price for ${selectedDays} day${selectedDays !== 1 ? 's' : ''}`}</p>
+            <p className="text-xs text-gray-600 font-bold mb-2 uppercase tracking-wider">
+              {isTicketing
+                ? (locale === 'hr' ? 'Plaćanja sada' : 'Pay now')
+                : (locale === 'hr' ? `Cijena za ${selectedDays} ${selectedDays === 1 ? 'dan' : 'dana'}` : `Price for ${selectedDays} day${selectedDays !== 1 ? 's' : ''}`)}
+            </p>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-3xl font-bold text-blue-600">€{displayPrice.toFixed(2)}</p>

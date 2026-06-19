@@ -577,7 +577,8 @@ export function SearchPage() {
     const checkoutListing = { ...listing, pricePerHour: rates.hourly, pricePerDay: rates.daily, verification_metadata: listing.verification_metadata };
     const totalPrice = getDisplayPrice(checkoutListing, durationHours, reservationType);
     const sub = parseFloat(totalPrice.toFixed(2));
-    const total = sub; // Always pass base price; checkout adds fee itself
+    const airportSurcharge = listing.verification_metadata?.airport_lot_enabled ? parseFloat((0.99 + (sub * 0.03)).toFixed(2)) : 0;
+    const total = sub + airportSurcharge; // Include airport surcharge if applicable; checkout adds fee itself
 
     // Convert naive local datetimes to UTC ISO so the server doesn't misread them as UTC
     let checkoutStartTime = parseLocalDateTime(startTime).toISOString();
