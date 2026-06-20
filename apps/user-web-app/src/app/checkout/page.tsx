@@ -130,6 +130,7 @@ function SummaryPanel({
   onApplyPromo, onRemovePromo, onInputChange,
   onCheckInChange, onCheckOutChange, onDatePickerToggle, onAddHours, hourlyRateCents,
   checkoutSlots, locale, ticketingOnlyEnabled, freeCancellationEnabled, freeCancellationDays,
+  airportSurchargeEur,
 }: {
   locationName: string;
   locationId: string;
@@ -157,6 +158,7 @@ function SummaryPanel({
   ticketingOnlyEnabled?: boolean;
   freeCancellationEnabled?: boolean;
   freeCancellationDays?: number;
+  airportSurchargeEur: number;
 }) {
   const subtotalEur = originalAmountCents / 100;
   const serviceFeeEurCents = promoDiscountPercent === 100 ? 0 : Math.min(199, Math.round(99 + (originalAmountCents * 0.10)));
@@ -989,6 +991,7 @@ function PaidCheckoutForm({
             ticketingOnlyEnabled={ticketingOnlyEnabled}
             freeCancellationEnabled={freeCancellationEnabled}
             freeCancellationDays={freeCancellationDays}
+            airportSurchargeEur={airportSurchargeEur}
           />
 
           {/* ── Right: form ── */}
