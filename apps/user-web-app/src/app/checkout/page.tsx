@@ -1163,6 +1163,7 @@ function CheckoutInner() {
   const [freeCancellationEnabled, setFreeCancellationEnabled] = useState(false);
   const [freeCancellationDays, setFreeCancellationDays] = useState(0);
   const [ticketingOnlyEnabled, setTicketingOnlyEnabled] = useState(false);
+  const [airportSurchargeEur, setAirportSurchargeEur] = useState(0);
 
   useEffect(() => {
     if (!locId) return;
