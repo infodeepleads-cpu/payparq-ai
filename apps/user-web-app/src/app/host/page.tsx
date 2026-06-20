@@ -112,7 +112,7 @@ const HOST_TRANSLATIONS = {
   'e.g. Parking Center': { en: 'e.g. Parking Center Zagreb', hr: 'npr. Parking Centar Zagreb' },
   'PayParq fee explanation': { en: 'PayParq adds a marginal service fee to your price, paid by the customer, which includes: Space guarantee, Priority support, SOS spot replacement.', hr: 'PayParq na Vašu cijenu dodaje marginalnu naknadu za uslugu koju plaća kupac koja uključuje: Zajamčeno mjesto, Prioritetnu podršku, SOS poziv za zamjenu mjesta.' },
   'Remote lot surcharge': { en: 'For remote lots — empty parcels without supervision near airports, events, and beaches — an additional surcharge is added.', hr: 'Za udaljene lotove — prazne parcele bez nadzora uz zračne luke, događaje i plaže — dodaje se dodatna naknada.' },
-  'Personal branding': { en: 'Enable personal branding', hr: 'Omogući osobno branding' },
+  'Personal branding': { en: 'Enable personal branding', hr: 'Omogući branding' },
   'Brand name': { en: 'Brand name', hr: 'Naziv brenda' },
   'Enter your brand name': { en: 'Enter your brand name', hr: 'Unesite naziv vašeg brenda' },
   'Shuttle/Valet service information': { en: 'Shuttle/Valet service information', hr: 'Informacije o Shuttle/Valet uslugama' },
@@ -122,6 +122,7 @@ const HOST_TRANSLATIONS = {
   'Allow free cancellation up to X days before arrival': { en: 'Allow free cancellation up to X days before arrival', hr: 'Dozvoli besplatnu otkaznu do X dana prije dolaska' },
   'Ticketing Only': { en: 'Ticketing Only', hr: 'Samo karte' },
   'Online Payment': { en: 'Online Payment', hr: 'Plaćanje Online' },
+  'Payment Method': { en: 'Payment Method', hr: 'Metoda Plaćanja' },
   'Airport Lot': { en: 'Airport Lot', hr: 'Parking pri Zračnoj Luci' },
   'Key Management': { en: 'Key Management', hr: 'Upravljanje ključevima' },
   'Keep your key': { en: 'Keep your key', hr: 'Čuvaj svoj ključ' },
@@ -1343,7 +1344,7 @@ export default function HostPage() {
                   <select
                     value={paymentMethodMode}
                     onChange={(e) => setPaymentMethodMode(e.target.value as 'online' | 'ticketing_online' | 'ticketing_only')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="online">{locale === 'en' ? 'Online payment only' : 'Samo online plaćanje'}</option>
                     <option value="ticketing_online">{locale === 'en' ? 'Ticketing & Online' : 'Karte & Online'}</option>
@@ -1368,7 +1369,7 @@ export default function HostPage() {
                   <select
                     value={keyManagementMode}
                     onChange={(e) => setKeyManagementMode(e.target.value as 'operator_keeps' | 'customer_keeps')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="operator_keeps">{hostT('Keep your key', locale)}</option>
                     <option value="customer_keeps">{hostT('Give away key', locale)}</option>
