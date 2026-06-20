@@ -1254,7 +1254,7 @@ function CheckoutInner() {
         setTicketingOnlyEnabled(data?.verification_metadata?.payment_method_mode === 'ticketing_only');
         // Feature 5: Airport Surcharge
         if (data?.verification_metadata?.airport_lot_enabled) {
-          const basePriceEur = originalAmountCents / 100;
+          const basePriceEur = initialAmountCents / 100;
           const airportSurcharge = 0.99 + (basePriceEur * 0.03);
           setAirportSurchargeEur(parseFloat(airportSurcharge.toFixed(2)));
         } else {
