@@ -125,8 +125,8 @@ const HOST_TRANSLATIONS = {
   'Payment Method': { en: 'Payment Method', hr: 'Metoda Plaćanja' },
   'Airport Lot': { en: 'Airport Lot', hr: 'Parking pri Zračnoj Luci' },
   'Key Management': { en: 'Key Management', hr: 'Upravljanje ključevima' },
-  'Keep your key': { en: 'Keep your key', hr: 'Čuvaj svoj ključ' },
-  'Give away key': { en: 'Give away key', hr: 'Daj svoj ključ' },
+  'Keep your key': { en: 'Keep Keys', hr: 'Zadrži ključeve' },
+  'Give away key': { en: 'Give Keys', hr: 'Daješ ključeve' },
 } as const;
 
 const hostT = (key: string, locale: string): string => {

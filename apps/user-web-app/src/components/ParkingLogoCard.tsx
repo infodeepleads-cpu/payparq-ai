@@ -125,8 +125,8 @@ export function ParkingLogoCard({
               <Lock className="w-5 h-5 text-black flex-shrink-0" strokeWidth={3} />
               <span className="text-sm font-bold text-gray-900">
                 {keyManagementMode === 'operator_keeps'
-                  ? (locale === 'hr' ? 'Čuva svoje ključeve' : 'Keeps your key')
-                  : (locale === 'hr' ? 'Daješ svoj ključ' : 'Give away key')}
+                  ? (locale === 'hr' ? 'Zadrži ključeve' : 'Keep Keys')
+                  : (locale === 'hr' ? 'Daješ ključeve' : 'Give Keys')}
               </span>
             </div>
 

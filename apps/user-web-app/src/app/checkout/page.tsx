@@ -542,6 +542,12 @@ function SummaryPanel({
                   <span className="font-medium">€{serviceFeeEur.toFixed(2)}</span>
                 </div>
               )}
+              {airportSurchargeEur > 0 && (
+                <div className="flex justify-between text-gray-700">
+                  <span>{locale === 'en' ? 'Airport Fee' : 'Naknada aerodroma'}</span>
+                  <span className="font-medium">€{airportSurchargeEur.toFixed(2)}</span>
+                </div>
+              )}
               {amountEur > 0 && (
                 <div className="flex justify-between text-gray-900 font-bold pt-2 border-t border-gray-100">
                   <span>{checkoutT('Total', locale)}</span>
@@ -657,6 +663,7 @@ function PaidCheckoutForm({
   const [promoCodeId, setPromoCodeId] = useState<string | null>(null);
   const [referrerId, setReferrerId] = useState<string | null>(null);
   const [referralCodeV2, setReferralCodeV2] = useState<string | null>(null);
+  const [airportSurchargeEur, setAirportSurchargeEur] = useState(0);
 
   // For free bookings, no PaymentElement loads — signal ready immediately
   useEffect(() => {
@@ -670,7 +677,7 @@ function PaidCheckoutForm({
   const totalWithFeeEurCents = ticketingOnlyEnabled ? serviceFeeEurCents : (displayAmountCents + serviceFeeEurCents);
 
   function calcAmountCents(durationHours: number): number {
-    const ph = phCents || (originalAmountCents / Math.max(0.5, (new Date(initialCheckOut).getTime() - new Date(initialCheckIn).getTime()) / (1000 * 60 * 60)));
+    const ph = phCents || (parkingAmountCents / Math.max(0.5, (new Date(initialCheckOut).getTime() - new Date(initialCheckIn).getTime()) / (1000 * 60 * 60)));
     const hourly = durationHours * ph;
     const daily = pdCents ? Math.ceil(durationHours / 24) * pdCents : Infinity;
     const monthly = (pmCents && durationHours >= 24 * 28) ? pmCents : Infinity;
@@ -1187,9 +1194,15 @@ function CheckoutInner() {
             setFreeCancellationEnabled(true);
             setFreeCancellationDays(data.verification_metadata.free_cancellation_days || 0);
           }
-          // Feature 4: Ticketing Only
-          if (data?.verification_metadata?.ticketing_only_enabled) {
-            setTicketingOnlyEnabled(true);
+          // Feature 4: Payment Method Mode
+          setTicketingOnlyEnabled(data?.verification_metadata?.payment_method_mode === 'ticketing_only');
+          // Feature 5: Airport Surcharge
+          if (data?.verification_metadata?.airport_lot_enabled) {
+            const basePriceEur = originalAmountCents / 100;
+            const airportSurcharge = 0.99 + (basePriceEur * 0.03);
+            setAirportSurchargeEur(parseFloat(airportSurcharge.toFixed(2)));
+          } else {
+            setAirportSurchargeEur(0);
           }
           const liveHourly = resolveScannerTruthPriceEuro(data, 'hourly');
           const liveDaily = resolveScannerTruthPriceEuro(data, 'daily');
@@ -1234,9 +1247,15 @@ function CheckoutInner() {
           setFreeCancellationEnabled(true);
           setFreeCancellationDays(data.verification_metadata.free_cancellation_days || 0);
         }
-        // Feature 4: Ticketing Only
-        if (data?.verification_metadata?.ticketing_only_enabled) {
-          setTicketingOnlyEnabled(true);
+        // Feature 4: Payment Method Mode
+        setTicketingOnlyEnabled(data?.verification_metadata?.payment_method_mode === 'ticketing_only');
+        // Feature 5: Airport Surcharge
+        if (data?.verification_metadata?.airport_lot_enabled) {
+          const basePriceEur = originalAmountCents / 100;
+          const airportSurcharge = 0.99 + (basePriceEur * 0.03);
+          setAirportSurchargeEur(parseFloat(airportSurcharge.toFixed(2)));
+        } else {
+          setAirportSurchargeEur(0);
         }
       });
   }, [locId]);

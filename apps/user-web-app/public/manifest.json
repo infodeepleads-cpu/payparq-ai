@@ -4,7 +4,7 @@
   "description": "Manage your parking lot, track payments, and get real-time notifications",
   "start_url": "/",
   "scope": "/",
-  "display": "standalone",
+  "display": "browser",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "orientation": "portrait-primary",

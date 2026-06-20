@@ -107,12 +107,6 @@ export default async function RootLayout({
         />
       </head>
       <body className={`${plusJakarta.className} antialiased`}>
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "(function(){if(typeof window==='undefined')return;var n=window.navigator;if(n&&'serviceWorker' in n){n.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){var s=r.scope;var o=window.location.origin;var isScoped=s===o+'/members/'||s===o+'/search/'||s.indexOf('firebase')>-1||s.indexOf('messaging')>-1;if(!isScoped&&s===o+'/'){r.unregister();}});}).catch(function(){});}})();",
-          }}
-        />
         <LocaleProvider initialLocale={locale}>
           <RuntimeTextTranslator />
           <WebVitals />
