@@ -1199,16 +1199,15 @@ function CheckoutInner() {
           }
           // Feature 4: Payment Method Mode
           setTicketingOnlyEnabled(data?.verification_metadata?.payment_method_mode === 'ticketing_only');
+          const liveHourly = resolveScannerTruthPriceEuro(data, 'hourly');
+          const liveDaily = resolveScannerTruthPriceEuro(data, 'daily');
           // Feature 5: Airport Surcharge
           if (data?.verification_metadata?.airport_lot_enabled) {
-            const basePriceEur = originalAmountCents / 100;
-            const airportSurcharge = 0.99 + (basePriceEur * 0.03);
+            const airportSurcharge = 0.99 + (liveHourly * 0.03);
             setAirportSurchargeEur(parseFloat(airportSurcharge.toFixed(2)));
           } else {
             setAirportSurchargeEur(0);
           }
-          const liveHourly = resolveScannerTruthPriceEuro(data, 'hourly');
-          const liveDaily = resolveScannerTruthPriceEuro(data, 'daily');
           const now = new Date();
           const ci = new Date(now);
           ci.setMinutes(0, 0, 0);
