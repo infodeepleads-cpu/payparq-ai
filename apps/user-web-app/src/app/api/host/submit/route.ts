@@ -102,11 +102,13 @@ export async function POST(req: NextRequest) {
     const freeCancellationDays    = parseFloat((formData.get('freeCancellationDays') as string) || '0');
 
     // Feature 4: Ticketing + Online Payment
-    const ticketingEnabled        = formData.get('ticketingEnabled') === 'true';
-    const onlinePaymentEnabled    = formData.get('onlinePaymentEnabled') === 'true';
+    const paymentMethodMode       = (formData.get('paymentMethodMode') as string) || 'online';
 
     // Feature 5: Airport Lot
     const airportLotEnabled       = formData.get('airportLotEnabled') === 'true';
+
+    // Feature 6: Key Management
+    const keyManagementMode       = (formData.get('keyManagementMode') as string) || 'operator_keeps';
 
     // Partnership toggles
     const wantPartnership      = formData.get('wantPartnership') === 'true';
@@ -222,11 +224,12 @@ export async function POST(req: NextRequest) {
           // Feature 3: Free Cancellation
           free_cancellation_enabled: freeCancellationEnabled,
           free_cancellation_days: freeCancellationEnabled ? freeCancellationDays : null,
-          // Feature 4: Ticketing + Online Payment
-          ticketing_enabled: ticketingEnabled,
-          online_payment_enabled: onlinePaymentEnabled,
+          // Feature 4: Payment Method Mode
+          payment_method_mode: paymentMethodMode,
           // Feature 5: Airport Lot
           airport_lot_enabled: airportLotEnabled,
+          // Feature 6: Key Management
+          key_management_mode: keyManagementMode,
           // Partnership toggles
           want_partnership: wantPartnership,
           want_qr_pay: wantQR,

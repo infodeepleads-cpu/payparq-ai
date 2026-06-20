@@ -16,6 +16,7 @@ interface ParkingLogoCardProps {
   variantType?: 'ticketing' | 'online' | 'valet';
   airportSurcharge?: number;
   isSoldOut?: boolean;
+  keyManagementMode?: 'operator_keeps' | 'customer_keeps';
 }
 
 export function ParkingLogoCard({
@@ -30,6 +31,7 @@ export function ParkingLogoCard({
   variantType = 'online',
   airportSurcharge = 0,
   isSoldOut = false,
+  keyManagementMode = 'operator_keeps',
 }: ParkingLogoCardProps) {
   const [showFeeModal, setShowFeeModal] = useState(false);
   const isOnlinePayment = variantType === 'online';
@@ -118,10 +120,14 @@ export function ParkingLogoCard({
               <span className="text-sm font-bold text-gray-900">{locale === 'hr' ? 'Nepokriveno' : 'Uncovered'}</span>
             </div>
 
-            {/* Nemojte zadržavati ključe */}
+            {/* Key Management */}
             <div className="flex items-center gap-3">
               <Lock className="w-5 h-5 text-black flex-shrink-0" strokeWidth={3} />
-              <span className="text-sm font-bold text-gray-900">{locale === 'hr' ? 'Ne drž. ključe' : 'No keys'}</span>
+              <span className="text-sm font-bold text-gray-900">
+                {keyManagementMode === 'operator_keeps'
+                  ? (locale === 'hr' ? 'Čuva svoje ključeve' : 'Keeps your key')
+                  : (locale === 'hr' ? 'Daješ svoj ključ' : 'Give away key')}
+              </span>
             </div>
 
             {/* Otvoreno 24/7 */}

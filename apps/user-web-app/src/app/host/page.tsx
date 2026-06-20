@@ -123,6 +123,9 @@ const HOST_TRANSLATIONS = {
   'Ticketing Only': { en: 'Ticketing Only', hr: 'Samo karte' },
   'Online Payment': { en: 'Online Payment', hr: 'Plaćanje Online' },
   'Airport Lot': { en: 'Airport Lot', hr: 'Parking pri Zračnoj Luci' },
+  'Key Management': { en: 'Key Management', hr: 'Upravljanje ključevima' },
+  'Keep your key': { en: 'Keep your key', hr: 'Čuvaj svoj ključ' },
+  'Give away key': { en: 'Give away key', hr: 'Daj svoj ključ' },
 } as const;
 
 const hostT = (key: string, locale: string): string => {
@@ -780,12 +783,14 @@ export default function HostPage() {
   const [freeCancellationEnabled, setFreeCancellationEnabled] = useState(false);
   const [freeCancellationDays, setFreeCancellationDays] = useState('');
 
-  // Feature 4: Ticketing Only (now multi-select with Online Payment)
-  const [ticketingEnabled, setTicketingEnabled] = useState(true);
-  const [onlinePaymentEnabled, setOnlinePaymentEnabled] = useState(true);
+  // Feature 4: Payment Method Mode
+  const [paymentMethodMode, setPaymentMethodMode] = useState<'online' | 'ticketing_online' | 'ticketing_only'>('online');
 
   // Feature 5: Airport Lot
   const [airportLotEnabled, setAirportLotEnabled] = useState(false);
+
+  // Feature 6: Key Management
+  const [keyManagementMode, setKeyManagementMode] = useState<'operator_keeps' | 'customer_keeps'>('operator_keeps');
 
   // Photos
   const [photos, setPhotos] = useState<File[]>([]);
@@ -888,11 +893,12 @@ export default function HostPage() {
     // Feature 3: Free Cancellation
     fd.append('freeCancellationEnabled', String(freeCancellationEnabled));
     fd.append('freeCancellationDays', freeCancellationDays);
-    // Feature 4: Ticketing + Online Payment
-    fd.append('ticketingEnabled', String(ticketingEnabled));
-    fd.append('onlinePaymentEnabled', String(onlinePaymentEnabled));
+    // Feature 4: Payment Method Mode
+    fd.append('paymentMethodMode', paymentMethodMode);
     // Feature 5: Airport Lot
     fd.append('airportLotEnabled', String(airportLotEnabled));
+    // Feature 6: Key Management
+    fd.append('keyManagementMode', keyManagementMode);
     // Partnership toggles
     fd.append('wantPartnership', String(wantPartnership));
     fd.append('wantQR', String(wantQR));
@@ -1333,62 +1339,40 @@ export default function HostPage() {
 
                 {/* Feature 4: Ticketing + Online Payment (Multi-select) */}
                 <div className="space-y-3 pt-4 border-t border-gray-100">
-                  <p className="text-xs font-semibold text-gray-800">{hostT('Payment Options', locale)}</p>
-                  <p className="text-xs text-gray-400">{locale === 'en' ? 'Choose which payment options to offer (select at least one)' : 'Odaberite opcije plaćanja za ponudu (odaberite najmanje jednu)'}</p>
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (ticketingEnabled && !onlinePaymentEnabled) return;
-                        setTicketingEnabled(!ticketingEnabled);
-                      }}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-colors ${
-                        ticketingEnabled ? 'border-gray-900 bg-gray-50' : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                    >
-                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                        ticketingEnabled ? 'border-gray-900 bg-gray-900' : 'border-gray-300'
-                      }`}>
-                        {ticketingEnabled && <span className="text-white text-xs font-bold">✓</span>}
-                      </div>
-                      <div className="text-left flex-1">
-                        <p className="text-xs font-semibold text-gray-900">{hostT('Ticketing Only', locale)}</p>
-                        <p className="text-xs text-gray-500">{locale === 'en' ? 'Secure spot (0.99-1.99€ + rest on arrival)' : 'Osiguraj mjesto (0.99-1.99€ + ostatak pri dolasku)'}</p>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (onlinePaymentEnabled && !ticketingEnabled) return;
-                        setOnlinePaymentEnabled(!onlinePaymentEnabled);
-                      }}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-colors ${
-                        onlinePaymentEnabled ? 'border-gray-900 bg-gray-50' : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                    >
-                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                        onlinePaymentEnabled ? 'border-gray-900 bg-gray-900' : 'border-gray-300'
-                      }`}>
-                        {onlinePaymentEnabled && <span className="text-white text-xs font-bold">✓</span>}
-                      </div>
-                      <div className="text-left flex-1">
-                        <p className="text-xs font-semibold text-gray-900">{hostT('Online Payment', locale)}</p>
-                        <p className="text-xs text-gray-500">{locale === 'en' ? 'Pay in full online' : 'Plaćanje u cijelosti online'}</p>
-                      </div>
-                    </button>
-                  </div>
+                  <p className="text-xs font-semibold text-gray-800">{hostT('Payment Method', locale)}</p>
+                  <select
+                    value={paymentMethodMode}
+                    onChange={(e) => setPaymentMethodMode(e.target.value as 'online' | 'ticketing_online' | 'ticketing_only')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="online">{locale === 'en' ? 'Online payment only' : 'Samo online plaćanje'}</option>
+                    <option value="ticketing_online">{locale === 'en' ? 'Ticketing & Online' : 'Karte & Online'}</option>
+                    <option value="ticketing_only">{locale === 'en' ? 'Ticketing only (pay service fee now)' : 'Samo karte (plaćanje naknade sada)'}</option>
+                  </select>
+                  <p className="text-xs text-gray-400 mt-2">
+                    {paymentMethodMode === 'online' && (locale === 'en' ? 'Customers pay full price at checkout' : 'Kupci plaćaju punu cijenu pri kupnji')}
+                    {paymentMethodMode === 'ticketing_online' && (locale === 'en' ? 'Customers choose between ticketing or online payment' : 'Kupci biraju između karata ili online plaćanja')}
+                    {paymentMethodMode === 'ticketing_only' && (locale === 'en' ? 'Customers pay only service fee at checkout' : 'Kupci plaćaju samo naknadu za uslugu pri kupnji')}
+                  </p>
                 </div>
 
                 {/* Feature 5: Airport Lot */}
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                  <p className="text-xs font-semibold text-gray-800">{hostT('Airport Lot', locale)}</p>
+                  <Toggle checked={airportLotEnabled} onChange={setAirportLotEnabled} />
+                </div>
+
+                {/* Feature 6: Key Management */}
                 <div className="space-y-3 pt-4 border-t border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-semibold text-gray-800">{hostT('Airport Lot', locale)}</p>
-                      <p className="text-xs text-gray-400">{locale === 'en' ? 'Add 2.49€ airport surcharge to all payment options' : 'Dodaj 2.49€ naknadu za parking pri zračnoj luci'}</p>
-                    </div>
-                    <Toggle checked={airportLotEnabled} onChange={setAirportLotEnabled} />
-                  </div>
+                  <p className="text-xs font-semibold text-gray-800">{hostT('Key Management', locale)}</p>
+                  <select
+                    value={keyManagementMode}
+                    onChange={(e) => setKeyManagementMode(e.target.value as 'operator_keeps' | 'customer_keeps')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="operator_keeps">{hostT('Keep your key', locale)}</option>
+                    <option value="customer_keeps">{hostT('Give away key', locale)}</option>
+                  </select>
                 </div>
 
                 {true && (

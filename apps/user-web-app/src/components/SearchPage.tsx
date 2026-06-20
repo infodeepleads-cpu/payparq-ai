@@ -177,11 +177,11 @@ const expandListingsToCardVariants = (listings: any[]): CardVariant[] => {
   const variants: CardVariant[] = [];
   listings.forEach((listing) => {
     const metadata = listing.verification_metadata || {};
-    const ticketingEnabled = metadata.ticketing_enabled !== false;
-    const onlinePaymentEnabled = metadata.online_payment_enabled !== false;
+    const paymentMode = metadata.payment_method_mode ?? 'online';
 
-    // Add ticketing variant if enabled
-    if (ticketingEnabled) {
+    // Create variants based on payment method mode
+    if (paymentMode === 'ticketing_only') {
+      // Only ticketing variant
       variants.push({
         listingId: listing.id,
         originalListing: listing,
@@ -189,10 +189,24 @@ const expandListingsToCardVariants = (listings: any[]): CardVariant[] => {
         priceMultiplier: 1,
         label: 'Ticketing',
       });
-    }
-
-    // Add online payment variant if enabled
-    if (onlinePaymentEnabled) {
+    } else if (paymentMode === 'ticketing_online') {
+      // Both ticketing and online variants
+      variants.push({
+        listingId: listing.id,
+        originalListing: listing,
+        variantType: 'ticketing',
+        priceMultiplier: 1,
+        label: 'Ticketing',
+      });
+      variants.push({
+        listingId: listing.id,
+        originalListing: listing,
+        variantType: 'online',
+        priceMultiplier: 1,
+        label: 'Online',
+      });
+    } else {
+      // Online only (default)
       variants.push({
         listingId: listing.id,
         originalListing: listing,
@@ -291,15 +305,15 @@ interface Parking {
 }
 
 const isSoldOut = (listing: Parking, startTime: string, endTime: string): boolean => {
-  const dateConfigs = listing.verification_metadata?.dateConfigs as Record<string, { isOpen?: boolean }> | undefined;
-  if (!dateConfigs || Object.keys(dateConfigs).length === 0) return false;
+  const calendarSchedule = listing.verification_metadata?.calendar_schedule as Record<string, { isOpen?: boolean }> | undefined;
+  if (!calendarSchedule || Object.keys(calendarSchedule).length === 0) return false;
 
   const start = new Date(startTime);
   const end = new Date(endTime);
 
   for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const config = dateConfigs[dateStr];
+    const config = calendarSchedule[dateStr];
     if (config && config.isOpen === false) {
       return true;
     }
@@ -551,8 +565,9 @@ export function SearchPage() {
     const liveListing = { ...selectedListing, pricePerHour: rates.hourly, pricePerDay: rates.daily, verification_metadata: selectedListing.verification_metadata };
     return parseFloat(getDisplayPrice(liveListing, durationHours, reservationType).toFixed(2));
   })() : 0;
+  const airportSurcharge = selectedListing?.verification_metadata?.airport_lot_enabled ? parseFloat((0.99 + subtotal * 0.03).toFixed(2)) : 0;
   const serviceFee = Math.min(1.99, parseFloat((0.99 + subtotal * 0.10).toFixed(2)));
-  const totalPrice = parseFloat((subtotal + serviceFee).toFixed(2));
+  const totalPrice = parseFloat((subtotal + airportSurcharge + serviceFee).toFixed(2));
 
   const formatDuration = () => {
     const h = durationHours;
@@ -589,13 +604,24 @@ export function SearchPage() {
     }
   };
 
-  const buildCheckoutUrl = (listing: Parking) => {
+  const buildCheckoutUrl = (listing: Parking, variantType: 'ticketing' | 'online' | 'valet' = 'online') => {
     const rates = resolveRatesForDate(listing, startTime);
     const checkoutListing = { ...listing, pricePerHour: rates.hourly, pricePerDay: rates.daily, verification_metadata: listing.verification_metadata };
     const totalPrice = getDisplayPrice(checkoutListing, durationHours, reservationType);
     const sub = parseFloat(totalPrice.toFixed(2));
     const airportSurcharge = listing.verification_metadata?.airport_lot_enabled ? parseFloat((0.99 + (sub * 0.03)).toFixed(2)) : 0;
-    const total = sub + airportSurcharge; // Include airport surcharge if applicable; checkout adds fee itself
+
+    // Calculate amount to charge based on variant type
+    let amountToCharge: number;
+    if (variantType === 'ticketing') {
+      // For ticketing, only charge service fee
+      const dailyPrice = sub / Math.max(Math.ceil(durationHours / 24), 1);
+      const serviceFee = Math.min(1.99, 0.99 + (dailyPrice * 0.10));
+      amountToCharge = serviceFee;
+    } else {
+      // For online and valet, charge full price + airport surcharge
+      amountToCharge = sub + airportSurcharge;
+    }
 
     // Convert naive local datetimes to UTC ISO so the server doesn't misread them as UTC
     let checkoutStartTime = parseLocalDateTime(startTime).toISOString();
@@ -612,7 +638,7 @@ export function SearchPage() {
       loc: listing.id,
       in: checkoutStartTime,
       out: checkoutEndTime,
-      amount_cents: Math.round(total * 100).toString(),
+      amount_cents: Math.round(amountToCharge * 100).toString(),
       name: listing.name || listing.address,
       address: listing.address,
       ph: Math.round(rates.hourly * 100).toString(),
@@ -2436,7 +2462,7 @@ export function SearchPage() {
                     </p>
                   </div>
                   <div className="text-right flex flex-col items-end">
-                    <p className="text-2xl font-bold text-gray-900">€{subtotal.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-gray-900">€{totalPrice.toFixed(2)}</p>
                     <span className="text-sm text-gray-500 border-b border-gray-400 pb-0.5 -mt-1">{t('Ukupno', locale)}</span>
                   </div>
                 </button>
@@ -2705,7 +2731,7 @@ export function SearchPage() {
                       price={priceWithAirport}
                       durationLabel={durationLabel}
                       locale={locale}
-                      checkoutUrl={buildCheckoutUrl(listing)}
+                      checkoutUrl={buildCheckoutUrl(listing, variant.variantType)}
                       onInfo={() => {
                         setSelectedListing(listing);
                         setShowDetailsView(true);
@@ -2718,6 +2744,7 @@ export function SearchPage() {
                       variantType={variant.variantType}
                       airportSurcharge={airportSurcharge}
                       isSoldOut={soldOut}
+                      keyManagementMode={(listing.verification_metadata?.key_management_mode as 'operator_keeps' | 'customer_keeps') || 'operator_keeps'}
                     />
                   );
                 })}
@@ -3029,7 +3056,7 @@ export function SearchPage() {
                         price={priceWithAirport}
                         durationLabel={reservationType}
                         locale={locale}
-                        checkoutUrl={buildCheckoutUrl(listing)}
+                        checkoutUrl={buildCheckoutUrl(listing, variant.variantType)}
                         onInfo={() => {}}
                         durationHours={durationHours}
                         variantType={variant.variantType}
@@ -3759,6 +3786,12 @@ export function SearchPage() {
                   </p>
                   <p className="text-sm font-semibold text-gray-900">€{subtotal.toFixed(2)}</p>
                 </div>
+                {airportSurcharge > 0 && (
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-600">{locale === 'en' ? 'Airport Fee' : 'Naknada aerodroma'}</p>
+                    <p className="text-sm font-semibold text-gray-900">€{airportSurcharge.toFixed(2)}</p>
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-gray-600">{t('Naknada za uslugu', locale)}</p>
                   <p className="text-sm font-semibold text-gray-900">€{serviceFee.toFixed(2)}</p>
