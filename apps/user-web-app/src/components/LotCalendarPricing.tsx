@@ -221,6 +221,9 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
       console.error('Failed to save date config:', err.message);
       setDateConfigs(prevConfigs);
       setSaveStatus('error');
+      alert(locale === 'hr'
+        ? `Spremanje nije uspjelo: ${err.message}\n\nPokušajte ponovo ili osvježite stranicu.`
+        : `Save failed: ${err.message}\n\nPlease try again or refresh the page.`);
       setTimeout(() => setSaveStatus('idle'), 3000);
     }
   };
@@ -419,6 +422,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
               basePriceHourly={liveBaseHourly}
               basePriceDaily={liveBaseDaily}
               basePriceMonthly={liveBaseMonthly}
+              existingConfig={dateConfigs[rangeStartDate]}
             />
           </div>
         </div>
@@ -717,17 +721,18 @@ interface RangeConfigWidgetProps {
   basePriceHourly?: number | null;
   basePriceDaily?: number | null;
   basePriceMonthly?: number | null;
+  existingConfig?: DateConfig;
 }
 
-function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale, basePriceHourly, basePriceDaily, basePriceMonthly }: RangeConfigWidgetProps) {
-  const [capacity, setCapacity] = useState(String(lotCapacity));
-  const [isOpen, setIsOpen] = useState(true);
-  const [openTime, setOpenTime] = useState('00:00');
-  const [closeTime, setCloseTime] = useState('23:59');
-  const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto');
-  const [priceHourly, setPriceHourly] = useState(basePriceHourly != null ? String(basePriceHourly) : '');
-  const [priceDaily, setPriceDaily] = useState(basePriceDaily != null ? String(basePriceDaily) : '');
-  const [priceMonthly, setPriceMonthly] = useState(basePriceMonthly != null ? String(basePriceMonthly) : '');
+function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale, basePriceHourly, basePriceDaily, basePriceMonthly, existingConfig }: RangeConfigWidgetProps) {
+  const [capacity, setCapacity] = useState(existingConfig?.capacity != null ? String(existingConfig.capacity) : String(lotCapacity));
+  const [isOpen, setIsOpen] = useState(existingConfig ? existingConfig.isOpen : true);
+  const [openTime, setOpenTime] = useState(existingConfig?.openTime ?? '00:00');
+  const [closeTime, setCloseTime] = useState(existingConfig?.closeTime ?? '23:59');
+  const [priceMode, setPriceMode] = useState<'auto' | 'manual'>(existingConfig?.priceMode ?? 'auto');
+  const [priceHourly, setPriceHourly] = useState(existingConfig?.priceHourly != null ? String(existingConfig.priceHourly) : basePriceHourly != null ? String(basePriceHourly) : '');
+  const [priceDaily, setPriceDaily] = useState(existingConfig?.priceDaily != null ? String(existingConfig.priceDaily) : basePriceDaily != null ? String(basePriceDaily) : '');
+  const [priceMonthly, setPriceMonthly] = useState(existingConfig?.priceMonthly != null ? String(existingConfig.priceMonthly) : basePriceMonthly != null ? String(basePriceMonthly) : '');
 
   return (
     <div className="space-y-4 md:space-y-5">
