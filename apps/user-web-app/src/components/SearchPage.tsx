@@ -653,6 +653,7 @@ export function SearchPage() {
       in: checkoutStartTime,
       out: checkoutEndTime,
       amount_cents: Math.round(amountToCharge * 100).toString(),
+      base_cents: Math.round(sub * 100).toString(),
       name: listing.name || listing.address,
       address: listing.address,
       ph: Math.round(rates.hourly * 100).toString(),

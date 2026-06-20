@@ -602,7 +602,7 @@ function Field({ label, note, ...props }: { label: string; note?: string } & Rea
 
 function PaidCheckoutForm({
   amountEur, locationName, checkIn: initialCheckIn, checkOut: initialCheckOut,
-  locationId, displayId, originalAmountCents, onAmountChange, isFree, address, clientSecret,
+  locationId, displayId, originalAmountCents, basePriceCents, onAmountChange, isFree, address, clientSecret,
   phCents = 0, pdCents = 0, pmCents = 0, checkoutSlots, onPaymentReady, initialRefCode,
   ticketingOnlyEnabled, freeCancellationEnabled, freeCancellationDays,
 }: {
@@ -613,6 +613,7 @@ function PaidCheckoutForm({
   locationId: string;
   displayId?: string;
   originalAmountCents: number;
+  basePriceCents?: number;
   onAmountChange: (cents: number, promoCode?: string) => void;
   isFree?: boolean;
   address?: string;
@@ -655,7 +656,7 @@ function PaidCheckoutForm({
   const [checkIn, setCheckIn] = useState(initialCheckIn);
   const [checkOut, setCheckOut] = useState(initialCheckOut);
   const [displayAmountCents, setDisplayAmountCents] = useState(originalAmountCents);
-  const [parkingAmountCents, setParkingAmountCents] = useState(originalAmountCents); // Tracks parking price before promo discount
+  const [parkingAmountCents, setParkingAmountCents] = useState(basePriceCents || originalAmountCents); // Tracks parking price before promo discount (without surcharges)
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [promoStatus, setPromoStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle');
   const [promoInput, setPromoInput] = useState('');
@@ -1146,6 +1147,7 @@ function CheckoutInner() {
   const checkIn = searchParams.get('in') || '';
   const checkOut = searchParams.get('out') || '';
   const initialAmountCents = parseInt(searchParams.get('amount_cents') || '0', 10);
+  const basePriceCents = parseInt(searchParams.get('base_cents') || '0', 10) || initialAmountCents;
   const locationName = searchParams.get('name') || 'Parking';
   const address = searchParams.get('address') || '';
   const displayId = searchParams.get('display_id') || '';
@@ -1399,6 +1401,7 @@ function CheckoutInner() {
         amountEur={amountEur} locationName={locationName}
         checkIn={checkIn} checkOut={checkOut}
         locationId={locId} displayId={displayId} originalAmountCents={initialAmountCents}
+        basePriceCents={basePriceCents}
         onAmountChange={handleAmountChange}
         isFree={clientSecret === 'free'}
         address={address}
