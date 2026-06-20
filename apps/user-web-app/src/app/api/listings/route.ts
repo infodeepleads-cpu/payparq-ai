@@ -37,7 +37,9 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ locations: enriched });
+    return NextResponse.json({ locations: enriched }, {
+      headers: { 'Cache-Control': 'no-store' },
+    });
   } catch (error) {
     console.error('Listings API error:', error);
     return NextResponse.json({ locations: [], error: 'Internal server error' }, { status: 500 });

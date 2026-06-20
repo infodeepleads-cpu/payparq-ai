@@ -163,8 +163,14 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
   const handleApplyRangeConfig = async (config: Omit<DateConfig, 'date'>) => {
     if (!rangeStartDate || !rangeEndDate) return;
 
-    const start = new Date(rangeStartDate + 'T00:00:00');
-    const end = new Date(rangeEndDate + 'T00:00:00');
+    // Close modal immediately so mobile doesn't hang waiting for async auth+API
+    const savedStart = rangeStartDate;
+    const savedEnd = rangeEndDate;
+    setRangeStartDate(null);
+    setRangeEndDate(null);
+
+    const start = new Date(savedStart + 'T00:00:00');
+    const end = new Date(savedEnd + 'T00:00:00');
     const newConfigs = { ...dateConfigs };
 
     for (let d = new Date(start); d <= end; ) {
@@ -210,6 +216,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
       setRangeEndDate(null);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
+      window.dispatchEvent(new CustomEvent('pricing-updated', { detail: { lotId } }));
     } catch (err: any) {
       console.error('Failed to save date config:', err.message);
       setDateConfigs(prevConfigs);
@@ -223,7 +230,6 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
     const newConfigs = { ...dateConfigs, [config.date]: config };
     await handleSaveBatch(newConfigs, prev);
     setSelectedDate(null);
-    window.dispatchEvent(new CustomEvent('pricing-updated', { detail: { lotId } }));
   };
 
   const handleCloseDate = async (dateStr: string) => {
@@ -624,6 +630,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale, allCo
                 value={priceHourly}
                 onChange={(e) => {
                   const val = e.target.value;
+                  setPriceMode('manual');
                   if (val === '') { setPriceHourly(''); return; }
                   const stripped = val.replace(/^0+/, '') || '0';
                   const num = parseFloat(stripped);
@@ -641,6 +648,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale, allCo
                 value={priceDaily}
                 onChange={(e) => {
                   const val = e.target.value;
+                  setPriceMode('manual');
                   if (val === '') { setPriceDaily(''); return; }
                   const stripped = val.replace(/^0+/, '') || '0';
                   const num = parseFloat(stripped);
@@ -658,6 +666,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onCancel, locale, allCo
                 value={priceMonthly}
                 onChange={(e) => {
                   const val = e.target.value;
+                  setPriceMode('manual');
                   if (val === '') { setPriceMonthly(''); return; }
                   const stripped = val.replace(/^0+/, '') || '0';
                   const num = parseFloat(stripped);
@@ -824,6 +833,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale, basePriceHo
                 value={priceHourly}
                 onChange={(e) => {
                   const val = e.target.value;
+                  setPriceMode('manual');
                   if (val === '') { setPriceHourly(''); return; }
                   const stripped = val.replace(/^0+/, '') || '0';
                   const num = parseFloat(stripped);
@@ -841,6 +851,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale, basePriceHo
                 value={priceDaily}
                 onChange={(e) => {
                   const val = e.target.value;
+                  setPriceMode('manual');
                   if (val === '') { setPriceDaily(''); return; }
                   const stripped = val.replace(/^0+/, '') || '0';
                   const num = parseFloat(stripped);
@@ -858,6 +869,7 @@ function RangeConfigWidget({ lotCapacity, onApply, onCancel, locale, basePriceHo
                 value={priceMonthly}
                 onChange={(e) => {
                   const val = e.target.value;
+                  setPriceMode('manual');
                   if (val === '') { setPriceMonthly(''); return; }
                   const stripped = val.replace(/^0+/, '') || '0';
                   const num = parseFloat(stripped);

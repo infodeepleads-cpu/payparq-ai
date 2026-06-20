@@ -793,7 +793,7 @@ export function SearchPage() {
     const fetchListings = async () => {
       try {
         setLoading(true);
-        const res = await fetch('/api/listings');
+        const res = await fetch('/api/listings', { cache: 'no-store' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const { locations, error } = await res.json();
 
