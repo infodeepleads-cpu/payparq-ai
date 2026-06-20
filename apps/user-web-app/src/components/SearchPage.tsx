@@ -305,7 +305,14 @@ interface Parking {
 }
 
 const isSoldOut = (listing: Parking, startTime: string, endTime: string): boolean => {
-  const calendarSchedule = listing.verification_metadata?.calendar_schedule as Record<string, { isOpen?: boolean }> | undefined;
+  if (!listing.verification_metadata) return false;
+
+  // Try multiple possible calendar storage locations
+  const calendarSchedule =
+    (listing.verification_metadata.calendar_schedule as Record<string, any>) ||
+    (listing.verification_metadata.dateConfigs as Record<string, any>) ||
+    (listing.verification_metadata.calendar_configs as Record<string, any>);
+
   if (!calendarSchedule || Object.keys(calendarSchedule).length === 0) return false;
 
   const start = new Date(startTime);
@@ -314,8 +321,15 @@ const isSoldOut = (listing: Parking, startTime: string, endTime: string): boolea
   for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const config = calendarSchedule[dateStr];
-    if (config && config.isOpen === false) {
-      return true;
+
+    // Check multiple closure indicators
+    if (config) {
+      if (config.isOpen === false) return true;
+      if (config.closed === true) return true;
+      if (config.available === false) return true;
+      if (config.capacity === 0) return true;
+      // If the date exists but has no availability data, it's closed
+      if (typeof config === 'object' && Object.keys(config).length === 0) return true;
     }
   }
   return false;
