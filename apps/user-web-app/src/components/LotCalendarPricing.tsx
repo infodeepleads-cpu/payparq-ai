@@ -167,9 +167,10 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
     const end = new Date(rangeEndDate + 'T00:00:00');
     const newConfigs = { ...dateConfigs };
 
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    for (let d = new Date(start); d <= end; ) {
       const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       newConfigs[dateStr] = { date: dateStr, ...config };
+      d.setDate(d.getDate() + 1);
     }
 
     await handleSaveBatch(newConfigs, dateConfigs);

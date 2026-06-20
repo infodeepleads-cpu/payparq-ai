@@ -318,7 +318,7 @@ const isSoldOut = (listing: Parking, startTime: string, endTime: string): boolea
   const start = new Date(startTime);
   const end = new Date(endTime);
 
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+  for (let d = new Date(start); d <= end; ) {
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const config = calendarSchedule[dateStr];
 
@@ -331,6 +331,7 @@ const isSoldOut = (listing: Parking, startTime: string, endTime: string): boolea
       // If the date exists but has no availability data, it's closed
       if (typeof config === 'object' && Object.keys(config).length === 0) return true;
     }
+    d.setDate(d.getDate() + 1);
   }
   return false;
 };
