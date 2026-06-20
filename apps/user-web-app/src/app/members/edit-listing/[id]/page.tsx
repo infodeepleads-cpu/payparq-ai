@@ -322,11 +322,14 @@ export default function EditListingPage() {
   const [freeCancellationEnabled, setFreeCancellationEnabled] = useState(false);
   const [freeCancellationDays, setFreeCancellationDays] = useState('');
 
-  // Feature 4: Ticketing Only
-  const [ticketingOnlyEnabled, setTicketingOnlyEnabled] = useState(false);
+  // Feature 4: Payment Method Mode
+  const [paymentMethodMode, setPaymentMethodMode] = useState<'online' | 'ticketing_online' | 'ticketing_only'>('online');
 
   // Feature 5: Airport Lot
   const [airportLotEnabled, setAirportLotEnabled] = useState(false);
+
+  // Feature 6: Key Management
+  const [keyManagementMode, setKeyManagementMode] = useState<'operator_keeps' | 'customer_keeps'>('operator_keeps');
 
   const [photos, setPhotos] = useState<File[]>([]);
   const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
@@ -420,11 +423,14 @@ export default function EditListingPage() {
       setFreeCancellationEnabled(meta.free_cancellation_enabled ?? false);
       setFreeCancellationDays(meta.free_cancellation_days ? String(meta.free_cancellation_days) : '');
 
-      // Feature 4: Ticketing Only
-      setTicketingOnlyEnabled(meta.ticketing_only_enabled ?? false);
+      // Feature 4: Payment Method Mode
+      setPaymentMethodMode(meta.payment_method_mode ?? 'online');
 
       // Feature 5: Airport Lot
       setAirportLotEnabled(meta.airport_lot_enabled ?? false);
+
+      // Feature 6: Key Management
+      setKeyManagementMode(meta.key_management_mode ?? 'operator_keeps');
 
       setExistingPhotos(data.verification_photos || []);
       setExistingLogoUrl(data.logo_url || '');
@@ -536,10 +542,12 @@ export default function EditListingPage() {
             // Feature 3: Free Cancellation
             free_cancellation_enabled: freeCancellationEnabled,
             free_cancellation_days: freeCancellationEnabled ? (freeCancellationDays ? parseFloat(freeCancellationDays) : null) : null,
-            // Feature 4: Ticketing Only
-            ticketing_only_enabled: ticketingOnlyEnabled,
+            // Feature 4: Payment Method Mode
+            payment_method_mode: paymentMethodMode,
             // Feature 5: Airport Lot
             airport_lot_enabled: airportLotEnabled,
+            // Feature 6: Key Management
+            key_management_mode: keyManagementMode,
           },
         }),
       });
@@ -863,14 +871,24 @@ export default function EditListingPage() {
                 )}
               </div>
 
-              {/* Feature 4: Ticketing Only */}
+              {/* Feature 4: Payment Method Mode */}
               <div className="space-y-3 pt-4 border-t border-gray-100">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-800">{locale === 'en' ? 'Ticketing Only' : 'Samo karte'}</p>
-                    <p className="text-xs text-gray-400">{locale === 'en' ? 'Customers pay only service fee at checkout' : 'Kupci plaćaju samo naknadu za uslugu pri kupnji'}</p>
-                  </div>
-                  <Toggle checked={ticketingOnlyEnabled} onChange={setTicketingOnlyEnabled} />
+                <div>
+                  <label className="text-xs font-semibold text-gray-800 block mb-2">{locale === 'en' ? 'Payment Method' : 'Metoda Plaćanja'}</label>
+                  <select
+                    value={paymentMethodMode}
+                    onChange={(e) => setPaymentMethodMode(e.target.value as 'online' | 'ticketing_online' | 'ticketing_only')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="online">{locale === 'en' ? 'Online payment only' : 'Samo online plaćanje'}</option>
+                    <option value="ticketing_online">{locale === 'en' ? 'Ticketing & Online' : 'Karte & Online'}</option>
+                    <option value="ticketing_only">{locale === 'en' ? 'Ticketing only (pay service fee now)' : 'Samo karte (plaćanje naknade sada)'}</option>
+                  </select>
+                  <p className="text-xs text-gray-400 mt-2">
+                    {paymentMethodMode === 'online' && (locale === 'en' ? 'Customers pay full price at checkout' : 'Kupci plaćaju punu cijenu pri kupnji')}
+                    {paymentMethodMode === 'ticketing_online' && (locale === 'en' ? 'Customers choose between ticketing or online payment' : 'Kupci biraju između karata ili online plaćanja')}
+                    {paymentMethodMode === 'ticketing_only' && (locale === 'en' ? 'Customers pay only service fee at checkout' : 'Kupci plaćaju samo naknadu za uslugu pri kupnji')}
+                  </p>
                 </div>
               </div>
 
@@ -882,6 +900,21 @@ export default function EditListingPage() {
                     <p className="text-xs text-gray-400">{locale === 'en' ? 'Add dynamic airport surcharge (0.99€ + 3% of total)' : 'Dodaj dinamičku naknadu za parking (0.99€ + 3% ukupno)'}</p>
                   </div>
                   <Toggle checked={airportLotEnabled} onChange={setAirportLotEnabled} />
+                </div>
+              </div>
+
+              {/* Feature 6: Key Management */}
+              <div className="space-y-3 pt-4 border-t border-gray-100">
+                <div>
+                  <label className="text-xs font-semibold text-gray-800 block mb-2">{locale === 'en' ? 'Key Management' : 'Upravljanje ključevima'}</label>
+                  <select
+                    value={keyManagementMode}
+                    onChange={(e) => setKeyManagementMode(e.target.value as 'operator_keeps' | 'customer_keeps')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="operator_keeps">{locale === 'en' ? 'Keep your key' : 'Čuvaj svoj ključ'}</option>
+                    <option value="customer_keeps">{locale === 'en' ? 'Give away key' : 'Daj svoj ključ'}</option>
+                  </select>
                 </div>
               </div>
 
