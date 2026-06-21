@@ -5,7 +5,6 @@ export const metadata: Metadata = {
   description:
     "Join Payparq Members for exclusive parking benefits, loyalty rewards, and monthly parking subscriptions.",
   alternates: { canonical: "https://www.payparq.com/members" },
-  manifest: "/manifest-members.json",
 };
 
 export default function MembersLayout({ children }: { children: React.ReactNode }) {

@@ -27,7 +27,6 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.payparq.com/search',
   },
-  manifest: '/manifest-search.json',
 };
 
 export default function SearchLayout({

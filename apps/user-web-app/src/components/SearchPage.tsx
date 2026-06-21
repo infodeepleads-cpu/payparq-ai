@@ -305,32 +305,16 @@ interface Parking {
 }
 
 const isSoldOut = (listing: Parking, startTime: string, endTime: string): boolean => {
-  if (!listing.verification_metadata) return false;
-
-  // Try multiple possible calendar storage locations
-  const calendarSchedule =
-    (listing.verification_metadata.calendar_schedule as Record<string, any>) ||
-    (listing.verification_metadata.dateConfigs as Record<string, any>) ||
-    (listing.verification_metadata.calendar_configs as Record<string, any>);
-
-  if (!calendarSchedule || Object.keys(calendarSchedule).length === 0) return false;
+  const dateConfigs = (listing as any).dateConfigs as Record<string, any> | undefined;
+  if (!dateConfigs || Object.keys(dateConfigs).length === 0) return false;
 
   const start = new Date(startTime);
   const end = new Date(endTime);
 
   for (let d = new Date(start); d <= end; ) {
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    const config = calendarSchedule[dateStr];
-
-    // Check multiple closure indicators
-    if (config) {
-      if (config.isOpen === false) return true;
-      if (config.closed === true) return true;
-      if (config.available === false) return true;
-      if (config.capacity === 0) return true;
-      // If the date exists but has no availability data, it's closed
-      if (typeof config === 'object' && Object.keys(config).length === 0) return true;
-    }
+    const config = dateConfigs[dateStr];
+    if (config && config.isOpen === false) return true;
     d.setDate(d.getDate() + 1);
   }
   return false;
@@ -1238,6 +1222,9 @@ export function SearchPage() {
     // Distance filter - only show lots within 50km of search location
     const ref = searchLocationPin || mapCenter;
     filtered = filtered.filter((l) => haversineKm(ref.lat, ref.lng, l.lat, l.lng) <= 50);
+
+    // Hide lots that are closed for the selected date range
+    filtered = filtered.filter((l) => !isSoldOut(l, startTime, endTime));
 
     // Quick filters
     if (quickFilters.includes('instant-access')) {
