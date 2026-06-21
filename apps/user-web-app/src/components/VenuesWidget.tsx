@@ -5,7 +5,7 @@ import { useLocale } from '@/components/LocaleProvider';
 
 export function VenuesWidget() {
   const { locale } = useLocale();
-  const venues = Object.values(VENUES).slice(0, 6);
+  const venues = Object.values(VENUES);
 
   return (
     <div className="rounded-2xl border border-black/5 bg-[#05020A] text-white p-6 md:p-8">
