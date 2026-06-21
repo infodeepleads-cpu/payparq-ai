@@ -15,6 +15,12 @@ export async function generateMetadata({ params }: AirportPageProps): Promise<Me
     return { title: 'Airport Not Found | Payparq' };
   }
 
+  // For high-ranking city pages, use them as canonical
+  const airportCities = ['split-airport', 'zagreb-airport', 'dubrovnik-airport', 'zadar-airport'];
+  const canonicalUrl = airportCities.includes(slug)
+    ? `https://www.payparq.com/city/${slug}`
+    : `https://www.payparq.com/airport/${slug}`;
+
   return generateSEOMetadata({
     title: `${airport.name} Parking | Reserve & Book | Payparq`,
     description: `${airport.description} Easy online booking with instant confirmation. Safe & affordable.`,
@@ -27,7 +33,7 @@ export async function generateMetadata({ params }: AirportPageProps): Promise<Me
       `affordable ${airport.name} parking`,
       `${airport.name} long-term parking`,
     ],
-    canonical: `https://www.payparq.com/airport/${slug}`,
+    canonical: canonicalUrl,
     ogImage: 'https://www.payparq.com/og-airport.jpg',
     ogType: 'website',
   });

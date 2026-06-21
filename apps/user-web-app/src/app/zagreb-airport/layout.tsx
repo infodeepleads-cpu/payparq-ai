@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title: 'Parking at Zagreb Airport | Affordable Rates | Payparq',
   description:
     'Book parking at Zagreb Airport (ZAG). Find secure, affordable parking spots with instant confirmation. Compare rates and reserve your spot now on Payparq.',
-  alternates: { canonical: 'https://www.payparq.com/zagreb-airport' },
+  alternates: { canonical: 'https://www.payparq.com/city/zagreb-airport' },
   openGraph: {
     title: 'Parking at Zagreb Airport | Payparq',
     description:

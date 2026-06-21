@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title: 'Parking at Split Airport | Affordable Rates | Payparq',
   description:
     'Book parking at Split Airport (SPU). Find secure, affordable parking spots with instant confirmation. Compare rates and reserve your spot now on Payparq.',
-  alternates: { canonical: 'https://www.payparq.com/split-airport' },
+  alternates: { canonical: 'https://www.payparq.com/city/split-airport' },
   openGraph: {
     title: 'Parking at Split Airport | Payparq',
     description:
