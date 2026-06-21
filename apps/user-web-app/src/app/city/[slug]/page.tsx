@@ -27,11 +27,17 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
     `parking near ${city.name}`,
   ];
 
+  // Use airport page as canonical for airport cities
+  const airportCities = ['split-airport', 'zagreb-airport', 'dubrovnik-airport', 'zadar-airport'];
+  const canonicalUrl = airportCities.includes(slug)
+    ? `https://www.payparq.com/airport/${slug}`
+    : `https://www.payparq.com/city/${slug}`;
+
   const metadata = generateSEOMetadata({
     title,
     description,
     keywords,
-    canonical: `https://www.payparq.com/city/${slug}`,
+    canonical: canonicalUrl,
     ogImage: 'https://www.payparq.com/og-parking.jpg',
     ogType: 'website',
   });
