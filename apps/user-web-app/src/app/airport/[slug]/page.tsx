@@ -9,7 +9,7 @@ interface AirportPageProps {
 
 export async function generateMetadata({ params }: AirportPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const airport = AIRPORTS[slug];
+  const airport = Object.values(AIRPORTS).find((a) => a.slug === slug);
 
   if (!airport) {
     return { title: 'Airport Not Found | Payparq' };
@@ -34,21 +34,21 @@ export async function generateMetadata({ params }: AirportPageProps): Promise<Me
 }
 
 export async function generateStaticParams() {
-  return Object.keys(AIRPORTS).map((slug) => ({ slug }));
+  return Object.values(AIRPORTS).map((airport) => ({ slug: airport.slug }));
 }
 
 export const revalidate = 3600;
 
 export default async function AirportPage({ params }: AirportPageProps) {
   const { slug } = await params;
-  const airport = AIRPORTS[slug];
+  const airport = Object.values(AIRPORTS).find((a) => a.slug === slug);
 
   if (!airport) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold text-black mb-2">Airport not found</h1>
-          <a href="/locations" className="text-blue-600 hover:underline">Back to locations</a>
+          <h1 className="text-2xl font-semibold text-black mb-2">Zračna Luka nije pronađena</h1>
+          <a href="/locations" className="text-blue-600 hover:underline">natrag na lokacije</a>
         </div>
       </div>
     );
