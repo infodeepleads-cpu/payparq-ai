@@ -53,6 +53,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const existingMeta = existing?.verification_metadata || {};
+    console.log('[PATCH /api/listings] Existing payment_method_mode:', existingMeta.payment_method_mode);
 
     // Deep clone existing metadata to preserve nested structures
     const mergedMeta = JSON.parse(JSON.stringify(existingMeta));
@@ -72,6 +73,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // Ensure old ticketing_enabled is completely removed
     delete mergedMeta.ticketing_enabled;
 
+    console.log('[PATCH /api/listings] Merged payment_method_mode:', mergedMeta.payment_method_mode);
+
     // Step 1: Update all top-level fields + merged metadata together
     const { error: updateErr } = await client
       .from('locations')
@@ -83,18 +86,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: updateErr.message }, { status: 500 });
     }
 
-    // Step 2: Targeted JSONB patch for payment_method_mode to ensure it is never lost
-    if (incomingMeta?.payment_method_mode) {
-      const { error: jsonbErr } = await client.rpc('patch_payment_method_mode', {
-        loc_id: id,
-        mode: incomingMeta.payment_method_mode,
-      });
-      if (jsonbErr) {
-        console.error('[PATCH /api/listings] JSONB patch error:', jsonbErr.message);
-      }
-    }
+    // Verify the save by reading back immediately
+    const { data: saved, error: verifyErr } = await client
+      .from('locations')
+      .select('verification_metadata')
+      .eq('id', id)
+      .single();
 
-    return NextResponse.json({ ok: true });
+    console.log('[PATCH /api/listings] Verified saved payment_method_mode:', saved?.verification_metadata?.payment_method_mode);
+
+    return NextResponse.json({ ok: true, savedPaymentMode: saved?.verification_metadata?.payment_method_mode });
   } catch (err) {
     return NextResponse.json({ error: 'internal_error' }, { status: 500 });
   }
