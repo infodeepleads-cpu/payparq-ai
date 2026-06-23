@@ -420,8 +420,9 @@ export default function EditListingPage() {
       setFreeCancellationEnabled(meta.free_cancellation_enabled ?? false);
       setFreeCancellationDays(meta.free_cancellation_days ? String(meta.free_cancellation_days) : '');
 
-      // Feature 4: Payment Method Mode — accept both old 'pay_on_arrival' and current 'ticketing_only'
-      const isTicketingOnly = meta.payment_method_mode === 'ticketing_only' || meta.payment_method_mode === 'pay_on_arrival';
+      // Feature 4: Payment Method Mode — accept all legacy values
+      const TICKETING_ONLY_VALUES = ['ticketing_only', 'pay_on_arrival', 'samo izdavanje karata'];
+      const isTicketingOnly = TICKETING_ONLY_VALUES.includes(meta.payment_method_mode);
       setPaymentMethodMode(isTicketingOnly ? 'ticketing_only' : 'online');
 
       // Feature 5: Airport Lot

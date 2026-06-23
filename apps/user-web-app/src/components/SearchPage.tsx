@@ -2417,8 +2417,8 @@ export function SearchPage() {
               {/* Location Content - Card Style */}
               <div className="px-8 py-6 space-y-3">
                 {/* Address */}
-                <p className="font-semibold text-gray-900" style={{ fontSize: '18px' }}>{selectedListing.verification_metadata?.personal_branding_enabled ? (selectedListing.verification_metadata?.personal_brand_name as string) : selectedListing.name}</p>
-                <p className="text-xs text-gray-500">{selectedListing.address}</p>
+                <p className="font-semibold text-gray-900" style={{ fontSize: '18px' }}>{selectedListing.name}</p>
+                <p className="text-xs text-gray-500">{selectedListing.verification_metadata?.personal_branding_enabled ? (selectedListing.verification_metadata?.personal_brand_name as string) : selectedListing.address}</p>
 
                 {/* Rating */}
                 <div className="flex items-center gap-1 text-sm font-semibold">

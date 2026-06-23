@@ -1241,27 +1241,21 @@ function CheckoutInner() {
       return;
     }
 
-    supabaseCheckout
-      .from('locations')
-      .select('verification_metadata')
-      .eq('id', locId)
-      .single()
-      .then(({ data }) => {
-        if (data?.verification_metadata?.checkoutSlots) {
-          setCheckoutSlots(data.verification_metadata.checkoutSlots);
-        }
-        // Feature 3: Free Cancellation
-        if (data?.verification_metadata?.free_cancellation_enabled) {
+    const TICKETING_ONLY_VALUES = ['ticketing_only', 'pay_on_arrival', 'samo izdavanje karata'];
+    fetch(`/api/listings/${locId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(json => {
+        const meta = json?.location?.verification_metadata;
+        if (!meta) return;
+        if (meta.checkoutSlots) setCheckoutSlots(meta.checkoutSlots);
+        if (meta.free_cancellation_enabled) {
           setFreeCancellationEnabled(true);
-          setFreeCancellationDays(data.verification_metadata.free_cancellation_days || 0);
+          setFreeCancellationDays(meta.free_cancellation_days || 0);
         }
-        // Feature 4: Payment Method Mode
-        setTicketingOnlyEnabled(data?.verification_metadata?.payment_method_mode === 'ticketing_only');
-        // Feature 5: Airport Surcharge
-        if (data?.verification_metadata?.airport_lot_enabled) {
+        setTicketingOnlyEnabled(TICKETING_ONLY_VALUES.includes(meta.payment_method_mode));
+        if (meta.airport_lot_enabled) {
           const basePriceEur = initialAmountCents / 100;
-          const airportSurcharge = 0.99 + (basePriceEur * 0.03);
-          setAirportSurchargeEur(parseFloat(airportSurcharge.toFixed(2)));
+          setAirportSurchargeEur(parseFloat((0.99 + basePriceEur * 0.03).toFixed(2)));
         } else {
           setAirportSurchargeEur(0);
         }

@@ -70,14 +70,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     delete mergedMeta.ticketing_enabled;
 
     // Step 1: Update all top-level fields + merged metadata together
-    const { error: updateErr } = await client
+    const { data: updated, error: updateErr } = await client
       .from('locations')
       .update({ ...topLevelFields, verification_metadata: mergedMeta })
-      .eq('id', id);
+      .eq('id', id)
+      .select('id');
 
     if (updateErr) {
       console.error('[PATCH /api/listings] Update error:', updateErr.message);
       return NextResponse.json({ error: updateErr.message }, { status: 500 });
+    }
+
+    if (!updated || updated.length === 0) {
+      console.error('[PATCH /api/listings] 0 rows updated for id:', id);
+      return NextResponse.json({ error: 'no_rows_updated' }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true });
