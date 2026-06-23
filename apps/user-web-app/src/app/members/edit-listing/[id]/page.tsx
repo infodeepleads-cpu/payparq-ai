@@ -491,7 +491,7 @@ export default function EditListingPage() {
       const reverseMapping: Record<string, string> = { 'Monday': 'Pon', 'Tuesday': 'Uto', 'Wednesday': 'Sri', 'Thursday': 'Čet', 'Friday': 'Pet', 'Saturday': 'Sub', 'Sunday': 'Ned' };
       const abbreviatedDays = openDays.map(d => reverseMapping[d] || d);
 
-      console.log('[Edit Listing] Saving with paymentMethodMode:', paymentMethodMode);
+      console.log('[Edit Listing] Saving with paymentMethodMode:', paymentMethodMode, 'typeof:', typeof paymentMethodMode);
 
       const res = await fetch(`/api/listings/${id}`, {
         method: 'PATCH',
