@@ -74,6 +74,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       verification_metadata: mergedMeta,
     };
 
+    console.log('[PATCH /api/listings] Final updatePayload.verification_metadata:', updatePayload.verification_metadata);
+
     const { error: updateErr } = await client
       .from('locations')
       .update(updatePayload)
@@ -85,6 +87,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     console.log('[PATCH /api/listings] Update successful for ID:', id);
+
+    // Verify the update by reading it back
+    const { data: verified } = await client
+      .from('locations')
+      .select('verification_metadata')
+      .eq('id', id)
+      .single();
+
+    console.log('[PATCH /api/listings] Verification read - payment_method_mode:', verified?.verification_metadata?.payment_method_mode);
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json({ error: 'internal_error' }, { status: 500 });

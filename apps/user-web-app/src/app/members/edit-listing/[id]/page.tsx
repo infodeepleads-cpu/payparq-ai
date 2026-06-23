@@ -430,6 +430,7 @@ export default function EditListingPage() {
         // Migrate old binary ticketing_enabled to new 3-option format
         paymentMode = meta.ticketing_enabled ? 'ticketing_online' : 'online';
       }
+      console.log('[Edit Listing Load] Loaded paymentMethodMode:', paymentMode, 'from meta:', meta.payment_method_mode);
       setPaymentMethodMode(paymentMode);
 
       // Feature 5: Airport Lot
@@ -489,6 +490,8 @@ export default function EditListingPage() {
       // overrides stored there are preserved in the merge)
       const reverseMapping: Record<string, string> = { 'Monday': 'Pon', 'Tuesday': 'Uto', 'Wednesday': 'Sri', 'Thursday': 'Čet', 'Friday': 'Pet', 'Saturday': 'Sub', 'Sunday': 'Ned' };
       const abbreviatedDays = openDays.map(d => reverseMapping[d] || d);
+
+      console.log('[Edit Listing] Saving with paymentMethodMode:', paymentMethodMode);
 
       const res = await fetch(`/api/listings/${id}`, {
         method: 'PATCH',
