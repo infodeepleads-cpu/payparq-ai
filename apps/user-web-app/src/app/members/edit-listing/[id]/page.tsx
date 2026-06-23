@@ -490,7 +490,10 @@ export default function EditListingPage() {
       const reverseMapping: Record<string, string> = { 'Monday': 'Pon', 'Tuesday': 'Uto', 'Wednesday': 'Sri', 'Thursday': 'Čet', 'Friday': 'Pet', 'Saturday': 'Sub', 'Sunday': 'Ned' };
       const abbreviatedDays = openDays.map(d => reverseMapping[d] || d);
 
-      const requestBody = {
+      const res = await fetch(`/api/listings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: lotName,
           address,
           latitude: pin ? pin.lat : null,
