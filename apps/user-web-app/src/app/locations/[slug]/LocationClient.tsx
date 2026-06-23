@@ -522,7 +522,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const personalBrandingEnabled = hub.verification_metadata?.personal_branding_enabled === true;
   const personalBrandName = hub.verification_metadata?.personal_brand_name as string | undefined;
   const shuttleValetInfo = hub.verification_metadata?.shuttle_valet_info as string | undefined;
-  const ticketingOnlyEnabled = hub.verification_metadata?.payment_method_mode === 'ticketing_only';
+  const ticketingOnlyEnabled = hub.verification_metadata?.payment_method_mode === 'pay_on_arrival';
 
   const serviceWidgets = [
     {

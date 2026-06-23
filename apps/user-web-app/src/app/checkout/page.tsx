@@ -468,9 +468,14 @@ function SummaryPanel({
                 <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
                   <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                 </span>
-                <span>{locale === 'en' ? 'Take a ticket when you arrive and pay the rest on exit' : 'Uzmite kartu kada stignete i platite ostatak pri izlasku'}</span>
+                <span>{locale === 'en' ? 'Authorization hold charged now' : 'Autorizacijska rezerva naplaćena sada'}</span>
               </div>
-              <p className="text-xs text-gray-600 ml-6">{locale === 'en' ? 'Service fee charged today, full parking price at exit' : 'Naknada za uslugu naplaćena danas, cijela cijena parkinga pri izlasku'}</p>
+              <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
+                <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
+                  <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                </span>
+                <span>{locale === 'en' ? 'Pay parking price when you arrive' : 'Platite cijenu parkinga pri dolasku'}</span>
+              </div>
             </>
           ) : (
             <div className="flex items-center gap-2 text-xs text-gray-900 font-bold">
@@ -522,16 +527,14 @@ function SummaryPanel({
               </div>
             )}
           </div>
-        ) : (
+        ) : !ticketingOnlyEnabled ? (
           <div className="border-t border-gray-100 pt-4 hidden lg:block">
             <p className="text-xs font-bold text-gray-900 mb-3">{checkoutT('Raščlamba cijena', locale)}</p>
             <div className="space-y-2 text-xs">
-              {!ticketingOnlyEnabled && (
-                <div className="flex justify-between text-gray-700">
-                  <span>{checkoutT('Subtotal', locale)}</span>
-                  <span className="font-medium">€{subtotalEur.toFixed(2)}</span>
-                </div>
-              )}
+              <div className="flex justify-between text-gray-700">
+                <span>{checkoutT('Subtotal', locale)}</span>
+                <span className="font-medium">€{subtotalEur.toFixed(2)}</span>
+              </div>
               {promoDiscountCents > 0 && (
                 <div className="flex justify-between text-green-600 font-semibold">
                   <span>{checkoutT('Promo Discount', locale)} (-{promoDiscountPercent}%)</span>

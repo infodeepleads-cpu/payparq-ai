@@ -323,7 +323,7 @@ export default function EditListingPage() {
   const [freeCancellationDays, setFreeCancellationDays] = useState('');
 
   // Feature 4: Payment Method Mode
-  const [paymentMethodMode, setPaymentMethodMode] = useState<'online' | 'ticketing_online' | 'ticketing_only'>('online');
+  const [paymentMethodMode, setPaymentMethodMode] = useState<'online' | 'pay_on_arrival'>('online');
 
   // Feature 5: Airport Lot
   const [airportLotEnabled, setAirportLotEnabled] = useState(false);
@@ -424,20 +424,9 @@ export default function EditListingPage() {
       setFreeCancellationDays(meta.free_cancellation_days ? String(meta.free_cancellation_days) : '');
 
       // Feature 4: Payment Method Mode
-      // Normalize to valid payment modes only (handle legacy Croatian text values)
-      let paymentMode: 'online' | 'ticketing_online' | 'ticketing_only' = 'online';
-      const storedMode = meta.payment_method_mode;
-
-      if (storedMode === 'online' || storedMode === 'ticketing_online' || storedMode === 'ticketing_only') {
-        paymentMode = storedMode;
-      } else if (storedMode === 'ticketing_enabled' || meta.ticketing_enabled === true) {
-        paymentMode = 'ticketing_online';
-      } else if (storedMode && typeof storedMode === 'string' && storedMode.toLowerCase().includes('karte')) {
-        // Legacy: if stored value contains "karte" (Croatian for "tickets"), assume ticketing_only
-        paymentMode = 'ticketing_only';
-      } else {
-        // Default to online for any other invalid value
-        paymentMode = 'online';
+      let paymentMode: 'online' | 'pay_on_arrival' = 'online';
+      if (meta.payment_method_mode === 'pay_on_arrival') {
+        paymentMode = 'pay_on_arrival';
       }
       setPaymentMethodMode(paymentMode);
 
@@ -909,17 +898,15 @@ export default function EditListingPage() {
                   <label className="text-xs font-semibold text-gray-800 block mb-2">{locale === 'en' ? 'Payment Method' : 'Metoda Plaćanja'}</label>
                   <select
                     value={paymentMethodMode}
-                    onChange={(e) => setPaymentMethodMode(e.target.value as 'online' | 'ticketing_online' | 'ticketing_only')}
+                    onChange={(e) => setPaymentMethodMode(e.target.value as 'online' | 'pay_on_arrival')}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="online">{locale === 'en' ? 'Online payment only' : 'Samo online plaćanje'}</option>
-                    <option value="ticketing_online">{locale === 'en' ? 'Ticketing & Online' : 'Karte & Online'}</option>
-                    <option value="ticketing_only">{locale === 'en' ? 'Ticketing only (pay service fee now)' : 'Samo karte (plaćanje naknade sada)'}</option>
+                    <option value="pay_on_arrival">{locale === 'en' ? 'Pay on Arrival' : 'Plaćanje pri dolasku'}</option>
                   </select>
                   <p className="text-xs text-gray-400 mt-2">
                     {paymentMethodMode === 'online' && (locale === 'en' ? 'Customers pay full price at checkout' : 'Kupci plaćaju punu cijenu pri kupnji')}
-                    {paymentMethodMode === 'ticketing_online' && (locale === 'en' ? 'Customers choose between ticketing or online payment' : 'Kupci biraju između karata ili online plaćanja')}
-                    {paymentMethodMode === 'ticketing_only' && (locale === 'en' ? 'Customers pay only service fee at checkout' : 'Kupci plaćaju samo naknadu za uslugu pri kupnji')}
+                    {paymentMethodMode === 'pay_on_arrival' && (locale === 'en' ? 'Customers pay authorization hold at checkout, full price when they arrive' : 'Kupci plaćaju autorizacijsku rezervu pri kupnji, punu cijenu pri dolasku')}
                   </p>
                 </div>
               </div>

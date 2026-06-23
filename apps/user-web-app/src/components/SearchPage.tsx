@@ -921,7 +921,7 @@ export function SearchPage() {
               baseDailyRate: pricePerDay,
               dateConfigs: metadata?.dateConfigs || {},
               verification_metadata: metadata,
-              ticketingOnlyEnabled: metadata?.payment_method_mode === 'ticketing_only',
+              ticketingOnlyEnabled: metadata?.payment_method_mode === 'pay_on_arrival',
               logo_url: loc.logo_url || undefined,
               shuttle_enabled: loc.shuttle_enabled === true,
               shuttleValet: (metadata.shuttle_valet_info as string | undefined) || undefined,
