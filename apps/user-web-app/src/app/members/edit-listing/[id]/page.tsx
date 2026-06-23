@@ -424,7 +424,13 @@ export default function EditListingPage() {
       setFreeCancellationDays(meta.free_cancellation_days ? String(meta.free_cancellation_days) : '');
 
       // Feature 4: Payment Method Mode
-      setPaymentMethodMode(meta.payment_method_mode ?? 'online');
+      // Fallback: handle old listings that had ticketing_enabled as boolean instead
+      let paymentMode = meta.payment_method_mode || 'online';
+      if (!meta.payment_method_mode && meta.ticketing_enabled !== undefined) {
+        // Migrate old binary ticketing_enabled to new 3-option format
+        paymentMode = meta.ticketing_enabled ? 'ticketing_online' : 'online';
+      }
+      setPaymentMethodMode(paymentMode);
 
       // Feature 5: Airport Lot
       setAirportLotEnabled(meta.airport_lot_enabled ?? false);
@@ -484,10 +490,7 @@ export default function EditListingPage() {
       const reverseMapping: Record<string, string> = { 'Monday': 'Pon', 'Tuesday': 'Uto', 'Wednesday': 'Sri', 'Thursday': 'Čet', 'Friday': 'Pet', 'Saturday': 'Sub', 'Sunday': 'Ned' };
       const abbreviatedDays = openDays.map(d => reverseMapping[d] || d);
 
-      const res = await fetch(`/api/listings/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const requestBody = {
           name: lotName,
           address,
           latitude: pin ? pin.lat : null,

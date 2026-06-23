@@ -38,6 +38,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const body = await req.json();
     const { verification_metadata: incomingMeta, ...topLevelFields } = body;
 
+    console.log('[PATCH /api/listings] ID:', id);
+    console.log('[PATCH /api/listings] Incoming payment_method_mode:', incomingMeta?.payment_method_mode);
+
     // Read existing metadata via supabaseAdmin (bypasses RLS)
     const { data: existing, error: fetchErr } = await client
       .from('locations')
@@ -51,11 +54,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const existingMeta = existing?.verification_metadata || {};
 
+    // Migrate old payment method format (binary ticketing_enabled → new 3-option payment_method_mode)
+    const cleanedMeta = { ...existingMeta };
+    if (cleanedMeta.ticketing_enabled !== undefined && incomingMeta?.payment_method_mode) {
+      // Old listings had binary ticketing_enabled; remove it when setting new payment_method_mode
+      delete cleanedMeta.ticketing_enabled;
+    }
+
     // Merge incoming metadata over existing — this preserves dateConfigs and other keys
     // not explicitly sent by the caller (e.g. calendar overrides)
     const mergedMeta = incomingMeta
-      ? { ...existingMeta, ...incomingMeta }
-      : existingMeta;
+      ? { ...cleanedMeta, ...incomingMeta }
+      : cleanedMeta;
+
+    console.log('[PATCH /api/listings] Merged payment_method_mode:', mergedMeta.payment_method_mode);
 
     const updatePayload: Record<string, unknown> = {
       ...topLevelFields,
@@ -68,9 +80,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .eq('id', id);
 
     if (updateErr) {
+      console.error('[PATCH /api/listings] Update error:', updateErr.message);
       return NextResponse.json({ error: updateErr.message }, { status: 500 });
     }
 
+    console.log('[PATCH /api/listings] Update successful for ID:', id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json({ error: 'internal_error' }, { status: 500 });
