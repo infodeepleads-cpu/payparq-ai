@@ -56,8 +56,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     // Migrate old payment method format (binary ticketing_enabled → new 3-option payment_method_mode)
     const cleanedMeta = { ...existingMeta };
-    if (cleanedMeta.ticketing_enabled !== undefined && incomingMeta?.payment_method_mode) {
-      // Old listings had binary ticketing_enabled; remove it when setting new payment_method_mode
+    if (cleanedMeta.ticketing_enabled !== undefined) {
+      // Old listings had binary ticketing_enabled; always remove it to avoid conflicts
       delete cleanedMeta.ticketing_enabled;
     }
 
