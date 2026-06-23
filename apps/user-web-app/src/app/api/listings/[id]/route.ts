@@ -54,18 +54,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const existingMeta = existing?.verification_metadata || {};
 
-    // Migrate old payment method format (binary ticketing_enabled → new 3-option payment_method_mode)
-    const cleanedMeta = { ...existingMeta };
-    if (cleanedMeta.ticketing_enabled !== undefined) {
-      // Old listings had binary ticketing_enabled; always remove it to avoid conflicts
-      delete cleanedMeta.ticketing_enabled;
-    }
+    // Start with incoming metadata as the base (replaces old format fields)
+    const mergedMeta = incomingMeta ? { ...incomingMeta } : { ...existingMeta };
 
-    // Merge incoming metadata over existing — this preserves dateConfigs and other keys
-    // not explicitly sent by the caller (e.g. calendar overrides)
-    const mergedMeta = incomingMeta
-      ? { ...cleanedMeta, ...incomingMeta }
-      : cleanedMeta;
+    // Only preserve dateConfigs from existing (calendar overrides managed separately)
+    if (existingMeta.dateConfigs && !incomingMeta?.dateConfigs) {
+      mergedMeta.dateConfigs = existingMeta.dateConfigs;
+    }
 
     console.log('[PATCH /api/listings] Merged payment_method_mode:', mergedMeta.payment_method_mode);
 
