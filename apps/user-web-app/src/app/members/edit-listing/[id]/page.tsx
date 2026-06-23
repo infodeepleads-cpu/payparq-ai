@@ -557,6 +557,12 @@ export default function EditListingPage() {
         throw new Error(error);
       }
 
+      // Reload data from database to reflect saved changes
+      await loadListing();
+
+      // Reset new photos since they've been uploaded
+      setPhotos([]);
+
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
