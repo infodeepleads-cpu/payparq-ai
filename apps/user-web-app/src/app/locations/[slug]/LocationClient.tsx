@@ -242,7 +242,6 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
 
   // Extract Feature metadata from verification_metadata
   const personalBrandingEnabled = hub.verification_metadata?.personal_branding_enabled === true;
-  const personalBrandName = hub.verification_metadata?.personal_brand_name as string | undefined;
   const locationId = hub.id || "parkng split airport";
   const slugKey = (hub.canonical_slug || "").toString().trim().toLowerCase();
   const locationKey = `${locationName} ${slugKey}`
@@ -2067,7 +2066,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     <div className="space-y-4">
                       <p className="text-[11px] uppercase tracking-[0.24em] text-black/60">About the location</p>
                       <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">{locationName}</h2>
-                      <p className="text-sm md:text-base text-black/75">{personalBrandingEnabled && personalBrandName ? personalBrandName : (hub.address || "")}</p>
+                      <p className="text-sm md:text-base text-black/75">{personalBrandingEnabled ? locationName : (hub.address || "")}</p>
                     </div>
                     <div>
                       <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">FAQ</p>

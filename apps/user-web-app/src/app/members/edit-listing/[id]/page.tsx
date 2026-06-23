@@ -313,7 +313,6 @@ export default function EditListingPage() {
 
   // Feature 1: Personal Branding
   const [personalBrandingEnabled, setPersonalBrandingEnabled] = useState(false);
-  const [personalBrandName, setPersonalBrandName] = useState('');
 
   // Feature 2: Shuttle/Valet Info
   const [shuttleValetInfo, setShuttleValetInfo] = useState('');
@@ -411,7 +410,6 @@ export default function EditListingPage() {
 
       // Feature 1: Personal Branding
       setPersonalBrandingEnabled(meta.personal_branding_enabled ?? false);
-      setPersonalBrandName(meta.personal_brand_name ?? '');
 
       // Feature 2: Shuttle/Valet Info
       setShuttleValetInfo(meta.shuttle_valet_info ?? '');
@@ -535,7 +533,6 @@ export default function EditListingPage() {
             tiered_daily_increment: tieredDailyEnabled ? (tieredDailyIncrement ? parseFloat(tieredDailyIncrement) : null) : null,
             // Feature 1: Personal Branding
             personal_branding_enabled: personalBrandingEnabled,
-            personal_brand_name: personalBrandingEnabled ? personalBrandName : null,
             // Feature 2: Shuttle/Valet Info
             shuttle_valet_info: shuttleValetInfo || null,
             // Feature 3: Free Cancellation
@@ -619,9 +616,6 @@ export default function EditListingPage() {
                   <label className={labelClass}>{locale === 'en' ? 'Personal branding' : 'Osobno branding'}</label>
                   <Toggle checked={personalBrandingEnabled} onChange={setPersonalBrandingEnabled} />
                 </div>
-                {personalBrandingEnabled && (
-                  <input type="text" placeholder={locale === 'en' ? 'Enter your brand name' : 'Unesite naziv vašeg brenda'} value={personalBrandName} onChange={(e) => setPersonalBrandName(e.target.value)} className={inputClass} />
-                )}
               </div>
             </div>
           </div>
