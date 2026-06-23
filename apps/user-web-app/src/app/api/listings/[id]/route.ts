@@ -67,6 +67,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       Object.assign(mergedMeta, incomingMeta);
     }
 
+    // Always remove old ticketing_enabled after merge to avoid conflicts
+    if (mergedMeta.ticketing_enabled !== undefined) {
+      delete mergedMeta.ticketing_enabled;
+    }
+
     console.log('[PATCH /api/listings] Merged payment_method_mode:', mergedMeta.payment_method_mode);
 
     const updatePayload: Record<string, unknown> = {
@@ -97,7 +102,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     console.log('[PATCH /api/listings] Verification read - payment_method_mode:', verified?.verification_metadata?.payment_method_mode);
 
-    return NextResponse.json({ ok: true });
+    // Alert if the saved value doesn't match what we tried to save
+    if (incomingMeta?.payment_method_mode && verified?.verification_metadata?.payment_method_mode !== incomingMeta.payment_method_mode) {
+      console.warn('[PATCH /api/listings] WARNING: Saved value differs from incoming!', {
+        incoming: incomingMeta.payment_method_mode,
+        verified: verified?.verification_metadata?.payment_method_mode
+      });
+    }
+
+    return NextResponse.json({ ok: true, savedPaymentMode: verified?.verification_metadata?.payment_method_mode });
   } catch (err) {
     return NextResponse.json({ error: 'internal_error' }, { status: 500 });
   }

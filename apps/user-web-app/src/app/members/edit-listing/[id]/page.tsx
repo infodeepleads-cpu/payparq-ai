@@ -566,6 +566,15 @@ export default function EditListingPage() {
         throw new Error(error);
       }
 
+      const responseData = await res.json();
+      console.log('[Edit Listing] API Response:', responseData);
+      if (responseData.savedPaymentMode !== paymentMethodMode) {
+        console.warn('[Edit Listing] WARNING: Saved value differs!', {
+          sent: paymentMethodMode,
+          saved: responseData.savedPaymentMode
+        });
+      }
+
       // Reload data from database to reflect saved changes
       await loadListing();
 
