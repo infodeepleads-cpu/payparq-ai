@@ -238,7 +238,13 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
       .catch(() => {});
   }, [hub.id]);
 
-  const locationName = normalizeLocationName(String(hub.name || '')) || "Parking Trogir";
+  // Extract Feature metadata from verification_metadata
+  const personalBrandingEnabled = hub.verification_metadata?.personal_branding_enabled === true;
+  const personalBrandName = hub.verification_metadata?.personal_brand_name as string | undefined;
+
+  const locationName = personalBrandingEnabled && personalBrandName
+    ? personalBrandName
+    : (normalizeLocationName(String(hub.name || '')) || "Parking Trogir");
   const locationId = hub.id || "parkng split airport";
   const slugKey = (hub.canonical_slug || "").toString().trim().toLowerCase();
   const locationKey = `${locationName} ${slugKey}`
@@ -519,8 +525,6 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const hubEnabled = hub.verification_metadata?.hub_enabled !== false;
   const freeCancellationEnabled = hub.verification_metadata?.free_cancellation_enabled === true;
   const freeCancellationDays = hub.verification_metadata?.free_cancellation_days as number | undefined;
-  const personalBrandingEnabled = hub.verification_metadata?.personal_branding_enabled === true;
-  const personalBrandName = hub.verification_metadata?.personal_brand_name as string | undefined;
   const shuttleValetInfo = hub.verification_metadata?.shuttle_valet_info as string | undefined;
   const ticketingOnlyEnabled = hub.verification_metadata?.payment_method_mode === 'pay_on_arrival';
 
@@ -2065,7 +2069,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     <div className="space-y-4">
                       <p className="text-[11px] uppercase tracking-[0.24em] text-black/60">About the location</p>
                       <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">{locationName}</h2>
-                      <p className="text-sm md:text-base text-black/75">{personalBrandingEnabled && personalBrandName ? personalBrandName : (hub.address || "")}</p>
+                      <p className="text-sm md:text-base text-black/75">{hub.address || ""}</p>
                     </div>
                     <div>
                       <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">FAQ</p>

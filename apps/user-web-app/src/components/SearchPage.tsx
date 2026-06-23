@@ -2203,8 +2203,8 @@ export function SearchPage() {
                                 }}
                                 className="w-full text-left px-3 py-2 border border-black/20 hover:border-black/40 rounded-lg transition-colors"
                               >
-                                <div className="text-sm font-semibold text-gray-900">{lot.name}</div>
-                                <div className="text-xs text-gray-500">{lot.verification_metadata?.personal_branding_enabled ? ((lot.verification_metadata?.personal_brand_name as string) || lot.address) : lot.address}</div>
+                                <div className="text-sm font-semibold text-gray-900">{lot.verification_metadata?.personal_branding_enabled ? (lot.verification_metadata?.personal_brand_name as string) : lot.name}</div>
+                                <div className="text-xs text-gray-500">{lot.address}</div>
                                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
                                   {lot.shuttle_enabled || lot.shuttleValet ? (
                                     <span className="flex items-center gap-1 text-blue-600 font-medium">
@@ -2417,7 +2417,8 @@ export function SearchPage() {
               {/* Location Content - Card Style */}
               <div className="px-8 py-6 space-y-3">
                 {/* Address */}
-                <p className="font-semibold text-gray-900" style={{ fontSize: '18px' }}>{selectedListing.verification_metadata?.personal_branding_enabled ? ((selectedListing.verification_metadata?.personal_brand_name as string) || selectedListing.address) : selectedListing.address}</p>
+                <p className="font-semibold text-gray-900" style={{ fontSize: '18px' }}>{selectedListing.verification_metadata?.personal_branding_enabled ? (selectedListing.verification_metadata?.personal_brand_name as string) : selectedListing.name}</p>
+                <p className="text-xs text-gray-500">{selectedListing.address}</p>
 
                 {/* Rating */}
                 <div className="flex items-center gap-1 text-sm font-semibold">
@@ -3098,8 +3099,8 @@ export function SearchPage() {
                                 }}
                                 className="w-full text-left px-3 py-2 border border-black/20 hover:border-black/40 rounded-lg transition-colors"
                               >
-                                <div className="text-sm font-semibold text-gray-900">{lot.name}</div>
-                                <div className="text-xs text-gray-500">{lot.verification_metadata?.personal_branding_enabled ? ((lot.verification_metadata?.personal_brand_name as string) || lot.address) : lot.address}</div>
+                                <div className="text-sm font-semibold text-gray-900">{lot.verification_metadata?.personal_branding_enabled ? (lot.verification_metadata?.personal_brand_name as string) : lot.name}</div>
+                                <div className="text-xs text-gray-500">{lot.address}</div>
                                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
                                   {lot.shuttle_enabled || lot.shuttleValet ? (
                                     <span className="flex items-center gap-1 text-blue-600 font-medium">
@@ -3349,7 +3350,8 @@ export function SearchPage() {
                 {/* Location Content - Card Style */}
                 <div className="px-8 py-6 space-y-3">
                   {/* Address */}
-                  <p className="font-semibold text-gray-900" style={{ fontSize: '18px' }}>{selectedListing.verification_metadata?.personal_branding_enabled ? ((selectedListing.verification_metadata?.personal_brand_name as string) || selectedListing.address) : selectedListing.address}</p>
+                  <p className="font-semibold text-gray-900" style={{ fontSize: '18px' }}>{selectedListing.verification_metadata?.personal_branding_enabled ? (selectedListing.verification_metadata?.personal_brand_name as string) : selectedListing.name}</p>
+                  <p className="text-xs text-gray-500">{selectedListing.address}</p>
 
                   {/* Rating */}
                   <div className="flex items-center gap-1 text-sm font-semibold">
