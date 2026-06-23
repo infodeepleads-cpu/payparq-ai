@@ -54,12 +54,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const existingMeta = existing?.verification_metadata || {};
 
-    // Start with incoming metadata as the base (replaces old format fields)
-    const mergedMeta = incomingMeta ? { ...incomingMeta } : { ...existingMeta };
+    // Start with existing metadata (preserves all fields including dateConfigs)
+    const mergedMeta = { ...existingMeta };
 
-    // Only preserve dateConfigs from existing (calendar overrides managed separately)
-    if (existingMeta.dateConfigs && !incomingMeta?.dateConfigs) {
-      mergedMeta.dateConfigs = existingMeta.dateConfigs;
+    // Remove old payment method format field
+    if (mergedMeta.ticketing_enabled !== undefined) {
+      delete mergedMeta.ticketing_enabled;
+    }
+
+    // Override with incoming metadata (form values take precedence)
+    if (incomingMeta) {
+      Object.assign(mergedMeta, incomingMeta);
     }
 
     console.log('[PATCH /api/listings] Merged payment_method_mode:', mergedMeta.payment_method_mode);
