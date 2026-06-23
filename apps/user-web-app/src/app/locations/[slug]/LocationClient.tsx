@@ -524,7 +524,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const freeCancellationEnabled = hub.verification_metadata?.free_cancellation_enabled === true;
   const freeCancellationDays = hub.verification_metadata?.free_cancellation_days as number | undefined;
   const shuttleValetInfo = hub.verification_metadata?.shuttle_valet_info as string | undefined;
-  const ticketingOnlyEnabled = hub.verification_metadata?.payment_method_mode === 'pay_on_arrival';
+  const ticketingOnlyEnabled = hub.verification_metadata?.payment_method_mode === 'ticketing_only' || hub.verification_metadata?.payment_method_mode === 'pay_on_arrival';
 
   const serviceWidgets = [
     {

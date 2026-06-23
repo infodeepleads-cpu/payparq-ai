@@ -351,18 +351,15 @@ export default function EditListingPage() {
 
   const loadListing = async () => {
     try {
-      if (!supabase) {
+      // Use API route (supabaseAdmin) so RLS cannot block reading verification_metadata
+      const res = await fetch(`/api/listings/${id}`);
+      if (!res.ok) {
         setLoading(false);
         return;
       }
+      const { location: data } = await res.json();
 
-      const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error || !data) {
+      if (!data) {
         setLoading(false);
         return;
       }
@@ -423,12 +420,9 @@ export default function EditListingPage() {
       setFreeCancellationEnabled(meta.free_cancellation_enabled ?? false);
       setFreeCancellationDays(meta.free_cancellation_days ? String(meta.free_cancellation_days) : '');
 
-      // Feature 4: Payment Method Mode
-      let paymentMode: 'online' | 'ticketing_only' = 'online';
-      if (meta.payment_method_mode === 'ticketing_only') {
-        paymentMode = 'ticketing_only';
-      }
-      setPaymentMethodMode(paymentMode);
+      // Feature 4: Payment Method Mode — accept both old 'pay_on_arrival' and current 'ticketing_only'
+      const isTicketingOnly = meta.payment_method_mode === 'ticketing_only' || meta.payment_method_mode === 'pay_on_arrival';
+      setPaymentMethodMode(isTicketingOnly ? 'ticketing_only' : 'online');
 
       // Feature 5: Airport Lot
       setAirportLotEnabled(meta.airport_lot_enabled ?? false);
@@ -487,8 +481,6 @@ export default function EditListingPage() {
       // overrides stored there are preserved in the merge)
       const reverseMapping: Record<string, string> = { 'Monday': 'Pon', 'Tuesday': 'Uto', 'Wednesday': 'Sri', 'Thursday': 'Čet', 'Friday': 'Pet', 'Saturday': 'Sub', 'Sunday': 'Ned' };
       const abbreviatedDays = openDays.map(d => reverseMapping[d] || d);
-
-      console.log('[Edit Listing] Saving with paymentMethodMode:', paymentMethodMode, 'typeof:', typeof paymentMethodMode);
 
       const res = await fetch(`/api/listings/${id}`, {
         method: 'PATCH',
@@ -563,14 +555,7 @@ export default function EditListingPage() {
         throw new Error(error);
       }
 
-      const responseData = await res.json();
-      console.log('[Edit Listing] API Response:', responseData);
-      if (responseData.savedPaymentMode !== paymentMethodMode) {
-        console.warn('[Edit Listing] WARNING: Saved value differs!', {
-          sent: paymentMethodMode,
-          saved: responseData.savedPaymentMode
-        });
-      }
+      await res.json();
 
       // Reload data from database to reflect saved changes
       await loadListing();
