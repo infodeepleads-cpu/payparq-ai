@@ -424,13 +424,21 @@ export default function EditListingPage() {
       setFreeCancellationDays(meta.free_cancellation_days ? String(meta.free_cancellation_days) : '');
 
       // Feature 4: Payment Method Mode
-      // Fallback: handle old listings that had ticketing_enabled as boolean instead
-      let paymentMode = meta.payment_method_mode || 'online';
-      if (!meta.payment_method_mode && meta.ticketing_enabled !== undefined) {
-        // Migrate old binary ticketing_enabled to new 3-option format
-        paymentMode = meta.ticketing_enabled ? 'ticketing_online' : 'online';
+      // Normalize to valid payment modes only (handle legacy Croatian text values)
+      let paymentMode: 'online' | 'ticketing_online' | 'ticketing_only' = 'online';
+      const storedMode = meta.payment_method_mode;
+
+      if (storedMode === 'online' || storedMode === 'ticketing_online' || storedMode === 'ticketing_only') {
+        paymentMode = storedMode;
+      } else if (storedMode === 'ticketing_enabled' || meta.ticketing_enabled === true) {
+        paymentMode = 'ticketing_online';
+      } else if (storedMode && typeof storedMode === 'string' && storedMode.toLowerCase().includes('karte')) {
+        // Legacy: if stored value contains "karte" (Croatian for "tickets"), assume ticketing_only
+        paymentMode = 'ticketing_only';
+      } else {
+        // Default to online for any other invalid value
+        paymentMode = 'online';
       }
-      console.log('[Edit Listing Load] Loaded paymentMethodMode:', paymentMode, 'from meta:', meta.payment_method_mode);
       setPaymentMethodMode(paymentMode);
 
       // Feature 5: Airport Lot

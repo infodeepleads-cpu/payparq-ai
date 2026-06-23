@@ -84,11 +84,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     // Step 2: Targeted JSONB patch for payment_method_mode to ensure it is never lost
-    // This uses SQL concat operator (||) to merge only that one key into the stored JSONB
-    if (incomingMeta?.payment_method_mode) {
+    // Normalize the mode to only accept valid values
+    const VALID_MODES = ['online', 'ticketing_online', 'ticketing_only'];
+    let normalizedMode = incomingMeta?.payment_method_mode;
+    if (normalizedMode && !VALID_MODES.includes(normalizedMode)) {
+      // If mode is invalid (e.g. legacy Croatian text), try to infer correct value
+      if (typeof normalizedMode === 'string' && normalizedMode.toLowerCase().includes('karte')) {
+        normalizedMode = 'ticketing_only';
+      } else {
+        normalizedMode = 'online';
+      }
+    }
+
+    if (normalizedMode) {
       const { error: jsonbErr } = await client.rpc('patch_payment_method_mode', {
         loc_id: id,
-        mode: incomingMeta.payment_method_mode,
+        mode: normalizedMode,
       });
       if (jsonbErr) {
         console.error('[PATCH /api/listings] JSONB patch error:', jsonbErr.message);
