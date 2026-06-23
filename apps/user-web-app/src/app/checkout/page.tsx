@@ -527,7 +527,7 @@ function SummaryPanel({
               </div>
             )}
           </div>
-        ) : !ticketingOnlyEnabled ? (
+        ) : (
           <div className="border-t border-gray-100 pt-4 hidden lg:block">
             <p className="text-xs font-bold text-gray-900 mb-3">{checkoutT('Raščlamba cijena', locale)}</p>
             <div className="space-y-2 text-xs">
