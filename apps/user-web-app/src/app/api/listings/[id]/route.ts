@@ -61,7 +61,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     delete mergedMeta.ticketing_enabled;
 
     // Override with incoming metadata (form values take precedence)
-    // Only merge provided fields to avoid conflicts
     if (incomingMeta) {
       for (const key in incomingMeta) {
         if (incomingMeta[key] !== undefined) {
@@ -73,18 +72,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // Ensure old ticketing_enabled is completely removed
     delete mergedMeta.ticketing_enabled;
 
-    console.log('[PATCH /api/listings] Merged payment_method_mode:', mergedMeta.payment_method_mode);
-
-    const updatePayload: Record<string, unknown> = {
-      ...topLevelFields,
-      verification_metadata: mergedMeta,
-    };
-
-    console.log('[PATCH /api/listings] Final updatePayload.verification_metadata:', updatePayload.verification_metadata);
-
+    // Step 1: Update all top-level fields + merged metadata together
     const { error: updateErr } = await client
       .from('locations')
-      .update(updatePayload)
+      .update({ ...topLevelFields, verification_metadata: mergedMeta })
       .eq('id', id);
 
     if (updateErr) {
@@ -92,26 +83,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: updateErr.message }, { status: 500 });
     }
 
-    console.log('[PATCH /api/listings] Update successful for ID:', id);
-
-    // Verify the update by reading it back
-    const { data: verified } = await client
-      .from('locations')
-      .select('verification_metadata')
-      .eq('id', id)
-      .single();
-
-    console.log('[PATCH /api/listings] Verification read - payment_method_mode:', verified?.verification_metadata?.payment_method_mode);
-
-    // Alert if the saved value doesn't match what we tried to save
-    if (incomingMeta?.payment_method_mode && verified?.verification_metadata?.payment_method_mode !== incomingMeta.payment_method_mode) {
-      console.warn('[PATCH /api/listings] WARNING: Saved value differs from incoming!', {
-        incoming: incomingMeta.payment_method_mode,
-        verified: verified?.verification_metadata?.payment_method_mode
+    // Step 2: Targeted JSONB patch for payment_method_mode to ensure it is never lost
+    // This uses SQL concat operator (||) to merge only that one key into the stored JSONB
+    if (incomingMeta?.payment_method_mode) {
+      const { error: jsonbErr } = await client.rpc('patch_payment_method_mode', {
+        loc_id: id,
+        mode: incomingMeta.payment_method_mode,
       });
+      if (jsonbErr) {
+        console.error('[PATCH /api/listings] JSONB patch error:', jsonbErr.message);
+        // Non-fatal: main update already succeeded
+      }
     }
 
-    return NextResponse.json({ ok: true, savedPaymentMode: verified?.verification_metadata?.payment_method_mode });
+    return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json({ error: 'internal_error' }, { status: 500 });
   }
