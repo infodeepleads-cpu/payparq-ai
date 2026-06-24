@@ -10,7 +10,7 @@ export async function GET() {
     const { data, error } = await supabaseAdmin
       .from('email_sequence_events')
       .select('*')
-      .in('event_type', ['email.replied', 'email.bounced', 'email.complained'])
+      .in('event_type', ['email.received', 'email.replied', 'email.bounced', 'email.complained'])
       .order('occurred_at', { ascending: false })
       .limit(100);
 
