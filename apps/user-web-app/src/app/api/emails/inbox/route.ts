@@ -10,7 +10,7 @@ export async function GET() {
     const { data, error } = await supabaseAdmin
       .from('email_sequence_events')
       .select('*')
-      .in('event_type', ['email.received', 'email.replied', 'email.bounced', 'email.complained'])
+      .in('event_type', ['email.replied', 'email.bounced', 'email.complained'])
       .order('occurred_at', { ascending: false })
       .limit(100);
 
@@ -20,7 +20,7 @@ export async function GET() {
       id: event.id,
       recipient_email: event.recipient_email,
       subject: event.subject || '(reply)',
-      status: event.event_type === 'email.replied' ? 'replied' : 'bounced',
+      status: event.event_type === 'email.replied' ? 'replied' : event.event_type === 'email.bounced' ? 'bounced' : 'complained',
       sent_at: event.occurred_at,
     }));
 
