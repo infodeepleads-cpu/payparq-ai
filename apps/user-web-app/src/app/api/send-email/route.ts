@@ -33,17 +33,24 @@ export async function POST(req: NextRequest) {
     // Log to database for AdminCRM
     if (emailId && supabaseAdmin) {
       try {
-        await supabaseAdmin.from('email_sequence_events').insert({
+        const { error: insertError } = await supabaseAdmin.from('email_sequence_events').upsert({
           id: emailId,
           recipient_email: to,
-          subject: subject,
+          subject: subject || 'No subject',
           event_type: 'email.sent',
           occurred_at: new Date().toISOString(),
-        });
+        }, { onConflict: 'id' });
+
+        if (insertError) {
+          console.error('[send-email] Database error:', insertError.message, { emailId, to, subject });
+        } else {
+          console.log('[send-email] Logged email:', { emailId, to });
+        }
       } catch (dbError) {
-        console.error('Error logging email to database:', dbError);
-        // Don't fail the response if logging fails
+        console.error('[send-email] Unexpected error:', dbError, { emailId, to });
       }
+    } else {
+      console.warn('[send-email] No emailId or supabaseAdmin', { emailId, hasAdmin: !!supabaseAdmin });
     }
 
     return NextResponse.json({ success: true, id: emailId });
