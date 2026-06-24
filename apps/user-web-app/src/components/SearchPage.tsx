@@ -2602,26 +2602,6 @@ export function SearchPage() {
                   )}
                 </div>
 
-                {/* Kako radi Dropdown */}
-                <div className="pt-6 border-t border-gray-200 mt-6">
-                  <button
-                    onClick={() => setShowHowToRedeem(!showHowToRedeem)}
-                    className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
-                  >
-                    <ChevronDown className="w-5 h-5 text-gray-600" />
-                    <p className="text-base font-bold text-gray-900">{t('Kako radi', locale)}</p>
-                  </button>
-                  {showHowToRedeem && (
-                    <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
-                      {selectedListing.howItWorks
-                        ? selectedListing.howItWorks.split('\n').map((step, i) => (
-                            <p key={i}>{translateText(step, locale)}</p>
-                          ))
-                        : <p className="text-gray-400">{t('Nema dostupnih informacija.', locale)}</p>}
-                    </div>
-                  )}
-                </div>
-
                 {/* Getting There Dropdown */}
                 <div className="pt-6 border-t border-gray-200 mt-6">
                   <button
@@ -3515,24 +3495,6 @@ export function SearchPage() {
                     {(translatedContent?.accessHours ?? selectedListing.accessHours)
                       ? (translatedContent?.accessHours ?? selectedListing.accessHours)!.split('\n').map((line, i) => <p key={i}>{line}</p>)
                       : <p className="text-gray-400">{t('Nema dostupnih informacija o radnom vremenu.', locale)}</p>}
-                  </div>
-                )}
-              </div>
-
-              {/* Kako radi */}
-              <div className="pt-3 border-t border-gray-200 mb-4 px-4">
-                <button
-                  onClick={() => setShowHowToRedeem(!showHowToRedeem)}
-                  className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
-                >
-                  <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showHowToRedeem ? 'rotate-180' : ''}`} />
-                  <p className="text-sm font-bold text-gray-900">{t('Kako radi', locale)}</p>
-                </button>
-                {showHowToRedeem && (
-                  <div className="space-y-2 text-xs text-gray-900 leading-relaxed mt-2 ml-6">
-                    {selectedListing.howItWorks
-                      ? selectedListing.howItWorks.split('\n').map((step, i) => <p key={i}>{translateText(step, locale)}</p>)
-                      : <p className="text-gray-400">{translateText('Nema dostupnih informacija.', locale)}</p>}
                   </div>
                 )}
               </div>

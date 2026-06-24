@@ -317,6 +317,9 @@ export default function EditListingPage() {
   // Feature 2: Shuttle/Valet Info
   const [shuttleValetInfo, setShuttleValetInfo] = useState('');
 
+  // Feature 2b: Getting There (Kako doći)
+  const [gettingThere, setGettingThere] = useState('');
+
   // Feature 3: Free Cancellation
   const [freeCancellationEnabled, setFreeCancellationEnabled] = useState(false);
   const [freeCancellationDays, setFreeCancellationDays] = useState('');
@@ -413,6 +416,9 @@ export default function EditListingPage() {
 
       // Feature 2: Shuttle/Valet Info
       setShuttleValetInfo(meta.shuttle_valet_info ?? '');
+
+      // Feature 2b: Getting There (Kako doći)
+      setGettingThere(meta.getting_there ?? '');
 
       // Feature 3: Free Cancellation
       setFreeCancellationEnabled(meta.free_cancellation_enabled ?? false);
@@ -535,6 +541,8 @@ export default function EditListingPage() {
             personal_branding_enabled: personalBrandingEnabled,
             // Feature 2: Shuttle/Valet Info
             shuttle_valet_info: shuttleValetInfo || null,
+            // Feature 2b: Getting There (Kako doći)
+            getting_there: gettingThere || null,
             // Feature 3: Free Cancellation
             free_cancellation_enabled: freeCancellationEnabled,
             free_cancellation_days: freeCancellationEnabled ? (freeCancellationDays ? parseFloat(freeCancellationDays) : null) : null,
@@ -915,6 +923,17 @@ export default function EditListingPage() {
                     <option value="customer_keeps">{locale === 'en' ? 'Give Keys' : 'Daješ ključeve'}</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Feature 2b: Getting There (Kako doći) */}
+              <div className="space-y-3 pt-4 border-t border-gray-100">
+                <label className="text-xs font-semibold text-gray-800 block">{locale === 'en' ? 'Getting There (Kako doći)' : 'Kako doći'}</label>
+                <textarea
+                  placeholder={locale === 'en' ? 'e.g., Take exit 5 off the highway, then turn left at the traffic light' : 'npr. Izite na izlazu 5 sa autoputa, zatim skrenite lijevo na semaforu'}
+                  value={gettingThere}
+                  onChange={(e) => setGettingThere(e.target.value)}
+                  className={`${inputClass} resize-none min-h-24`}
+                />
               </div>
 
               <div className="space-y-4 pt-2 border-t border-gray-100">
