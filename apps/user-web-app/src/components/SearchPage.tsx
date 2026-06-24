@@ -2603,7 +2603,6 @@ export function SearchPage() {
                 </div>
 
                 {/* Kako radi Dropdown */}
-                {selectedListing.verification_metadata?.show_how_it_works_enabled !== false && (
                 <div className="pt-6 border-t border-gray-200 mt-6">
                   <button
                     onClick={() => setShowHowToRedeem(!showHowToRedeem)}
@@ -2622,7 +2621,6 @@ export function SearchPage() {
                     </div>
                   )}
                 </div>
-                )}
 
                 {/* Getting There Dropdown */}
                 <div className="pt-6 border-t border-gray-200 mt-6">
@@ -3522,7 +3520,6 @@ export function SearchPage() {
               </div>
 
               {/* Kako radi */}
-              {selectedListing.verification_metadata?.show_how_it_works_enabled !== false && (
               <div className="pt-3 border-t border-gray-200 mb-4 px-4">
                 <button
                   onClick={() => setShowHowToRedeem(!showHowToRedeem)}
@@ -3539,7 +3536,6 @@ export function SearchPage() {
                   </div>
                 )}
               </div>
-              )}
 
               {/* Getting There */}
               <div className="pt-3 border-t border-gray-200 mb-4 px-4">
