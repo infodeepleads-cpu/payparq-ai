@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
       'email.bounce': 'email.bounced',
       'email.complaint': 'email.complained',
       'email.reply': 'email.replied',
+      'email.received': 'email.received',
     };
 
     const eventType = eventTypeMap[type];
