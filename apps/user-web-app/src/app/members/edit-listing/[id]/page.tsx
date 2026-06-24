@@ -320,6 +320,9 @@ export default function EditListingPage() {
   // Feature 2b: Getting There (Kako doći)
   const [gettingThere, setGettingThere] = useState('');
 
+  // Feature 2c: Show How It Works Toggle
+  const [showHowItWorksEnabled, setShowHowItWorksEnabled] = useState(true);
+
   // Feature 3: Free Cancellation
   const [freeCancellationEnabled, setFreeCancellationEnabled] = useState(false);
   const [freeCancellationDays, setFreeCancellationDays] = useState('');
@@ -419,6 +422,9 @@ export default function EditListingPage() {
 
       // Feature 2b: Getting There (Kako doći)
       setGettingThere(meta.getting_there ?? '');
+
+      // Feature 2c: Show How It Works Toggle
+      setShowHowItWorksEnabled(meta.show_how_it_works_enabled ?? true);
 
       // Feature 3: Free Cancellation
       setFreeCancellationEnabled(meta.free_cancellation_enabled ?? false);
@@ -543,6 +549,8 @@ export default function EditListingPage() {
             shuttle_valet_info: shuttleValetInfo || null,
             // Feature 2b: Getting There (Kako doći)
             getting_there: gettingThere || null,
+            // Feature 2c: Show How It Works Toggle
+            show_how_it_works_enabled: showHowItWorksEnabled,
             // Feature 3: Free Cancellation
             free_cancellation_enabled: freeCancellationEnabled,
             free_cancellation_days: freeCancellationEnabled ? (freeCancellationDays ? parseFloat(freeCancellationDays) : null) : null,
@@ -934,6 +942,19 @@ export default function EditListingPage() {
                   onChange={(e) => setGettingThere(e.target.value)}
                   className={`${inputClass} resize-none min-h-24`}
                 />
+              </div>
+
+              {/* Feature 2c: Show How It Works Toggle */}
+              <div className="space-y-3 pt-4 border-t border-gray-100">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showHowItWorksEnabled}
+                    onChange={(e) => setShowHowItWorksEnabled(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 accent-blue-600"
+                  />
+                  <span className="text-xs font-semibold text-gray-800">{locale === 'en' ? 'Show "How It Works" section' : 'Prikaži "Kako radi" sekciju'}</span>
+                </label>
               </div>
 
               <div className="space-y-4 pt-2 border-t border-gray-100">
