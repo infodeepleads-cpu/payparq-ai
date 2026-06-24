@@ -35,6 +35,22 @@ export async function POST(req: NextRequest) {
 
     const emailId = result.data?.id;
 
+    // Log to email_sequence_events for AdminCRM
+    if (emailId && supabaseAdmin) {
+      try {
+        await supabaseAdmin.from('email_sequence_events').insert({
+          id: emailId,
+          recipient_email: to,
+          subject: subject,
+          event_type: 'email.sent',
+          occurred_at: new Date().toISOString(),
+        });
+      } catch (dbError) {
+        console.error('Error logging email to database:', dbError);
+        // Don't fail the response if logging fails
+      }
+    }
+
     // Track A/B test if variant is specified
     if (variant && campaignId && supabaseAdmin && emailId) {
       try {

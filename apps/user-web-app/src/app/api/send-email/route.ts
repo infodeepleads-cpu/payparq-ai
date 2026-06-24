@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, id: result.data?.id });
+    const emailId = result.data?.id;
+
+    // Log to database for AdminCRM
+    if (emailId && supabaseAdmin) {
+      try {
+        await supabaseAdmin.from('email_sequence_events').insert({
+          id: emailId,
+          recipient_email: to,
+          subject: subject,
+          event_type: 'email.sent',
+          occurred_at: new Date().toISOString(),
+        });
+      } catch (dbError) {
+        console.error('Error logging email to database:', dbError);
+        // Don't fail the response if logging fails
+      }
+    }
+
+    return NextResponse.json({ success: true, id: emailId });
   } catch (error) {
     console.error('Error sending email:', error);
     return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
