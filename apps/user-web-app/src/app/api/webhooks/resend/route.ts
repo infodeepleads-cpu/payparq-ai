@@ -29,22 +29,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Extract data
-    const { email_id, to, subject, created_at } = data;
+    const { email_id, to, created_at } = data;
 
     // Log event to database
-    await supabaseAdmin.from('email_sequence_events').insert({
-      id: email_id,
+    const { error: insertError } = await supabaseAdmin.from('email_sequence_events').insert({
       recipient_email: to,
-      subject: subject || '(email)',
+      email_id: email_id,
       event_type: eventType,
       occurred_at: created_at || new Date().toISOString(),
-    }).then(result => {
-      // Ignore if record already exists (upsert behavior)
-      if (result.error?.code === '23505') {
-        return; // Duplicate key error is OK
-      }
-      if (result.error) throw result.error;
     });
+
+    if (insertError && insertError.code !== '23505') {
+      console.error('Resend webhook insert error:', insertError.message, { email_id, to, eventType });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

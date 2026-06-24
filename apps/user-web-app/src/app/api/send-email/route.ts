@@ -33,16 +33,15 @@ export async function POST(req: NextRequest) {
     // Log to database for AdminCRM
     if (emailId && supabaseAdmin) {
       try {
-        const { error: insertError } = await supabaseAdmin.from('email_sequence_events').upsert({
-          id: emailId,
+        const { error: insertError } = await supabaseAdmin.from('email_sequence_events').insert({
           recipient_email: to,
-          subject: subject || 'No subject',
+          email_id: emailId,
           event_type: 'email.sent',
           occurred_at: new Date().toISOString(),
-        }, { onConflict: 'id' });
+        });
 
         if (insertError) {
-          console.error('[send-email] Database error:', insertError.message, { emailId, to, subject });
+          console.error('[send-email] Database error:', insertError.message, { emailId, to });
         } else {
           console.log('[send-email] Logged email:', { emailId, to });
         }

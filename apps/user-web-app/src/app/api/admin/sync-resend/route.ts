@@ -44,18 +44,18 @@ export async function POST(req: NextRequest) {
           else if (email.clicked) status = 'email.clicked';
           else if (email.opened) status = 'email.opened';
 
-          await supabaseAdmin.from('email_sequence_events').insert({
-            id: email.id,
+          const { error: insertError } = await supabaseAdmin.from('email_sequence_events').insert({
             recipient_email: email.to,
-            subject: email.subject || '(email)',
+            email_id: email.id,
             event_type: status,
             occurred_at: email.created_at || new Date().toISOString(),
-          }).then(result => {
-            if (result.error?.code !== '23505') {
-              if (result.error) throw result.error;
-              synced++;
-            }
           });
+
+          if (!insertError || insertError.code === '23505') {
+            synced++;
+          } else {
+            console.error(`Error syncing email ${email.id}:`, insertError.message);
+          }
         } catch (error) {
           console.error(`Error syncing email ${email.id}:`, error);
         }
