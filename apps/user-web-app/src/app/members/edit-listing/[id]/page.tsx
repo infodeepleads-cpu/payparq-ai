@@ -330,6 +330,9 @@ export default function EditListingPage() {
   // Feature 6: Key Management
   const [keyManagementMode, setKeyManagementMode] = useState<'operator_keeps' | 'customer_keeps'>('operator_keeps');
 
+  // Feature 7: Show How It Works
+  const [showHowItWorksEnabled, setShowHowItWorksEnabled] = useState(true);
+
   const [photos, setPhotos] = useState<File[]>([]);
   const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -428,6 +431,9 @@ export default function EditListingPage() {
 
       // Feature 6: Key Management
       setKeyManagementMode(meta.key_management_mode ?? 'operator_keeps');
+
+      // Feature 7: Show How It Works
+      setShowHowItWorksEnabled(meta.show_how_it_works_enabled ?? true);
 
       setExistingPhotos(data.verification_photos || []);
       setExistingLogoUrl(data.logo_url || '');
@@ -544,6 +550,8 @@ export default function EditListingPage() {
             airport_lot_enabled: airportLotEnabled,
             // Feature 6: Key Management
             key_management_mode: keyManagementMode,
+            // Feature 7: Show How It Works
+            show_how_it_works_enabled: showHowItWorksEnabled,
           },
         }),
       });
@@ -914,6 +922,17 @@ export default function EditListingPage() {
                     <option value="operator_keeps">{locale === 'en' ? 'Keep Keys' : 'Zadrži ključeve'}</option>
                     <option value="customer_keeps">{locale === 'en' ? 'Give Keys' : 'Daješ ključeve'}</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Feature 7: Show How It Works */}
+              <div className="space-y-3 pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800">{locale === 'en' ? 'Show Instructions' : 'Prikaži Kako radi'}</p>
+                    <p className="text-xs text-gray-400">{locale === 'en' ? 'Display parking instructions in search' : 'Prikaži upute u rezultatima pretrage'}</p>
+                  </div>
+                  <Toggle checked={showHowItWorksEnabled} onChange={setShowHowItWorksEnabled} />
                 </div>
               </div>
 
