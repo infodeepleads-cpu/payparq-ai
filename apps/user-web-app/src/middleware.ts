@@ -8,6 +8,11 @@ const CORS_HEADERS = {
 };
 
 export async function middleware(req: NextRequest) {
+  // Skip middleware for webhooks
+  if (req.nextUrl.pathname.startsWith('/api/webhooks/')) {
+    return NextResponse.next();
+  }
+
   // Handle CORS preflight for API routes
   if (req.nextUrl.pathname.startsWith('/api/') && req.method === 'OPTIONS') {
     return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
