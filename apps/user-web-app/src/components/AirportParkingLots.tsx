@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Star, MapPin, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from '@/components/LocaleProvider';
@@ -35,6 +35,7 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
   const { locale } = useLocale();
   const [lots, setLots] = useState<ParkingLot[]>([]);
   const [loading, setLoading] = useState(true);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchNearbyLots = async () => {
@@ -134,26 +135,31 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div
+            ref={scrollContainerRef}
+            className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory scroll-smooth"
+            style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch' }}
+          >
             {lots.map((lot) => (
-              <ParkingLogoCard
-                key={lot.id}
-                listing={{
-                  name: lot.name,
-                  logo: lot.image,
-                  photo: lot.image,
-                  rating: lot.rating,
-                  reviewCount: lot.reviewCount,
-                  distance: lot.distance || 0,
-                }}
-                price={parseFloat(lot.priceFrom.replace('€', '').replace('/day', ''))}
-                durationLabel={locale === 'hr' ? 'Cijena za 7 dana' : 'Price for 7 days'}
-                locale={locale}
-                checkoutUrl={`/checkout?location_id=${lot.id}&lat=${lat}&lng=${lng}&name=${airportName}`}
-                onInfo={() => {}}
-                selectedDays={7}
-                durationHours={168}
-              />
+              <div key={lot.id} className="flex-shrink-0 w-full sm:w-96 snap-center">
+                <ParkingLogoCard
+                  listing={{
+                    name: lot.name,
+                    logo: lot.image,
+                    photo: lot.image,
+                    rating: lot.rating,
+                    reviewCount: lot.reviewCount,
+                    distance: lot.distance || 0,
+                  }}
+                  price={parseFloat(lot.priceFrom.replace('€', '').replace('/day', ''))}
+                  durationLabel={locale === 'hr' ? 'Cijena za 7 dana' : 'Price for 7 days'}
+                  locale={locale}
+                  checkoutUrl={`/checkout?location_id=${lot.id}&lat=${lat}&lng=${lng}&name=${airportName}`}
+                  onInfo={() => {}}
+                  selectedDays={7}
+                  durationHours={168}
+                />
+              </div>
             ))}
           </div>
         </div>
