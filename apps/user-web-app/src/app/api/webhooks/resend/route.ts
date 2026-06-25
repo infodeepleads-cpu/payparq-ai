@@ -31,16 +31,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true }); // Ignore unknown events
     }
 
-    // Extract data - for incoming emails, use 'to' field, fallback to 'from' if not present
     const { email_id, to, created_at } = data;
-    const recipient_email = to || data?.from;
+    const recipient_email = Array.isArray(to) ? to[0] : to;
 
-    // Log event to database
     const { error: insertError } = await supabaseAdmin.from('email_sequence_events').insert({
       recipient_email: recipient_email,
       email_id: email_id,
       event_type: eventType,
       occurred_at: created_at || new Date().toISOString(),
+      ...(subject ? { subject } : {}),
     });
 
     if (insertError && insertError.code !== '23505') {
