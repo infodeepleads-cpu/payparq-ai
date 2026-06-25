@@ -39,7 +39,6 @@ export async function POST(req: NextRequest) {
       email_id: email_id,
       event_type: eventType,
       occurred_at: created_at || new Date().toISOString(),
-      ...(subject ? { subject } : {}),
     });
 
     if (insertError && insertError.code !== '23505') {
