@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Star, MapPin, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from '@/components/LocaleProvider';
+import { ParkingLogoCard } from '@/components/ParkingLogoCard';
 
 interface ParkingLot {
   id: string;
@@ -133,70 +134,26 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {lots.map((lot) => (
-              <div key={lot.id} className="bg-white border border-black/8 rounded-2xl p-6 hover:shadow-lg transition-shadow duration-300 flex flex-col items-center text-center">
-                {/* Logo */}
-                <div className="w-20 h-20 rounded-xl bg-gray-100 flex items-center justify-center mb-4 flex-shrink-0 border border-black/10 overflow-hidden">
-                  {lot.image && (
-                    <img
-                      src={lot.image}
-                      alt={lot.name}
-                      className="w-full h-full object-contain p-2"
-                    />
-                  )}
-                </div>
-
-                {/* Name */}
-                <h3 className="font-bold text-black text-base mb-2 line-clamp-2">{lot.name}</h3>
-
-                {/* Rating */}
-                <div className="flex items-center justify-center gap-2 mb-3">
-                  <div className="flex gap-0.5">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        size={13}
-                        className={i < Math.floor(lot.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
-                      />
-                    ))}
-                  </div>
-                  <span className="font-semibold text-black text-xs">{lot.rating}</span>
-                  <span className="text-xs text-black/50">({lot.reviewCount})</span>
-                </div>
-
-                {/* Divider */}
-                <div className="w-full h-px bg-black/8 mb-3" />
-
-                {/* Distance + Features (compact) */}
-                <div className="text-xs text-black/70 space-y-1 mb-4 flex-1">
-                  {lot.distance !== undefined && (
-                    <p className="flex items-center justify-center gap-1">
-                      <MapPin size={12} className="flex-shrink-0" />
-                      {locale === 'hr' ? `Većina čeka ${Math.round(lot.distance * 12)} min` : `Most people wait ${Math.round(lot.distance * 12)} min`}
-                    </p>
-                  )}
-                  <p>✓ {locale === 'hr' ? 'Natkrivena garaža' : 'Covered Garage'}</p>
-                  <p>✓ {locale === 'hr' ? 'Bez ograničenja veličine' : 'No max. height'}</p>
-                  <p>✓ {locale === 'hr' ? 'Nemojte zadržavati ključeve' : 'Do Not Keep Keys'}</p>
-                  <p>✓ {locale === 'hr' ? 'Prosljeđivanje automobila' : 'Hand in car keys'}</p>
-                  <p className="font-semibold mt-2">{locale === 'hr' ? 'Otvoreno 7-24' : 'Open 7-24'}</p>
-                </div>
-
-                {/* Price */}
-                <div className="w-full mb-4 pb-4 border-t border-black/8">
-                  <p className="text-xs text-black/50 font-semibold mb-1 uppercase tracking-wider">{locale === 'hr' ? 'Cijena za 7 dana' : 'Price for 7 days'}</p>
-                  <p className="text-2xl font-bold text-black">{lot.priceFrom}</p>
-                </div>
-
-                {/* CTA Button */}
-                <button
-                  onClick={() => handleBookNow(lot as any)}
-                  className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 active:scale-95 transition text-sm shadow-sm hover:shadow-md"
-                >
-                  {locale === 'hr' ? 'Nastavi na Checkout' : 'Proceed to Checkout'}
-                </button>
-              </div>
+              <ParkingLogoCard
+                key={lot.id}
+                listing={{
+                  name: lot.name,
+                  logo: lot.image,
+                  photo: lot.image,
+                  rating: lot.rating,
+                  reviewCount: lot.reviewCount,
+                  distance: lot.distance || 0,
+                }}
+                price={parseFloat(lot.priceFrom.replace('€', '').replace('/day', ''))}
+                durationLabel={locale === 'hr' ? 'Cijena za 7 dana' : 'Price for 7 days'}
+                locale={locale}
+                checkoutUrl={`/checkout?location_id=${lot.id}&lat=${lat}&lng=${lng}&name=${airportName}`}
+                onInfo={() => {}}
+                selectedDays={7}
+                durationHours={168}
+              />
             ))}
           </div>
         </div>
