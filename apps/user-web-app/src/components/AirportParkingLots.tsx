@@ -83,11 +83,7 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
   if (!lots.length) return null;
 
   const handleBookNow = (lot: ParkingLot & { slug?: string }) => {
-    if (lot.slug) {
-      router.push(`/locations/${lot.slug}`);
-    } else {
-      router.push(`/search?lat=${lat}&lng=${lng}&name=${airportName}&source=airport`);
-    }
+    router.push(`/checkout?location_id=${lot.id}&lat=${lat}&lng=${lng}&name=${airportName}`);
   };
 
   const minPrice = Math.min(...lots.map(l => {
@@ -133,10 +129,8 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col gap-6 mb-12">
             <div>
-              <p className="text-xs uppercase tracking-[0.12em] text-black/50 mb-2 font-semibold">{locale === 'hr' ? 'Premium Parkiranje' : 'Premium Parking'}</p>
-              <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-black">{locale === 'hr' ? `Zajamčena mjesta blizu ${airportName}` : `Guaranteed Spots Near ${airportName}`}</h2>
+              <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-black">{locale === 'hr' ? `Parking u ${airportName}` : `Parking in ${airportName}`}</h2>
             </div>
-            <p className="text-base text-black/60 max-w-2xl">{locale === 'hr' ? 'Osigurajte parkirno mjesto na premium lokacijama. Trenutna potvrda, zajamčene best cijene i iznimna usluga.' : 'Secure your parking space at premium locations. Instant confirmation, best prices guaranteed, and exceptional service.'}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">

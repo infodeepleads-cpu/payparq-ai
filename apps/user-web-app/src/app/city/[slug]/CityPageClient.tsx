@@ -9,9 +9,7 @@ import { AirportBookingFlow } from '@/components/AirportBookingFlow';
 import { LocationSelectorModal } from '@/components/LocationSelectorModal';
 import { AirportReviews } from '@/components/AirportReviews';
 import { AirportParkingLots } from '@/components/AirportParkingLots';
-import { NearbyPlaces } from '@/components/NearbyPlaces';
 import { CityWhatYouShouldKnow } from '@/components/CityWhatYouShouldKnow';
-import { HowItWorks } from '@/components/HowItWorks';
 import { WhyPayParq } from '@/components/WhyPayParq';
 import type { City } from '@/data/cities';
 
@@ -83,14 +81,8 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
         {/* Parking Lots Section */}
         <AirportParkingLots airport={slug} lat={city.lat} lng={city.lng} airportName={city.name} />
 
-        {/* Nearby Places Section */}
-        <NearbyPlaces locationName={city.name} locationKey={slug} />
-
         {/* What You Should Know */}
         <CityWhatYouShouldKnow cityName={city.name} />
-
-        {/* How It Works */}
-        <HowItWorks airport={city.name} />
 
         {/* Why PayParq */}
         <WhyPayParq airport={city.name} />
