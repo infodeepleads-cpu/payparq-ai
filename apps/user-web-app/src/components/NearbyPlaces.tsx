@@ -116,12 +116,6 @@ export function NearbyPlaces({ locationName, locationKey, nearbyPlaces }: Nearby
             </div>
           </div>
 
-          {/* Footer Note */}
-          <div className="mt-10 p-6 rounded-xl bg-black/5">
-            <p className="text-sm text-black/60">
-              <strong>{locale === 'hr' ? 'Savjet:' : 'Tip:'}</strong> {tipText} {locationName}.
-            </p>
-          </div>
         </div>
       </section>
     </>
