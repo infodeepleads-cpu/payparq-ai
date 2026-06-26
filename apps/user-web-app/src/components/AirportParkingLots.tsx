@@ -19,6 +19,9 @@ interface ParkingLot {
   image?: string;
   distance?: number;
   slug?: string;
+  shuttle_enabled?: boolean;
+  valet_enabled?: boolean;
+  dailyPrice?: number;
 }
 
 interface AirportParkingLotsProps {
