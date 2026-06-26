@@ -81,7 +81,7 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
         </div>
 
         {/* Parking Lots Section */}
-        <AirportParkingLots airport={slug} lat={city.lat} lng={city.lng} airportName={city.name} />
+        <AirportParkingLots airport={slug} lat={city.lat} lng={city.lng} airportName={city.name} locativeName={city.locativeName} />
 
         {/* Nearby Places Section */}
         <NearbyPlaces locationName={city.name} locationKey={slug} />

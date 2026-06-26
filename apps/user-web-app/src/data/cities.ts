@@ -156,7 +156,7 @@ export const CITIES: Record<string, City> = {
   kastela: {
     id: 'kastela',
     name: 'Kaštela',
-    locativeName: 'Kašteli',
+    locativeName: 'Kaštelima',
     region: 'Dalmatia',
     lat: 43.5417,
     lng: 16.4500,

@@ -26,11 +26,12 @@ interface AirportParkingLotsProps {
   lat: number;
   lng: number;
   airportName: string;
+  locativeName?: string;
 }
 
 const MAX_DISTANCE_KM = 25; // Only show lots within 25km
 
-export function AirportParkingLots({ airport, lat, lng, airportName }: AirportParkingLotsProps) {
+export function AirportParkingLots({ airport, lat, lng, airportName, locativeName }: AirportParkingLotsProps) {
   const router = useRouter();
   const { locale } = useLocale();
   const [lots, setLots] = useState<ParkingLot[]>([]);
@@ -135,7 +136,7 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col gap-6 mb-12">
             <div>
-              <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-black">{locale === 'hr' ? `Parking u ${airportName}` : `Parking in ${airportName}`}</h2>
+              <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-black">{locale === 'hr' ? `Parking u ${locativeName || airportName}` : `Parking in ${airportName}`}</h2>
             </div>
           </div>
 
