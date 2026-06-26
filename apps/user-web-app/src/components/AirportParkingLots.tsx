@@ -52,9 +52,9 @@ export function AirportParkingLots({ airport, lat, lng, airportName, locativeNam
                 id: lot.id,
                 name: lot.name,
                 location: lot.address || lot.name,
-                rating: 4.9,
-                reviewCount: 0,
-                bookings: '1000+',
+                rating: lot.rating || 0,
+                reviewCount: lot.ratings_count || 0,
+                bookings: lot.ratings_count ? `${lot.ratings_count}+` : '0',
                 description: `Secure parking at ${lot.name}. Book in advance and guarantee your spot near ${airportName}.`,
                 priceFrom: sevenDayPrice > 0 ? `€${sevenDayPrice.toFixed(2)}` : 'From €2.00',
                 dailyPrice: lot.dailyPrice || 0,
@@ -62,6 +62,8 @@ export function AirportParkingLots({ airport, lat, lng, airportName, locativeNam
                 image: lot.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop',
                 distance: lot.distance,
                 slug: lot.slug,
+                shuttle_enabled: lot.shuttle_enabled,
+                valet_enabled: lot.valet_enabled,
               };
             })
             // Filter: only show lots within MAX_DISTANCE_KM
@@ -155,6 +157,8 @@ export function AirportParkingLots({ airport, lat, lng, airportName, locativeNam
                     rating: lot.rating,
                     reviewCount: lot.reviewCount,
                     distance: lot.distance || 0,
+                    shuttle_enabled: lot.shuttle_enabled,
+                    shuttleValet: lot.valet_enabled,
                   }}
                   price={parseFloat(lot.priceFrom.replace('€', ''))}
                   durationLabel={locale === 'hr' ? 'Cijena za 7 dana' : 'Price for 7 days'}

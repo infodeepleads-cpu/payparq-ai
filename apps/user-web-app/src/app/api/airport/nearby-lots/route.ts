@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await supabaseAdmin
       .from('locations')
-      .select('id, name, address, canonical_slug, latitude, longitude, base_price_hourly, base_price_daily, base_price_monthly, verification_metadata, verification_photos')
+      .select('id, name, address, canonical_slug, latitude, longitude, base_price_hourly, base_price_daily, base_price_monthly, verification_metadata, verification_photos, shuttle_enabled, valet_enabled, rating, ratings_count')
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
       .limit(50);
@@ -48,6 +48,10 @@ export async function GET(req: NextRequest) {
           distance,
           dailyPrice,
           image: photos[0],
+          shuttle_enabled: loc.shuttle_enabled,
+          valet_enabled: loc.valet_enabled,
+          rating: loc.rating || 0,
+          ratings_count: loc.ratings_count || 0,
         };
       })
       .sort((a, b) => a.distance - b.distance)
