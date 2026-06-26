@@ -11,6 +11,7 @@ import { AirportReviews } from '@/components/AirportReviews';
 import { AirportParkingLots } from '@/components/AirportParkingLots';
 import { NearbyPlaces } from '@/components/NearbyPlaces';
 import { CityWhatYouShouldKnow } from '@/components/CityWhatYouShouldKnow';
+import { SmarterWayToPark } from '@/components/SmarterWayToPark';
 import { WhyPayParq } from '@/components/WhyPayParq';
 import type { City } from '@/data/cities';
 
@@ -42,7 +43,7 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
                     {locale === 'hr' ? (
                       <>
                         <span style={{ color: '#fff' }}>Pronađite parking u</span><br />
-                        <span style={{ color: '#7c3aed' }}>{city.name}</span>
+                        <span style={{ color: '#7c3aed' }}>{city.locativeName || city.name}</span>
                       </>
                     ) : (
                       <>
@@ -87,6 +88,9 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
 
         {/* What You Should Know */}
         <CityWhatYouShouldKnow cityName={city.name} />
+
+        {/* Smarter Way to Park */}
+        <SmarterWayToPark />
 
         {/* Why PayParq */}
         <WhyPayParq airport={city.name} />

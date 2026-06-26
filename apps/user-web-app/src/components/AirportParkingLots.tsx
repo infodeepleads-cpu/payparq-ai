@@ -45,20 +45,24 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
 
         if (apiLots && apiLots.length > 0) {
           const lotsWithDetails = apiLots
-            .map((lot: any) => ({
-              id: lot.id,
-              name: lot.name,
-              location: lot.address || lot.name,
-              rating: 4.9,
-              reviewCount: Math.floor(Math.random() * 200) + 50,
-              bookings: '1000+',
-              description: `Secure parking at ${lot.name}. Book in advance and guarantee your spot near ${airportName}.`,
-              priceFrom: lot.dailyPrice > 0 ? `€${lot.dailyPrice.toFixed(2)}/day` : 'From €2.00/day',
-              badge: 'best-price-guaranteed',
-              image: lot.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop',
-              distance: lot.distance,
-              slug: lot.slug,
-            }))
+            .map((lot: any) => {
+              const sevenDayPrice = (lot.dailyPrice || 0) * 7;
+              return {
+                id: lot.id,
+                name: lot.name,
+                location: lot.address || lot.name,
+                rating: 4.9,
+                reviewCount: Math.floor(Math.random() * 200) + 50,
+                bookings: '1000+',
+                description: `Secure parking at ${lot.name}. Book in advance and guarantee your spot near ${airportName}.`,
+                priceFrom: sevenDayPrice > 0 ? `€${sevenDayPrice.toFixed(2)}` : 'From €2.00',
+                dailyPrice: lot.dailyPrice || 0,
+                badge: 'best-price-guaranteed',
+                image: lot.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop',
+                distance: lot.distance,
+                slug: lot.slug,
+              };
+            })
             // Filter: only show lots within MAX_DISTANCE_KM
             .filter((lot: ParkingLot) => lot.distance === undefined || lot.distance <= MAX_DISTANCE_KM);
 
@@ -151,7 +155,7 @@ export function AirportParkingLots({ airport, lat, lng, airportName }: AirportPa
                     reviewCount: lot.reviewCount,
                     distance: lot.distance || 0,
                   }}
-                  price={parseFloat(lot.priceFrom.replace('€', '').replace('/day', ''))}
+                  price={parseFloat(lot.priceFrom.replace('€', ''))}
                   durationLabel={locale === 'hr' ? 'Cijena za 7 dana' : 'Price for 7 days'}
                   locale={locale}
                   checkoutUrl={`/checkout?location_id=${lot.id}&lat=${lat}&lng=${lng}&name=${airportName}`}

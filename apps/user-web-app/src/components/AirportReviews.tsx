@@ -107,7 +107,27 @@ export function AirportReviews({ airport, locationName }: AirportReviewsProps) {
         }}
       />
 
-      <section className="w-full px-6 md:px-12 py-10 border-b border-black/10 bg-white">
+      {/* Mobile Compact Version */}
+      <section className="md:hidden w-full px-6 py-6 border-b border-black/10 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <GoogleLogo />
+              <span className="text-xs font-semibold text-black/70">Google</span>
+            </div>
+            <div className="flex gap-0.5">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} size={12} className="fill-yellow-400 text-yellow-400" />
+              ))}
+            </div>
+            <span className="text-sm font-bold text-black">{averageRating}</span>
+            <span className="text-xs text-black/50">({totalReviewCount})</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Desktop Full Version */}
+      <section className="hidden md:block w-full px-6 md:px-12 py-10 border-b border-black/10 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="mb-5">
             <div className="flex items-center gap-2 mb-2">

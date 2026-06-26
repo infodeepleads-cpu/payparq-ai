@@ -5,6 +5,7 @@ export interface City {
   lat: number;
   lng: number;
   description: string;
+  locativeName?: string; // For "u [city]" grammar (locative case)
 }
 
 export const CITIES: Record<string, City> = {
@@ -155,6 +156,7 @@ export const CITIES: Record<string, City> = {
   kastela: {
     id: 'kastela',
     name: 'Kaštela',
+    locativeName: 'Kašteli',
     region: 'Dalmatia',
     lat: 43.5417,
     lng: 16.4500,
