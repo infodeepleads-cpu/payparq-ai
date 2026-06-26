@@ -81,14 +81,14 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
         {/* Parking Lots Section */}
         <AirportParkingLots airport={slug} lat={city.lat} lng={city.lng} airportName={city.name} locativeName={city.locativeName} />
 
-        {/* Nearby Places Section */}
-        <NearbyPlaces locationName={city.name} locationKey={slug} />
+        {/* Smarter Way to Park */}
+        <SmarterWayToPark />
 
         {/* What You Should Know */}
         <CityWhatYouShouldKnow cityName={city.name} />
 
-        {/* Smarter Way to Park */}
-        <SmarterWayToPark />
+        {/* Nearby Places Section */}
+        <NearbyPlaces locationName={city.name} locationKey={slug} />
 
         {/* Why PayParq */}
         <WhyPayParq airport={city.name} />

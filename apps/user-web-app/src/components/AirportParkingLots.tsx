@@ -32,7 +32,7 @@ interface AirportParkingLotsProps {
   locativeName?: string;
 }
 
-const MAX_DISTANCE_KM = 25; // Only show lots within 25km
+const MAX_DISTANCE_KM = 40; // Only show lots within 40km
 
 export function AirportParkingLots({ airport, lat, lng, airportName, locativeName }: AirportParkingLotsProps) {
   const router = useRouter();
