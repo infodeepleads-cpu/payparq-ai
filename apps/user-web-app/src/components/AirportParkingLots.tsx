@@ -53,7 +53,7 @@ export function AirportParkingLots({ airport, lat, lng, airportName, locativeNam
                 name: lot.name,
                 location: lot.address || lot.name,
                 rating: 4.9,
-                reviewCount: Math.floor(Math.random() * 200) + 50,
+                reviewCount: 0,
                 bookings: '1000+',
                 description: `Secure parking at ${lot.name}. Book in advance and guarantee your spot near ${airportName}.`,
                 priceFrom: sevenDayPrice > 0 ? `€${sevenDayPrice.toFixed(2)}` : 'From €2.00',
