@@ -75,10 +75,8 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
           </div>
         </section>
 
-        {/* Reviews Section - Hidden on mobile */}
-        <div className="hidden md:block">
-          <AirportReviews airport={slug} locationName={city.name} />
-        </div>
+        {/* Reviews Section */}
+        <AirportReviews airport={slug} locationName={city.name} />
 
         {/* Parking Lots Section */}
         <AirportParkingLots airport={slug} lat={city.lat} lng={city.lng} airportName={city.name} locativeName={city.locativeName} />

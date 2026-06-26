@@ -108,21 +108,41 @@ export function AirportReviews({ airport, locationName }: AirportReviewsProps) {
       />
 
       {/* Mobile Compact Version */}
-      <section className="md:hidden w-full px-6 py-6 border-b border-black/10 bg-white">
+      <section className="w-full px-6 py-8 border-b border-black/10 bg-white md:hidden">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center gap-3">
+          <h3 className="text-sm font-semibold text-black mb-4">Customer Reviews</h3>
+          <div className="flex items-center gap-3 mb-4">
             <div className="flex items-center gap-1.5">
               <GoogleLogo />
               <span className="text-xs font-semibold text-black/70">Google</span>
             </div>
             <div className="flex gap-0.5">
               {[...Array(5)].map((_, i) => (
-                <Star key={i} size={12} className="fill-yellow-400 text-yellow-400" />
+                <Star key={i} size={14} className="fill-yellow-400 text-yellow-400" />
               ))}
             </div>
             <span className="text-sm font-bold text-black">{averageRating}</span>
             <span className="text-xs text-black/50">({totalReviewCount})</span>
           </div>
+          {displayReviews.length > 0 && (
+            <div className="bg-white rounded-lg border border-black/10 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-semibold">
+                  {displayReviews[0].author.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-black">{displayReviews[0].author}</p>
+                  <p className="text-xs text-black/40">{new Date(displayReviews[0].date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}</p>
+                </div>
+              </div>
+              <div className="flex gap-0.5 mb-2">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} size={12} className={i < displayReviews[0].rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200'} />
+                ))}
+              </div>
+              <p className="text-xs text-black/70 line-clamp-2">{displayReviews[0].text}</p>
+            </div>
+          )}
         </div>
       </section>
 
