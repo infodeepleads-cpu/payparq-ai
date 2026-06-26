@@ -108,7 +108,7 @@ export function AirportReviews({ airport, locationName }: AirportReviewsProps) {
       />
 
       {/* Mobile Compact Version */}
-      <section className="md:hidden w-full px-6 py-8 border-b border-black/10 bg-white">
+      <section className="md:hidden w-full px-6 py-8 border-b border-black/10 bg-white" suppressHydrationWarning>
         <div className="max-w-6xl mx-auto flex justify-center">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
@@ -127,7 +127,7 @@ export function AirportReviews({ airport, locationName }: AirportReviewsProps) {
       </section>
 
       {/* Desktop Full Version */}
-      <section className="hidden md:block w-full px-6 md:px-12 py-10 border-b border-black/10 bg-white">
+      <section className="hidden md:block w-full px-6 md:px-12 py-10 border-b border-black/10 bg-white" suppressHydrationWarning>
         <div className="max-w-6xl mx-auto">
           <div className="mb-5">
             <div className="flex items-center gap-2 mb-2">
