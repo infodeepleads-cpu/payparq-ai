@@ -13,11 +13,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'supabase_not_configured' }, { status: 500 });
     }
 
+    // Bounding box ~55km around the requested coordinates
+    const delta = 0.5;
     const { data, error } = await supabaseAdmin
       .from('locations')
-      .select('id, name, address, canonical_slug, latitude, longitude, base_price_hourly, base_price_daily, base_price_monthly, verification_metadata, verification_photos, shuttle_enabled, valet_enabled, rating, ratings_count')
+      .select('*')
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
+      .gte('latitude', lat - delta)
+      .lte('latitude', lat + delta)
+      .gte('longitude', lng - delta)
+      .lte('longitude', lng + delta)
       .limit(50);
 
     if (error) {
@@ -50,8 +56,8 @@ export async function GET(req: NextRequest) {
           image: photos[0],
           shuttle_enabled: loc.shuttle_enabled,
           valet_enabled: loc.valet_enabled,
-          rating: loc.rating || 0,
-          ratings_count: loc.ratings_count || 0,
+          rating: loc.review_score || 0,
+          ratings_count: loc.review_count || 0,
         };
       })
       .sort((a, b) => a.distance - b.distance)
