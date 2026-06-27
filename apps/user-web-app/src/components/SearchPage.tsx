@@ -930,13 +930,24 @@ export function SearchPage() {
 
           setListings(parkingListings);
           const urlHubId = new URLSearchParams(window.location.search).get('hubId');
+          const urlLocationId = new URLSearchParams(window.location.search).get('location_id');
           setIsHubIdMode(!!urlHubId);
           const displayList = urlHubId
             ? parkingListings.filter((l) => l.id === urlHubId || l.display_id === urlHubId)
             : parkingListings;
           setFilteredListings(displayList);
           if (displayList.length > 0) {
-            setSelectedListing(displayList[1] ?? displayList[0]);
+            let selectedLot = displayList[1] ?? displayList[0];
+            if (urlLocationId) {
+              const matchedLot = displayList.find((l) => l.id === urlLocationId);
+              if (matchedLot) {
+                selectedLot = matchedLot;
+                setShowDetailsView(true);
+                setShowMobileDetails(true);
+                setMapCenter({ lat: matchedLot.lat, lng: matchedLot.lng });
+              }
+            }
+            setSelectedListing(selectedLot);
             if (urlHubId) {
               setShowDetailsView(true);
               setShowMobileDetails(true);
