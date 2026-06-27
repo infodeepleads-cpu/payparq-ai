@@ -7,9 +7,9 @@ import { FooterBrand } from '@/components/FooterBrand';
 import { AirportBookingFlow } from '@/components/AirportBookingFlow';
 import { AirportReviews } from '@/components/AirportReviews';
 import { AirportParkingLots } from '@/components/AirportParkingLots';
+import { SmarterWayToPark } from '@/components/SmarterWayToPark';
 import { AirportSEOSection } from '@/components/AirportSEOSection';
 import { NearbyPlaces } from '@/components/NearbyPlaces';
-import { HowItWorks } from '@/components/HowItWorks';
 import { WhyPayParq } from '@/components/WhyPayParq';
 import type { Airport } from '@/data/airports';
 
@@ -62,6 +62,7 @@ export default function AirportPageClient({ airport, slug }: AirportPageClientPr
 
         <AirportReviews airport={slug} locationName={airport.name} />
         <AirportParkingLots airport={slug} lat={airport.lat} lng={airport.lng} airportName={airport.name} />
+        <SmarterWayToPark />
         <AirportSEOSection
           location={slug}
           locationName={airport.name}
@@ -70,7 +71,6 @@ export default function AirportPageClient({ airport, slug }: AirportPageClientPr
           nearbyAreas={airport.nearbyAreas}
         />
         <NearbyPlaces locationName={airport.name} locationKey={slug} />
-        <HowItWorks airport={airport.name} />
         <WhyPayParq airport={airport.name} />
       </main>
 
