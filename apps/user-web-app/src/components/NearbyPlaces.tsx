@@ -21,8 +21,10 @@ interface NearbyPlacesProps {
 
 export function NearbyPlaces({ locationName, locationKey, nearbyPlaces }: NearbyPlacesProps) {
   const { locale } = useLocale();
-  // Use provided nearbyPlaces or fetch from data file using locationKey
-  const places = nearbyPlaces || (locationKey && NEARBY_PLACES[locationKey]) || [];
+  // Map airport slugs to city slugs (e.g., 'split-airport' -> 'split')
+  const citySlug = locationKey?.replace('-airport', '');
+  // Use provided nearbyPlaces or fetch from data file using locationKey or mapped citySlug
+  const places = nearbyPlaces || (locationKey && NEARBY_PLACES[locationKey]) || (citySlug && NEARBY_PLACES[citySlug]) || [];
 
   if (!places || places.length === 0) return null;
 

@@ -34,12 +34,12 @@ export default function AirportPageClient({ airport, slug }: AirportPageClientPr
                   {locale === 'hr' ? (
                     <>
                       <span style={{ color: '#fff' }}>Parkiraj kod</span><br />
-                      <span style={{ color: '#7c3aed' }}>{airport.name}</span>
+                      <span style={{ color: '#2563eb' }}>{airport.name}</span>
                     </>
                   ) : (
                     <>
                       <span style={{ color: '#fff' }}>Park at</span><br />
-                      <span style={{ color: '#7c3aed' }}>{airport.name}</span>
+                      <span style={{ color: '#2563eb' }}>{airport.name}</span>
                     </>
                   )}
                 </h1>
