@@ -280,17 +280,6 @@ export function AirportSEOSection({ location, locationName, city, region, nearby
   return (
     <section className="w-full px-6 md:px-12 py-16 bg-white">
       <div className="max-w-6xl mx-auto">
-        {/* Breadcrumb */}
-        <div className="mb-8 flex items-center gap-2 text-sm text-black/60">
-          <span>{city}</span>
-          {nearbyAreas.map((area, idx) => (
-            <span key={idx}>
-              <span className="mx-2">›</span>
-              <span>{area}</span>
-            </span>
-          ))}
-        </div>
-
         {/* Title */}
         <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-black mb-8 leading-tight">
           {content.title}
