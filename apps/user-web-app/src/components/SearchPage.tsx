@@ -996,6 +996,15 @@ export function SearchPage() {
     setPhotoIndex(0);
   }, [selectedListing?.id]);
 
+  // Ensure details view opens when location_id param is in URL and listing is selected
+  useEffect(() => {
+    const urlLocationId = new URLSearchParams(window.location.search).get('location_id');
+    if (urlLocationId && selectedListing && selectedListing.id === urlLocationId) {
+      setShowDetailsView(true);
+      setShowMobileDetails(true);
+    }
+  }, [selectedListing?.id]);
+
   // Initialize Places service and handle location search - immediate, no debounce
   useEffect(() => {
     if (!isLoaded || !showPredictions) return;
