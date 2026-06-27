@@ -10,7 +10,7 @@ export function CitiesWidget() {
   return (
     <div className="rounded-2xl border border-black/5 bg-[#05020A] text-white p-6 md:p-8">
       <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-4">
-        {locale === 'en' ? 'Explore Parking in Croatian Cities' : 'Pronađite Parking u Hrvatskim Gradovima'}
+        {locale === 'en' ? 'Explore Parking in Croatian Cities' : 'Pronađite Parking u Gradovima'}
       </p>
       <div className="flex flex-wrap gap-3">
         {cities.map((city) => (
