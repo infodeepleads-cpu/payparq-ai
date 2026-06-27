@@ -12,6 +12,7 @@ interface AirportBookingFlowProps {
   defaultName: string;
   showEvents?: boolean;
   onLocationClick?: () => void;
+  onDatesChange?: (startDate: string, endDate: string, days: number) => void;
 }
 
 type Step = null | 'arrival' | 'departure';
@@ -22,7 +23,7 @@ interface Event {
   date: string;
 }
 
-export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEvents = false, onLocationClick }: AirportBookingFlowProps) {
+export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEvents = false, onLocationClick, onDatesChange }: AirportBookingFlowProps) {
   const router = useRouter();
   const { locale } = useLocale();
   const [step, setStep] = useState<Step>(null);
@@ -100,6 +101,10 @@ export function AirportBookingFlow({ defaultLat, defaultLng, defaultName, showEv
     if (arrivalDateTime && finalDeparture) {
       setDepartureDateTime(finalDeparture);
       setStep(null);
+      if (onDatesChange) {
+        const days = Math.max(1, Math.ceil((new Date(finalDeparture).getTime() - new Date(arrivalDateTime).getTime()) / (1000 * 60 * 60 * 24)));
+        onDatesChange(arrivalDateTime, finalDeparture, days);
+      }
     }
   };
 

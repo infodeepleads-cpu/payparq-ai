@@ -23,6 +23,14 @@ interface CityPageClientProps {
 export default function CityPageClient({ city, slug }: CityPageClientProps) {
   const { locale } = useLocale();
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [bookingDates, setBookingDates] = useState<{ start: string; end: string; days: number }>(() => {
+    const start = new Date();
+    start.setHours(15, 0, 0, 0);
+    const end = new Date();
+    end.setDate(end.getDate() + 7);
+    end.setHours(15, 0, 0, 0);
+    return { start: start.toISOString().slice(0, 16), end: end.toISOString().slice(0, 16), days: 7 };
+  });
 
   return (
     <div className="min-h-screen bg-[#05020A] flex flex-col overflow-hidden">
@@ -36,19 +44,19 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
                 {locale === 'hr' && slug === 'rovinj' ? (
                   <h1 className="text-4xl md:text-7xl font-semibold md:font-bold tracking-tight mb-2 md:mb-4 break-words text-white" style={{ lineHeight: '1.2' }}>
                     <span style={{ color: '#fff' }}>Usporedi cijene</span><br />
-                    <span style={{ color: '#7c3aed' }}>parkinga u Rovinju</span>
+                    <span style={{ color: '#2563eb' }}>parkinga u Rovinju</span>
                   </h1>
                 ) : (
                   <h1 className="text-4xl md:text-7xl font-semibold md:font-bold tracking-tight mb-2 md:mb-4 break-words text-white" style={{ lineHeight: '1.2' }}>
                     {locale === 'hr' ? (
                       <>
                         <span style={{ color: '#fff' }}>Pronađite parking u</span><br />
-                        <span style={{ color: '#7c3aed' }}>{city.locativeName || city.name}</span>
+                        <span style={{ color: '#2563eb' }}>{city.locativeName || city.name}</span>
                       </>
                     ) : (
                       <>
                         <span style={{ color: '#fff' }}>Find Parking in</span><br />
-                        <span style={{ color: '#7c3aed' }}>{city.name}</span>
+                        <span style={{ color: '#2563eb' }}>{city.name}</span>
                       </>
                     )}
                   </h1>
@@ -60,6 +68,7 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
                     defaultLng={city.lng}
                     defaultName={city.name}
                     onLocationClick={() => setIsLocationModalOpen(true)}
+                    onDatesChange={(start, end, days) => setBookingDates({ start, end, days })}
                   />
                 </div>
               </div>
@@ -79,7 +88,7 @@ export default function CityPageClient({ city, slug }: CityPageClientProps) {
         <AirportReviews airport={slug} locationName={city.name} />
 
         {/* Parking Lots Section */}
-        <AirportParkingLots airport={slug} lat={city.lat} lng={city.lng} airportName={city.name} locativeName={city.locativeName} />
+        <AirportParkingLots airport={slug} lat={city.lat} lng={city.lng} airportName={city.name} locativeName={city.locativeName} startDate={bookingDates.start} endDate={bookingDates.end} selectedDays={bookingDates.days} />
 
         {/* Smarter Way to Park */}
         <SmarterWayToPark />

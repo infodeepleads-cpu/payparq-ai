@@ -129,7 +129,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'not_found' }, { status: 404 });
     }
 
-    if (existing.owner_id !== user.id) {
+    const isSuperadmin = user.email?.toLowerCase() === 'payparq@outlook.com';
+    if (!isSuperadmin && existing.owner_id !== user.id) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     }
 

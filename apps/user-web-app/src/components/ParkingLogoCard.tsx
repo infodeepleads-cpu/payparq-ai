@@ -107,7 +107,7 @@ export function ParkingLogoCard({
                   <path d="M11 14l-2 6"/>
                   <path d="M16 9l2 2"/>
                 </svg>
-                <p className="text-sm font-bold text-gray-900">{Math.round(listing.distance * 12)} min {locale === 'hr' ? 'hoda od terminala' : 'walk from terminal'}</p>
+                <p className="text-sm font-bold text-gray-900">{Math.round(listing.distance * 12)} min {locale === 'hr' ? 'hoda' : 'walk'}</p>
               </>
             )}
           </div>

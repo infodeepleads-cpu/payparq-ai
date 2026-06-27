@@ -30,11 +30,14 @@ interface AirportParkingLotsProps {
   lng: number;
   airportName: string;
   locativeName?: string;
+  startDate?: string;
+  endDate?: string;
+  selectedDays?: number;
 }
 
 const MAX_DISTANCE_KM = 40; // Only show lots within 40km
 
-export function AirportParkingLots({ airport, lat, lng, airportName, locativeName }: AirportParkingLotsProps) {
+export function AirportParkingLots({ airport, lat, lng, airportName, locativeName, startDate, endDate, selectedDays = 7 }: AirportParkingLotsProps) {
   const router = useRouter();
   const { locale } = useLocale();
   const [lots, setLots] = useState<ParkingLot[]>([]);
@@ -150,29 +153,35 @@ export function AirportParkingLots({ airport, lat, lng, airportName, locativeNam
             className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory scroll-smooth"
             style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch' }}
           >
-            {lots.map((lot) => (
-              <div key={lot.id} className="flex-shrink-0 w-full sm:w-96 snap-center">
-                <ParkingLogoCard
-                  listing={{
-                    name: lot.name,
-                    logo: lot.image,
-                    photo: lot.image,
-                    rating: lot.rating,
-                    reviewCount: lot.reviewCount,
-                    distance: lot.distance || 0,
-                    shuttle_enabled: lot.shuttle_enabled,
-                    shuttleValet: lot.valet_enabled,
-                  }}
-                  price={parseFloat(lot.priceFrom.replace('€', ''))}
-                  durationLabel={locale === 'hr' ? 'Cijena za 7 dana' : 'Price for 7 days'}
-                  locale={locale}
-                  checkoutUrl={`/checkout?location_id=${lot.id}&lat=${lat}&lng=${lng}&name=${airportName}`}
-                  onInfo={() => {}}
-                  selectedDays={7}
-                  durationHours={168}
-                />
-              </div>
-            ))}
+            {lots.map((lot) => {
+              const price = (lot.dailyPrice || 0) * selectedDays;
+              const displayPrice = price > 0 ? price : 2;
+              const dateParams = startDate && endDate ? `&start=${encodeURIComponent(startDate)}&end=${encodeURIComponent(endDate)}` : '';
+              const checkoutUrl = `/checkout?location_id=${lot.id}&lat=${lat}&lng=${lng}&name=${encodeURIComponent(airportName)}${dateParams}`;
+              return (
+                <div key={lot.id} className="flex-shrink-0 w-full sm:w-96 snap-center">
+                  <ParkingLogoCard
+                    listing={{
+                      name: lot.name,
+                      logo: lot.image,
+                      photo: lot.image,
+                      rating: lot.rating,
+                      reviewCount: lot.reviewCount,
+                      distance: lot.distance || 0,
+                      shuttle_enabled: lot.shuttle_enabled,
+                      shuttleValet: lot.valet_enabled,
+                    }}
+                    price={displayPrice}
+                    durationLabel={locale === 'hr' ? `Cijena za ${selectedDays} ${selectedDays === 1 ? 'dan' : 'dana'}` : `Price for ${selectedDays} day${selectedDays !== 1 ? 's' : ''}`}
+                    locale={locale}
+                    checkoutUrl={checkoutUrl}
+                    onInfo={() => lot.slug ? router.push(`/locations/${lot.slug}`) : undefined}
+                    selectedDays={selectedDays}
+                    durationHours={selectedDays * 24}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
