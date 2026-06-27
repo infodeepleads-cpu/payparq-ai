@@ -939,9 +939,12 @@ export function SearchPage() {
           if (displayList.length > 0) {
             let selectedLot = displayList[1] ?? displayList[0];
             if (urlLocationId) {
-              const matchedLot = displayList.find((l) => l.id === urlLocationId);
+              const matchedLot = displayList.find(
+                (l) => l.id === urlLocationId || l.display_id === urlLocationId || l.slug === urlLocationId
+              );
               if (matchedLot) {
                 selectedLot = matchedLot;
+                console.log(`[SearchPage] Matched location_id=${urlLocationId} to lot ${matchedLot.id}`);
                 setShowDetailsView(true);
                 setShowMobileDetails(true);
                 setMapCenter({ lat: matchedLot.lat, lng: matchedLot.lng });
@@ -999,7 +1002,16 @@ export function SearchPage() {
   // Ensure details view opens when location_id param is in URL and listing is selected
   useEffect(() => {
     const urlLocationId = new URLSearchParams(window.location.search).get('location_id');
-    if (urlLocationId && selectedListing && selectedListing.id === urlLocationId) {
+    if (!urlLocationId || !selectedListing) return;
+
+    // Check multiple ID fields for match (id, display_id, slug)
+    const isMatch =
+      selectedListing.id === urlLocationId ||
+      selectedListing.display_id === urlLocationId ||
+      selectedListing.slug === urlLocationId;
+
+    if (isMatch) {
+      console.log(`[SearchPage] Auto-opening details for location_id=${urlLocationId}`);
       setShowDetailsView(true);
       setShowMobileDetails(true);
     }

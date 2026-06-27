@@ -159,6 +159,7 @@ export function AirportParkingLots({ airport, lat, lng, airportName, locativeNam
               const amountCents = Math.round(displayPrice * 100);
               const checkoutUrl = `/checkout?loc=${lot.id}&name=${encodeURIComponent(lot.name)}&amount_cents=${amountCents}&lat=${lat}&lng=${lng}`;
               const searchUrl = `/search?lat=${lat}&lng=${lng}&name=${encodeURIComponent(airportName)}&location_id=${lot.id}`;
+              console.log(`[AirportParkingLots] Lot: ${lot.name} (id=${lot.id}, display_id=${lot.slug}, price=€${displayPrice})`);
               return (
                 <div key={lot.id} className="flex-shrink-0 w-full sm:w-96 snap-center">
                   <ParkingLogoCard
