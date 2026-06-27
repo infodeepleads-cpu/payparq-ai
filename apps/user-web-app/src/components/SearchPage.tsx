@@ -940,7 +940,7 @@ export function SearchPage() {
             let selectedLot = displayList[1] ?? displayList[0];
             if (urlLocationId) {
               const matchedLot = displayList.find(
-                (l) => l.id === urlLocationId || l.display_id === urlLocationId || l.slug === urlLocationId
+                (l) => l.id === urlLocationId || l.display_id === urlLocationId
               );
               if (matchedLot) {
                 selectedLot = matchedLot;
@@ -1004,11 +1004,10 @@ export function SearchPage() {
     const urlLocationId = new URLSearchParams(window.location.search).get('location_id');
     if (!urlLocationId || !selectedListing) return;
 
-    // Check multiple ID fields for match (id, display_id, slug)
+    // Check multiple ID fields for match (id, display_id)
     const isMatch =
       selectedListing.id === urlLocationId ||
-      selectedListing.display_id === urlLocationId ||
-      selectedListing.slug === urlLocationId;
+      selectedListing.display_id === urlLocationId;
 
     if (isMatch) {
       console.log(`[SearchPage] Auto-opening details for location_id=${urlLocationId}`);
