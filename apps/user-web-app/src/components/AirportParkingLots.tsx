@@ -9,6 +9,7 @@ import { getTieredDailyConfig, calculateTieredDailyPrice } from '@/lib/locationP
 
 interface ParkingLot {
   id: string;
+  display_id?: string;
   name: string;
   location: string;
   rating: number;
@@ -20,9 +21,12 @@ interface ParkingLot {
   image?: string;
   distance?: number;
   slug?: string;
+  address?: string;
   shuttle_enabled?: boolean;
   valet_enabled?: boolean;
   dailyPrice?: number;
+  hourlyPrice?: number;
+  monthlyPrice?: number;
   verification_metadata?: Record<string, unknown>;
 }
 
@@ -58,14 +62,18 @@ export function AirportParkingLots({ airport, lat, lng, airportName, locativeNam
               const sevenDayPrice = (lot.dailyPrice || 0) * 7;
               return {
                 id: lot.id,
+                display_id: lot.display_id,
                 name: lot.name,
                 location: lot.address || lot.name,
+                address: lot.address,
                 rating: lot.rating || 0,
                 reviewCount: lot.ratings_count || 0,
                 bookings: lot.ratings_count ? `${lot.ratings_count}+` : '0',
                 description: `Secure parking at ${lot.name}. Book in advance and guarantee your spot near ${airportName}.`,
                 priceFrom: sevenDayPrice > 0 ? `€${sevenDayPrice.toFixed(2)}` : 'From €2.00',
                 dailyPrice: lot.dailyPrice || 0,
+                hourlyPrice: lot.hourlyPrice || 0,
+                monthlyPrice: lot.monthlyPrice || 0,
                 badge: 'best-price-guaranteed',
                 image: lot.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop',
                 distance: lot.distance,
@@ -163,9 +171,25 @@ export function AirportParkingLots({ airport, lat, lng, airportName, locativeNam
                 : (lot.dailyPrice || 0) * selectedDays;
               const displayPrice = price > 0 ? price : 2;
               const amountCents = Math.round(displayPrice * 100);
-              const hourlyPriceCents = Math.round((lot.dailyPrice || 0) * 100 / 24);
+              const hourlyPriceCents = Math.round((lot.hourlyPrice || 0) * 100);
               const dailyPriceCents = Math.round((lot.dailyPrice || 0) * 100);
-              const checkoutUrl = `/checkout?loc=${lot.id}&name=${encodeURIComponent(lot.name)}&amount_cents=${amountCents}&in=${encodeURIComponent(startDate || '')}&out=${encodeURIComponent(endDate || '')}&ph=${hourlyPriceCents}&pd=${dailyPriceCents}&lat=${lat}&lng=${lng}`;
+              const monthlyPriceCents = Math.round((lot.monthlyPrice || 0) * 100);
+
+              const params = new URLSearchParams();
+              params.set('loc', lot.id);
+              if (lot.display_id) params.set('display_id', lot.display_id);
+              params.set('name', lot.name || '');
+              if (lot.address) params.set('address', lot.address);
+              params.set('in', startDate ? new Date(startDate).toISOString() : '');
+              params.set('out', endDate ? new Date(endDate).toISOString() : '');
+              params.set('amount_cents', String(amountCents));
+              params.set('ph', String(hourlyPriceCents));
+              params.set('pd', String(dailyPriceCents));
+              params.set('pm', String(monthlyPriceCents));
+              params.set('source', 'platform');
+              params.set('flow', 'reserve');
+              const checkoutUrl = `/checkout?${params.toString()}`;
+
               const searchUrl = `/search?lat=${lat}&lng=${lng}&name=${encodeURIComponent(airportName)}&location_id=${lot.id}`;
               console.log(`[AirportParkingLots] Lot: ${lot.name} (id=${lot.id}, display_id=${lot.slug}, price=€${displayPrice}, hourly=${lot.dailyPrice ? (lot.dailyPrice/24).toFixed(2) : 0}€)`);
               return (
