@@ -187,7 +187,7 @@ export function ParkingLogoCard({
         {/* CTA Button - Stripe Blue */}
         <div className="px-6 py-4 border-t border-gray-200">
           <button
-            onClick={() => !isSoldOut && openCheckout(checkoutUrl)}
+            onClick={(e) => { e.stopPropagation(); !isSoldOut && openCheckout(checkoutUrl); }}
             disabled={isSoldOut}
             className={`w-full inline-block text-center font-bold py-3 px-4 rounded-lg active:scale-95 transition text-sm shadow-sm ${
               isSoldOut
