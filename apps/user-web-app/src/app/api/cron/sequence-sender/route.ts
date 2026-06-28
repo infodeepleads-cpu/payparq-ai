@@ -4,8 +4,6 @@ import { Resend } from 'resend';
 
 export const dynamic = 'force-dynamic';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 function getNextSendDate(delayDays: number): Date {
   const now = new Date();
   const minDelay = Math.floor(delayDays * 0.66);
@@ -46,6 +44,7 @@ async function logEmailSend(enrollmentId: string, recipientEmail: string, emailN
 }
 
 export async function GET(req: NextRequest) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
   if (!supabaseAdmin) return NextResponse.json({ error: 'db_unavailable' }, { status: 500 });
 
   const cronSecret = process.env.CRON_SECRET;
