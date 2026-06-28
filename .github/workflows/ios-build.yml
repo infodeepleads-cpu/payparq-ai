@@ -42,6 +42,23 @@ jobs:
           echo -n "${{ secrets.APPLE_API_KEY_P8 }}" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
           chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
 
+      - name: Generate iOS app icons from correct logo
+        run: |
+          SRC="public/icon-512.png"
+          DEST="ios/App/App/Assets.xcassets/AppIcon.appiconset"
+          sips -z 1024 1024 "$SRC" --out "$DEST/AppIcon-1024@1x.png"
+          sips -z 180 180   "$SRC" --out "$DEST/AppIcon-180@3x.png"
+          sips -z 120 120   "$SRC" --out "$DEST/AppIcon-120@2x.png"
+          sips -z 87  87    "$SRC" --out "$DEST/AppIcon-87@3x.png"
+          sips -z 80  80    "$SRC" --out "$DEST/AppIcon-80@2x.png"
+          sips -z 76  76    "$SRC" --out "$DEST/AppIcon-76@1x.png"
+          sips -z 58  58    "$SRC" --out "$DEST/AppIcon-58@2x.png"
+          sips -z 40  40    "$SRC" --out "$DEST/AppIcon-40@2x.png"
+          sips -z 167 167   "$SRC" --out "$DEST/AppIcon-167@2x.png"
+          sips -z 152 152   "$SRC" --out "$DEST/AppIcon-152@2x.png"
+          sips -z 29  29    "$SRC" --out "$DEST/AppIcon-29@2x.png"
+          sips -z 29  29    "$SRC" --out "$DEST/AppIcon-29@3x.png"
+
       - name: Build IPA
         run: |
           cd ios/App
@@ -56,6 +73,7 @@ jobs:
             -authenticationKeyID "${{ secrets.APPLE_API_KEY_ID }}" \
             -authenticationKeyIssuerID "${{ secrets.APPLE_API_KEY_ISSUER_ID }}" \
             CODE_SIGN_STYLE="Automatic" \
+            CODE_SIGN_IDENTITY="iPhone Distribution" \
             DEVELOPMENT_TEAM="T254J772YJ"
 
       - name: Export IPA
