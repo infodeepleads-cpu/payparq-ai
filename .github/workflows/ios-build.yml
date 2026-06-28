@@ -42,16 +42,11 @@ jobs:
           echo -n "${{ secrets.APPLE_API_KEY_P8 }}" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
           chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
 
-      - name: Install iOS dependencies
-        run: |
-          cd ios/App
-          pod install --repo-update
-
       - name: Build IPA
         run: |
           cd ios/App
           xcodebuild archive \
-            -workspace App.xcworkspace \
+            -project App.xcodeproj \
             -scheme App \
             -configuration Release \
             -destination 'generic/platform=iOS' \
