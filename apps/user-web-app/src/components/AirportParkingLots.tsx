@@ -23,6 +23,7 @@ interface ParkingLot {
   shuttle_enabled?: boolean;
   valet_enabled?: boolean;
   dailyPrice?: number;
+  verification_metadata?: Record<string, unknown>;
 }
 
 interface AirportParkingLotsProps {
@@ -71,6 +72,7 @@ export function AirportParkingLots({ airport, lat, lng, airportName, locativeNam
                 slug: lot.slug,
                 shuttle_enabled: lot.shuttle_enabled,
                 valet_enabled: lot.valet_enabled,
+                verification_metadata: lot.verification_metadata,
               };
             })
             // Filter: only show lots within MAX_DISTANCE_KM
