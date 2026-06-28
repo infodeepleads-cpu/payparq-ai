@@ -175,13 +175,16 @@ export function AirportParkingLots({ airport, lat, lng, airportName, locativeNam
               const dailyPriceCents = Math.round((lot.dailyPrice || 0) * 100);
               const monthlyPriceCents = Math.round((lot.monthlyPrice || 0) * 100);
 
+              const defaultCheckIn = startDate ? new Date(startDate).toISOString() : new Date().toISOString();
+              const defaultCheckOut = endDate ? new Date(endDate).toISOString() : new Date(Date.now() + selectedDays * 24 * 60 * 60 * 1000).toISOString();
+
               const params = new URLSearchParams();
               params.set('loc', lot.id);
               if (lot.display_id) params.set('display_id', lot.display_id);
               params.set('name', lot.name || '');
               if (lot.address) params.set('address', lot.address);
-              params.set('in', startDate ? new Date(startDate).toISOString() : '');
-              params.set('out', endDate ? new Date(endDate).toISOString() : '');
+              params.set('in', defaultCheckIn);
+              params.set('out', defaultCheckOut);
               params.set('amount_cents', String(amountCents));
               params.set('ph', String(hourlyPriceCents));
               params.set('pd', String(dailyPriceCents));
