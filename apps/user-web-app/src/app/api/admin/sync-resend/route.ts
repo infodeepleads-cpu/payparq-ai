@@ -4,10 +4,10 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function POST(req: NextRequest) {
   try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
     if (!supabaseAdmin) {
       return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
     }
