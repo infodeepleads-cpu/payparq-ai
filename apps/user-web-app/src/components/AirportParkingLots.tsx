@@ -5,6 +5,7 @@ import { Star, MapPin, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from '@/components/LocaleProvider';
 import { ParkingLogoCard } from '@/components/ParkingLogoCard';
+import { getTieredDailyConfig, calculateTieredDailyPrice } from '@/lib/locationPricing';
 
 interface ParkingLot {
   id: string;
@@ -154,7 +155,10 @@ export function AirportParkingLots({ airport, lat, lng, airportName, locativeNam
             style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch' }}
           >
             {lots.map((lot) => {
-              const price = (lot.dailyPrice || 0) * selectedDays;
+              const tiered = getTieredDailyConfig({ verification_metadata: lot.verification_metadata });
+              const price = tiered
+                ? calculateTieredDailyPrice(tiered, selectedDays)
+                : (lot.dailyPrice || 0) * selectedDays;
               const displayPrice = price > 0 ? price : 2;
               const amountCents = Math.round(displayPrice * 100);
               const hourlyPriceCents = Math.round((lot.dailyPrice || 0) * 100 / 24);

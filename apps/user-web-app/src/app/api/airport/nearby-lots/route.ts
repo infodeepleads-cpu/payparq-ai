@@ -58,6 +58,7 @@ export async function GET(req: NextRequest) {
           valet_enabled: loc.valet_enabled,
           rating: loc.review_score || 0,
           ratings_count: loc.review_count || 0,
+          verification_metadata: loc.verification_metadata,
         };
       })
       .sort((a, b) => a.distance - b.distance)
