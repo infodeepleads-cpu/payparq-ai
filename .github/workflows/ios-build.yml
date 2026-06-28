@@ -61,14 +61,9 @@ jobs:
       - name: Export IPA
         run: |
           cd ios/App
-          xcodebuild -exportArchive \
-            -archivePath ./build/App.xcarchive \
-            -exportOptionsPlist ExportOptions.plist \
-            -exportPath ./build \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8 \
-            -authenticationKeyID "${{ secrets.APPLE_API_KEY_ID }}" \
-            -authenticationKeyIssuerID "${{ secrets.APPLE_API_KEY_ISSUER_ID }}"
+          mkdir -p build/Payload
+          cp -r build/App.xcarchive/Products/Applications/App.app build/Payload/
+          cd build && zip -qr PayParq.ipa Payload && rm -rf Payload
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
@@ -77,10 +72,6 @@ jobs:
           path: apps/user-web-app/ios/App/build/*.ipa
 
       - name: Upload to TestFlight
+        if: false
         run: |
-          cd ios/App
-          xcrun altool --upload-app \
-            -f build/*.ipa \
-            -u "${{ secrets.APPLE_ID }}" \
-            -p "${{ secrets.APPLE_APP_PASSWORD }}" \
-            -t ios
+          echo "TestFlight upload disabled - IPA available as artifact"
